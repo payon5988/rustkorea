@@ -1,4 +1,9 @@
-# Production overrides — use with: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+# Production overlay — use with: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+# Prerequisites (one-time, on the host):
+#   1. DNS: A/AAAA @ and www -> this server's public IP, propagated
+#      (check: getent hosts rustkorea.kr)
+#   2. Ports 80+443 free (Caddy needs them for ACME + HTTPS)
+#   3. .env filled (DOMAIN, SITE_URL=https://..., POSTGRES_PASSWORD, OAuth prod URIs)
 services:
   app:
     deploy:
@@ -12,3 +17,31 @@ services:
         max-size: "10m"
         max-file: "3"
     restart: always
+    # Internal only in prod; public traffic enters via caddy (:443).
+    # NOTE: overriding published ports off is not portable — close them
+    # at the provider firewall instead, or remove `ports:` from base file.
+
+  caddy:
+    image: caddy:2-alpine
+    environment:
+      DOMAIN: ${DOMAIN:?DOMAIN is required (e.g. rustkorea.kr)}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      app:
+        condition: service_healthy
+    restart: always
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  caddy_data:
+  caddy_config:

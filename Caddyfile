@@ -1,0 +1,38 @@
+# Caddy reverse proxy: automatic HTTPS (Let's Encrypt HTTP-01) + static
+# security headers at the edge. Requires ports 80/443 free on the host
+# and DNS A/AAAA records pointing at this server BEFORE first start
+# (otherwise certificate issuance fails and Caddy retries with backoff).
+{
+	admin off
+}
+
+{$DOMAIN} {
+	# Security headers (defense in depth; app also sets its own)
+	header {
+		Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "SAMEORIGIN"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		-Server
+	}
+
+	# Well-known endpoints must stay same-origin (no redirect games)
+	handle /.well-known/* {
+		reverse_proxy app:3000
+	}
+
+	# Everything else to the app; preserve client IP for rate limiting
+	handle {
+		reverse_proxy app:3000 {
+			header_up X-Forwarded-For {http.request.header.X-Forwarded-For}
+			header_up X-Real-Ip {http.request.remote.host}
+			header_up X-Forwarded-Proto {http.request.scheme}
+		}
+	}
+
+	log {
+		output stdout
+		format json
+	}
+}

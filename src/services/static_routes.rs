@@ -81,6 +81,14 @@ pub async fn manifest_json(cx: &Cx) -> Result<TypedBody> {
     })
 }
 
+#[route(GET "/logo.svg")]
+pub async fn rust_logo(_cx: &Cx) -> Result<TypedBody> {
+    Ok(TypedBody {
+        content_type: "image/svg+xml",
+        body: include_str!("../../public/icons/rust-logo.svg").to_string(),
+    })
+}
+
 #[route(GET "/icon-192.png")]
 pub async fn icon_192_png(_cx: &Cx) -> Result<BinBody> {
     Ok(BinBody {

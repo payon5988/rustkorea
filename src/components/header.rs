@@ -109,10 +109,7 @@ pub async fn Header(cx: &Cx) -> Result<impl View + '_> {
                     if !logo_url_val.is_empty() {
                         <img src=(logo_url_val.clone()) alt="logo" style="width:28px; height:28px; border-radius:6px; object-fit:contain;">
                     } else {
-                        <svg width="28" height="28" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M75.2 0l-.2 81.5c0 24.3-18.6 44.4-42.8 46.2L11.6 129v10.5h40.2l2.1-9.4c.4 0 .6.1.8.1 24.8 0 44.9 20.1 44.9 44.9v51.3L96.1 256h10.4l.2-20.2V175.4c0-24.8 20.1-44.9 44.9-44.9 1 0 2.1 0 3.1.1l2.3 10.4h43.2v-10.5l-22.1-1.3c-23.7-1.8-42.1-21.6-42.1-45.5L134 0H75.2zm77 53.7l-3 13.4h19.5l3.3-13.4H152.2zm-30.7 0l-2.6 13.4h18.9l2.6-13.4h-18.9zm-31 0l-3 13.4h19.5l3-13.4H90.5z" fill="#DE5B30"/>
-                            <path d="M75.2 157.3l-.1 46.8c0 13.5 10.5 24.8 24 25.6l.3.1V256h40v-26.5l.3-.1c13.5-.8 24-12.1 24-25.6v-47.4c0-13.5-10.5-24.8-24-25.6l-.3-.1v-8.6c0-13.5-10.5-24.8-24-25.6l-.3-.1v-8.6c0-13.5-10.5-24.8-24-25.6l-.3-.1v-8.7H93l-.3 8.7c-13.5.8-24 12.1-24 25.6v8.6l-.3.1c-13.5.8-24 12.1-24 25.6v8.6l-.3.1c-13.5.8-24 12.1-24 25.6l.3 8.3h39.7v26.6l.3.1c13.5.8 24 12.1 24 25.6z" fill="#fff"/>
-                        </svg>
+                        <img src="/logo.svg" alt="Rust logo" width="28" height="28" style="object-fit:contain;">
                     }
                     <span>(site_title_val)</span>
                 </a>

@@ -68,7 +68,7 @@ pub async fn root_layout(
                 <link rel="manifest" href="/manifest.json" />
                 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
                 <meta name="mobile-web-app-capable" content="yes" />
-                <link rel="icon" href="/icon-192.png" type="image/png" />
+                <link rel="icon" href="/logo.svg" type="image/svg+xml" />
                 <meta name="theme-color" content=(theme_color) />
                 <meta name=(apple_meta_name) content="yes" />
                 if adsense_enabled == "true" && !adsense_client.is_empty() {

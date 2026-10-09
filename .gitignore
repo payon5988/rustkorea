@@ -1,0 +1,12 @@
+/target/
+.env
+*.log
+*.db
+*.db-*
+data/
+assets/
+rustkorea.db*
+/tmp/
+.DS_Store
+*.orig
+*.rej

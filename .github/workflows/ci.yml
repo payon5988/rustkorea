@@ -1,0 +1,80 @@
+name: Rust Korea Hub CI/CD
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  quality-and-test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: rustkorea_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Cache cargo registry
+        uses: Swatinem/rust-cache@v2
+
+      - name: Format check
+        run: cargo fmt --check
+
+      - name: Clippy (deny warnings)
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+      - name: Security audit
+        run: |
+          cargo install cargo-audit --locked
+          cargo audit
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/rustkorea_test
+
+      - name: Run tests
+        run: cargo test
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/rustkorea_test
+
+      - name: Build release
+        run: cargo build --release
+
+      - name: Bundle assets
+        run: |
+          cargo install topcoat-cli --version 0.10.0 --locked
+          topcoat asset bundle --release
+
+      - name: Smoke test endpoints
+        run: |
+          DATABASE_URL=postgres://postgres:postgres@localhost:5432/rustkorea_test \
+            ./target/release/rustkorea &
+          SRV=$!
+          trap "kill $SRV" EXIT
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:3000/healthz && break
+            sleep 2
+          done
+          curl -sf http://localhost:3000/healthz
+          curl -sf http://localhost:3000/robots.txt
+          curl -sf http://localhost:3000/sitemap.xml
+          curl -sf http://localhost:3000/manifest.json
+          curl -sf http://localhost:3000/sw.js
+          curl -sf http://localhost:3000/.well-known/assetlinks.json

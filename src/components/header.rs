@@ -1,0 +1,214 @@
+use std::future::Future;
+use topcoat::{
+    Result,
+    context::Cx,
+    cookie::{Cookies, cookies},
+    view::{View, component, view},
+};
+
+use crate::db::Db;
+use crate::models::{NavItem, User};
+use crate::services::i18n::{Locale, detect_locale};
+
+async fn get_user(cx: &Cx) -> Option<User> {
+    let db: &Db = topcoat::context::app_context(cx);
+    crate::auth::session::current_user(db, cx).await
+}
+
+async fn get_header_nav(cx: &Cx) -> Vec<NavItem> {
+    let db: &Db = topcoat::context::app_context(cx);
+    let items: Vec<NavItem> = sqlx::query_as::<_, NavItem>(
+        "SELECT * FROM nav_items WHERE section = 'header' AND visible = 1 ORDER BY position ASC",
+    )
+    .fetch_all(db)
+    .await
+    .unwrap_or_default();
+    let access = crate::auth::access::load_access(db, cx).await;
+    items
+        .into_iter()
+        .filter(|item| {
+            item.required_permission.is_empty()
+                || access
+                    .as_ref()
+                    .map(|a| a.can(&item.required_permission))
+                    .unwrap_or(false)
+        })
+        .collect()
+}
+
+async fn unread_count(cx: &Cx, user_id: &str) -> i64 {
+    let db: &Db = topcoat::context::app_context(cx);
+    sqlx::query_scalar::<_, i64>(
+        "SELECT COUNT(*) FROM notifications WHERE user_id = $1 AND is_read = 0",
+    )
+    .bind(user_id)
+    .fetch_one(db)
+    .await
+    .unwrap_or(0)
+}
+
+#[component]
+pub async fn Header(cx: &Cx) -> Result<impl View + '_> {
+    let user = get_user(cx).await;
+    let db: &Db = topcoat::context::app_context(cx);
+    let access = crate::auth::access::load_access(db, cx).await;
+    let is_admin = access.as_ref().map(|a| a.is_admin()).unwrap_or(false);
+    let nav_items = get_header_nav(cx).await;
+    let (site_title_val, logo_url_val) = {
+        let db: &crate::db::Db = topcoat::context::app_context(cx);
+        let t = crate::services::site_settings::get_setting(db, "site_title").await;
+        let l = crate::services::site_settings::get_setting(db, "logo_url").await;
+        (
+            if t.is_empty() {
+                "Rust Korea".to_string()
+            } else {
+                t
+            },
+            l,
+        )
+    };
+    let notif_count = if let Some(ref u) = user {
+        unread_count(cx, &u.id).await
+    } else {
+        0
+    };
+    let locale_cookie = cookies(cx).get("locale").map(|c| c.value().to_string());
+    let locale = detect_locale(locale_cookie.as_deref(), None);
+    let locale_label = if locale == Locale::Ko { "EN" } else { "KO" };
+    let next_locale = if locale == Locale::Ko { "en" } else { "ko" };
+    let notif_badge = if notif_count > 0 {
+        "position:absolute; top:-4px; right:-4px; min-width:16px; height:16px; border-radius:8px; background:#DC2626; color:#fff; font-size:10px; font-weight:700; display:flex; align-items:center; justify-content:center; padding:0 4px;".to_string()
+    } else {
+        "display:none;".to_string()
+    };
+
+    let is_logged_in = user.is_some();
+    let current_path = topcoat::router::request::uri(cx).path().to_string();
+    let tab_home_active = current_path == "/";
+    let tab_manuals_active = current_path.starts_with("/manuals");
+    let tab_community_active = current_path.starts_with("/community");
+    let tab_search_active = current_path.starts_with("/search");
+    let tab_profile_active = if is_logged_in {
+        if let Some(ref u) = user {
+            current_path == format!("/users/{}", u.username)
+        } else {
+            false
+        }
+    } else {
+        current_path.starts_with("/auth")
+    };
+
+    let tab_active_style = "color:#2563EB;";
+    let tab_inactive_style = "color:#9ca3af;";
+    let tab_notif_style = "position:absolute; top:2px; right:4px; min-width:14px; height:14px; border-radius:7px; background:#DC2626; color:#fff; font-size:9px; font-weight:700; display:flex; align-items:center; justify-content:center; padding:0 3px; line-height:1;";
+
+    Ok(view! {
+        <header style="position:sticky; top:0; z-index:50; background:#fff; border-bottom:1px solid #e5e7eb; box-shadow:0 1px 3px rgba(0,0,0,0.05); transition:background 0.2s, border-color 0.2s;">
+            <div class="container" style="display:flex; align-items:center; justify-content:space-between; height:64px;">
+                <a href="/" style="display:flex; align-items:center; gap:8px; font-weight:800; font-size:17px; color:#16181d; letter-spacing:-0.02em; flex-shrink:0;">
+                    if !logo_url_val.is_empty() {
+                        <img src=(logo_url_val.clone()) alt="logo" style="width:28px; height:28px; border-radius:6px; object-fit:contain;">
+                    } else {
+                        <svg width="28" height="28" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M75.2 0l-.2 81.5c0 24.3-18.6 44.4-42.8 46.2L11.6 129v10.5h40.2l2.1-9.4c.4 0 .6.1.8.1 24.8 0 44.9 20.1 44.9 44.9v51.3L96.1 256h10.4l.2-20.2V175.4c0-24.8 20.1-44.9 44.9-44.9 1 0 2.1 0 3.1.1l2.3 10.4h43.2v-10.5l-22.1-1.3c-23.7-1.8-42.1-21.6-42.1-45.5L134 0H75.2zm77 53.7l-3 13.4h19.5l3.3-13.4H152.2zm-30.7 0l-2.6 13.4h18.9l2.6-13.4h-18.9zm-31 0l-3 13.4h19.5l3-13.4H90.5z" fill="#DE5B30"/>
+                            <path d="M75.2 157.3l-.1 46.8c0 13.5 10.5 24.8 24 25.6l.3.1V256h40v-26.5l.3-.1c13.5-.8 24-12.1 24-25.6v-47.4c0-13.5-10.5-24.8-24-25.6l-.3-.1v-8.6c0-13.5-10.5-24.8-24-25.6l-.3-.1v-8.6c0-13.5-10.5-24.8-24-25.6l-.3-.1v-8.7H93l-.3 8.7c-13.5.8-24 12.1-24 25.6v8.6l-.3.1c-13.5.8-24 12.1-24 25.6v8.6l-.3.1c-13.5.8-24 12.1-24 25.6l.3 8.3h39.7v26.6l.3.1c13.5.8 24 12.1 24 25.6z" fill="#fff"/>
+                        </svg>
+                    }
+                    <span>(site_title_val)</span>
+                </a>
+
+                <nav class="desktop-nav" style="display:flex; align-items:center; gap:4px;">
+                    if nav_items.is_empty() {
+                        <a href="/manuals" style="padding:8px 16px; font-size:15px; color:#374151; font-weight:400; transition:color 0.15s; border-bottom:2px solid transparent;">"매뉴얼"</a>
+                        <a href="/youtube" style="padding:8px 16px; font-size:15px; color:#374151; font-weight:400; transition:color 0.15s; border-bottom:2px solid transparent;">"영상"</a>
+                        <a href="/community" style="padding:8px 16px; font-size:15px; color:#374151; font-weight:400; transition:color 0.15s; border-bottom:2px solid transparent;">"커뮤니티"</a>
+                        <a href="/events" style="padding:8px 16px; font-size:15px; color:#374151; font-weight:400; transition:color 0.15s; border-bottom:2px solid transparent;">"이벤트"</a>
+                        <a href="/search" style="padding:8px 16px; font-size:15px; color:#374151; font-weight:400; transition:color 0.15s; border-bottom:2px solid transparent;">"검색"</a>
+                    } else {
+                        for item in &nav_items {
+                            <a href=(item.href.clone()) style="padding:8px 16px; font-size:15px; color:#374151; font-weight:400; transition:color 0.15s; border-bottom:2px solid transparent;">(item.label.clone())</a>
+                        }
+                    }
+                </nav>
+
+                <div class="desktop-actions" style="display:flex; align-items:center; gap:10px;">
+                    <button onclick="toggleTheme()" style="background:none; border:1px solid #E4E4E7; border-radius:8px; padding:6px 8px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:border-color 0.15s; color:#6b7280;" title="테마 전환">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+                    </button>
+                    <a href="#" onclick=(format!("document.cookie='locale={next_locale};path=/;SameSite=Lax'+(location.protocol==='https:'?';Secure':'');location.reload();return false;")) style="font-size:12px; font-weight:600; color:#6b7280; border:1px solid #E4E4E7; border-radius:8px; padding:5px 10px; cursor:pointer; transition:color 0.15s;">(locale_label)</a>
+                    if is_admin {
+                        <a href="/admin" style="font-size:13px; color:#6b7280; font-weight:500; transition:color 0.15s;">"관리자"</a>
+                    }
+                    if let Some(u) = &user {
+                        <a href="/notifications" style="position:relative; display:flex; align-items:center; padding:6px; color:#6b7280; border-radius:8px; transition:color 0.15s;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                            <span style=(notif_badge.clone())>(format!("{notif_count}"))</span>
+                        </a>
+                        <a href=(format!("/users/{}", u.username)) style="display:flex; align-items:center; gap:8px;">
+                            if let Some(avatar) = &u.avatar_url {
+                                <img src=(avatar.clone()) alt="" style="width:28px; height:28px; border-radius:50%;">
+                            }
+                            <span style="font-size:13px; color:#374151; font-weight:500;">(u.username.clone())</span>
+                        </a>
+                        <a href="/auth/logout" style="font-size:13px; color:#6b7280; transition:color 0.15s;">"로그아웃"</a>
+                    } else {
+                        <a href="/auth/login" style="font-size:14px; color:#6b7280; font-weight:500; transition:color 0.15s;">"로그인"</a>
+                        <a href="/auth/register" style="background:#2563EB; color:#fff; padding:8px 16px; border-radius:8px; font-size:14px; font-weight:600; transition:background 0.15s;">"회원가입"</a>
+                    }
+                </div>
+
+                <div class="mobile-actions">
+                    <a href="/search" style="display:flex; align-items:center; padding:6px; color:#6b7280;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                    </a>
+                    <button onclick="toggleTheme()" style="background:none; border:1px solid #E4E4E7; border-radius:8px; padding:5px 7px; cursor:pointer; display:flex; align-items:center; justify-content:center; color:#6b7280;" title="테마 전환">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+                    </button>
+                    if is_logged_in {
+                        <a href="/notifications" style="position:relative; display:flex; align-items:center; padding:6px; color:#6b7280;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                            <span style=(notif_badge.clone())>(format!("{notif_count}"))</span>
+                        </a>
+                    }
+                </div>
+            </div>
+        </header>
+
+        <div class="bottom-tab-bar">
+            <a href="/" class="bottom-tab" style=(if tab_home_active { tab_active_style } else { tab_inactive_style })>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                <span>"홈"</span>
+            </a>
+            <a href="/manuals" class="bottom-tab" style=(if tab_manuals_active { tab_active_style } else { tab_inactive_style })>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
+                <span>"매뉴얼"</span>
+            </a>
+            <a href="/community" class="bottom-tab" style=(if tab_community_active { tab_active_style } else { tab_inactive_style })>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                <span>"커뮤니티"</span>
+            </a>
+            <a href="/search" class="bottom-tab" style=(if tab_search_active { tab_active_style } else { tab_inactive_style })>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                <span>"검색"</span>
+            </a>
+            if let Some(u) = &user {
+                <a href=(format!("/users/{}", u.username)) class="bottom-tab" style=(format!("position:relative; {}", if tab_profile_active { tab_active_style } else { tab_inactive_style }))>
+                    if let Some(avatar) = &u.avatar_url {
+                        <img src=(avatar.clone()) alt="" style="width:22px; height:22px; border-radius:50%;">
+                    } else {
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    }
+                    <span>"프로필"</span>
+                    if notif_count > 0 {
+                        <span style=(tab_notif_style)>(format!("{notif_count}"))</span>
+                    }
+                </a>
+            } else {
+                <a href="/auth/login" class="bottom-tab" style=(if tab_profile_active { tab_active_style } else { tab_inactive_style })>
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+                    <span>"로그인"</span>
+                </a>
+            }
+        </div>
+    })
+}

@@ -1,0 +1,11 @@
+target/
+.git/
+.env
+*.log
+*.db
+data/
+assets/
+tmp/
+.DS_Store
+*.orig
+*.rej

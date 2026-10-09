@@ -1,0 +1,8 @@
+-- Align integer widths with Rust models (i64 <-> BIGINT).
+ALTER TABLE users ALTER COLUMN points TYPE BIGINT;
+ALTER TABLE posts ALTER COLUMN view_count TYPE BIGINT;
+ALTER TABLE categories ALTER COLUMN position TYPE BIGINT;
+ALTER TABLE categories ALTER COLUMN visible TYPE BIGINT;
+ALTER TABLE badges ALTER COLUMN points_required TYPE BIGINT;
+ALTER TABLE uploads ALTER COLUMN size TYPE BIGINT;
+ALTER TABLE point_history ALTER COLUMN points TYPE BIGINT;

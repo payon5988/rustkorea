@@ -1,0 +1,26 @@
+{
+  "packageId": "kr.rustkorea.hub",
+  "host": "rustkorea.kr",
+  "name": "Rust Korea Hub",
+  "launcherName": "RustKorea",
+  "display": "standalone",
+  "themeColor": "#2563EB",
+  "navigationColor": "#2563EB",
+  "backgroundColor": "#ffffff",
+  "enableNotifications": true,
+  "startUrl": "/",
+  "iconUrl": "https://rustkorea.kr/maskable-512.png",
+  "maskableIconUrl": "https://rustkorea.kr/maskable-512.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "./android.keystore",
+    "alias": "android"
+  },
+  "appVersionName": "0.5.0",
+  "appVersionCode": 1,
+  "shortcuts": [
+    { "name": "매뉴얼", "shortName": "매뉴얼", "url": "/manuals" },
+    { "name": "커뮤니티", "shortName": "커뮤니티", "url": "/community" }
+  ],
+  "generatorApp": "bubblewrap"
+}

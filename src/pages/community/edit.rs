@@ -117,7 +117,7 @@ pub async fn edit_post_page(cx: &Cx) -> Result<impl View + '_> {
         <script>
             {(crate::services::markdown::EASYMDE_INIT_JS)}
                     {(crate::services::markdown::MD_UPLOAD_JS)}
-                    "var easymde=initEasyMDE('editor');bindMdUpload('md-file',easymde);"
+                    "var easymde=null;try{easymde=initEasyMDE('editor');}catch(e){}bindMdUpload('md-file',easymde);"
         </script>
     })
 }

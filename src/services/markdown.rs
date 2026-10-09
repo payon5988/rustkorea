@@ -195,7 +195,9 @@ pub const HL_INIT_JS: &str = r#"function initHighlight(){var blocks=document.que
 
 /// Bind a `.md` file input to an EasyMDE instance.
 /// Call as `bindMdUpload('md-file', easymde)`. No `<`, `>`, `&` characters.
-pub const MD_UPLOAD_JS: &str = r#"function bindMdUpload(inputId,ed){var inp=document.getElementById(inputId);if(!inp||!ed){return;}inp.addEventListener('change',function(){var f=inp.files[0];if(!f){return;}var r=new FileReader();r.onload=function(){var t=r.result;if(typeof t==='string'){ed.value(t);}};r.readAsText(f);});}"#;
+/// Falls back to the raw textarea when EasyMDE failed to initialize, so a
+/// CDN hiccup never silently disables uploads.
+pub const MD_UPLOAD_JS: &str = r#"function bindMdUpload(inputId,ed){var inp=document.getElementById(inputId);if(!inp){return;}inp.addEventListener('change',function(){var f=inp.files[0];if(!f){return;}var r=new FileReader();r.onload=function(){var t=r.result;if(typeof t!=='string'){return;}var done=false;try{if(ed){ed.value(t);done=true;}}catch(e){}if(!done){var ta=document.getElementById('editor');if(ta){ta.value=t;try{ta.dispatchEvent(new Event('input',{bubbles:true}));}catch(e2){}}}};r.readAsText(f);});}"#;
 
 /// Allowlist for avatar/thumbnail URLs stored from external providers.
 /// Anything else is dropped at write time (defense in depth; renderers

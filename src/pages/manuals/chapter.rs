@@ -102,12 +102,18 @@ pub async fn chapter_detail(cx: &Cx) -> Result<impl View + '_> {
                 <h1 style="font-size:1.75rem; font-weight:800; letter-spacing:-0.03em; margin-bottom:32px;">(ch.title.clone())</h1>
 
                 <div class="card" style="padding:40px 48px;">
-                    <div class="prose prose-headings:text-zinc-900 prose-p:text-zinc-600 prose-p:leading-relaxed prose-a:text-[#DE5B30] prose-a:no-underline hover:prose-a:underline prose-code:text-[#DE5B30] prose-code:bg-zinc-100 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:font-normal prose-pre:bg-zinc-50 prose-pre:border prose-pre:border-zinc-200 prose-pre:rounded-lg max-w-none" style="font-size:14px; line-height:1.8;">
+                    <div class="markdown-body">
                         (topcoat::view::Unescaped::new_unchecked(ch.content_html.clone()))
                     </div>
                 </div>
 
                 {AdUnit(slot_id: "chapter_bottom".into())}
+
+                <link rel="stylesheet" href=(crate::services::markdown::HL_CSS_URL) integrity=(crate::services::markdown::HL_CSS_SRI) crossorigin="anonymous">
+                <script src=(crate::services::markdown::HL_JS_URL) integrity=(crate::services::markdown::HL_JS_SRI) crossorigin="anonymous"></script>
+                <script src=(crate::services::markdown::HL_RUST_URL) integrity=(crate::services::markdown::HL_RUST_SRI) crossorigin="anonymous"></script>
+                <script>{(crate::services::markdown::HL_INIT_JS)}</script>
+                <script>"initHighlight();"</script>
 
                 <div style="margin-top:32px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
                     if current_user.is_some() {

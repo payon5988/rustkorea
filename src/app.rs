@@ -65,6 +65,7 @@ pub async fn root_layout(
                 <link rel="alternate" type="application/rss+xml" title="Rust Korea Hub" href="/feed.xml" />
                 <link rel="preconnect" href="https://fonts.googleapis.com" />
                 <link rel="stylesheet" href=(tailwind::stylesheet!()) />
+                <style>{(crate::services::markdown::MARKDOWN_CSS)}</style>
                 <link rel="manifest" href="/manifest.json" />
                 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
                 <meta name="mobile-web-app-capable" content="yes" />

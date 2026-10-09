@@ -32,10 +32,19 @@ pub async fn home(cx: &Cx) -> Result<impl View + '_> {
         .await
         .unwrap_or_default();
 
-    let chapter_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM manual_chapters")
-        .fetch_one(db)
-        .await
-        .unwrap_or(0);
+    let series_count: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM manual_series WHERE visibility = 'public'")
+            .fetch_one(db)
+            .await
+            .unwrap_or(0);
+    let chapter_count: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM manual_chapters mc
+         JOIN manual_series ms ON ms.id = mc.series_id
+         WHERE ms.visibility = 'public'",
+    )
+    .fetch_one(db)
+    .await
+    .unwrap_or(0);
     let video_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM youtube_videos")
         .fetch_one(db)
         .await
@@ -72,8 +81,9 @@ pub async fn home(cx: &Cx) -> Result<impl View + '_> {
             <section class="container" style="margin-top:-30px; margin-bottom:60px;">
                 <div class="grid-3" style="display:grid; grid-template-columns:repeat(3,1fr); gap:24px;">
                     <div class="card" style="padding:24px; text-align:center;">
-                        <div style="font-size:2rem; font-weight:800; color:#16181d; letter-spacing:-0.02em;">(chapter_count)</div>
-                        <div style="font-size:13px; color:#6b7280; margin-top:4px;">"매뉴얼 챕터"</div>
+                        <div style="font-size:2rem; font-weight:800; color:#16181d; letter-spacing:-0.02em;">(series_count)</div>
+                        <div style="font-size:13px; color:#6b7280; margin-top:4px;">"매뉴얼 시리즈"</div>
+                        <div style="font-size:12px; color:#9ca3af; margin-top:2px;">(format!("총 {chapter_count}개 챕터"))</div>
                     </div>
                     <div class="card" style="padding:24px; text-align:center;">
                         <div style="font-size:2rem; font-weight:800; color:#16181d; letter-spacing:-0.02em;">(video_count)</div>

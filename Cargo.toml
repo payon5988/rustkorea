@@ -13,7 +13,7 @@ rust-version = "1.85"
 
 [dependencies]
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "sync"] }
-topcoat = { version = "0.10", features = ["tailwind", "runtime", "session", "cookie", "asset", "sse"] }
+topcoat = { version = "0.10", features = ["tailwind", "runtime", "session", "cookie", "asset", "sse", "multipart"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1" }
 uuid = { version = "1", features = ["v4", "serde"] }
@@ -30,6 +30,7 @@ rand = "0.8"
 form_urlencoded = { version = "1" }
 quick-xml = { version = "0.37", features = ["serialize"] }
 totp-rs = { version = "5", features = ["gen_secret", "otpauth", "qr"] }
+pdf-extract = { version = "0.8" }
 
 [build-dependencies]
 topcoat = { version = "0.10", features = ["tailwind"] }

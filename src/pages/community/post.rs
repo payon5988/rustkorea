@@ -61,6 +61,9 @@ pub async fn post_detail(cx: &Cx) -> Result<impl View + '_> {
     let id = path_param::<Id>(cx);
     let db: &Db = topcoat::context::app_context(cx);
     let csrf_token = crate::auth::session::csrf_token(db, cx).await;
+    let hl_css = crate::services::markdown::HL_CSS_URL;
+    let hl_js = crate::services::markdown::HL_JS_URL;
+    let hl_rust = crate::services::markdown::HL_RUST_URL;
     let current_user = get_current_user(cx).await;
 
     // Deduplicated view count: one per viewer (user or IP hash) per 24h.
@@ -230,10 +233,16 @@ pub async fn post_detail(cx: &Cx) -> Result<impl View + '_> {
                 </div>
 
                 <div class="card" style="padding:32px; margin-bottom:40px;">
-                    <div class="prose prose-p:text-zinc-600 prose-p:leading-relaxed prose-a:text-[#DE5B30] prose-code:text-[#DE5B30] prose-code:bg-zinc-100 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-pre:bg-zinc-50 prose-pre:border prose-pre:border-zinc-200 prose-pre:rounded-lg max-w-none" style="font-size:14px; line-height:1.8;">
+                    <div class="markdown-body">
                         (topcoat::view::Unescaped::new_unchecked(p.content_html.clone()))
                     </div>
                 </div>
+
+                <link rel="stylesheet" href=(hl_css)>
+                <script src=(hl_js)></script>
+                <script src=(hl_rust)></script>
+                <script>{(crate::services::markdown::HL_INIT_JS)}</script>
+                <script>"initHighlight();"</script>
 
                 <div>
                     <div style="display:flex; align-items:center; gap:8px; margin-bottom:16px;">

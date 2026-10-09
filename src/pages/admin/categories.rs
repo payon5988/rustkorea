@@ -421,7 +421,7 @@ pub async fn admin_categories(cx: &Cx) -> Result<impl View + '_> {
                                                     <input type="hidden" name="csrf_token" value=(csrf_token.clone())>
                                                     <button type="submit" style="font-size:11px; color:#6b7280; background:none; border:none; cursor:pointer; padding:2px 4px;" title="아래로">"▼"</button>
                                                 </form>
-                                                <button type="button" onclick=(format!("document.getElementById('edit-id').value='{}';document.getElementById('edit-name').value='{}';document.getElementById('edit-color').value='{}';document.getElementById('edit-color-pick').value='{}';document.getElementById('edit-desc').value='{}';document.getElementById('edit-perm').value='{}';document.getElementById('edit-modal').style.display='flex'", cat.id, cat.name, cat.color, cat.color, cat.description, cat.write_permission)) style="font-size:12px; color:#60a5fa; background:none; border:none; cursor:pointer; font-weight:600;">"수정"</button>
+                                                <button type="button" onclick="fillCatEdit(this)" data-id=(cat.id.clone()) data-name=(cat.name.clone()) data-color=(cat.color.clone()) data-desc=(cat.description.clone()) data-perm=(cat.write_permission.clone()) style="font-size:12px; color:#60a5fa; background:none; border:none; cursor:pointer; font-weight:600;">"수정"</button>
                                                 <form action=(format!("/admin/categories/{}/toggle", cat.id)) method="POST" style="display:inline;">
                                                     <input type="hidden" name="csrf_token" value=(csrf_token.clone())>
                                                     <button type="submit" style=(format!("font-size:12px; color:{}; background:none; border:none; cursor:pointer; font-weight:600;", toggle_color))>
@@ -482,6 +482,9 @@ pub async fn admin_categories(cx: &Cx) -> Result<impl View + '_> {
             </div>
 
             <div id="edit-modal" style="display:none; position:fixed; inset:0; z-index:100; background:rgba(0,0,0,0.6); align-items:center; justify-content:center;" onclick="if(event.target===this)this.style.display='none'">
+                <script>
+                    {r#"function fillCatEdit(btn){var d=btn.dataset;document.getElementById('edit-id').value=d.id;document.getElementById('edit-name').value=d.name;document.getElementById('edit-color').value=d.color;document.getElementById('edit-color-pick').value=d.color;document.getElementById('edit-desc').value=d.desc;document.getElementById('edit-perm').value=d.perm;document.getElementById('edit-modal').style.display='flex'}"#}
+                </script>
                 <div style="background:#1a1d27; border:1px solid #2a2d3a; border-radius:12px; padding:28px; width:420px; max-width:90vw;">
                     <h3 style="font-size:16px; font-weight:700; color:#f9fafb; margin-bottom:20px;">"카테고리 수정"</h3>
                     <form action="/admin/categories/update" method="POST" style="display:flex; flex-direction:column; gap:14px;">

@@ -329,7 +329,13 @@ pub async fn admin_dashboard(cx: &Cx) -> Result<impl View + '_> {
                         <div style="width:44px; height:44px; border-radius:10px; background:rgba(222,91,48,0.1); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#DE5B30" stroke-width="2" stroke-linecap="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
                         </div>
-                        <div><div style="font-size:1.5rem; font-weight:800; color:#f9fafb; letter-spacing:-0.02em;">(series_count + chapter_count)</div><div style="font-size:12px; color:#6b7280;">"매뉴얼"</div></div>
+                        <div><div style="font-size:1.5rem; font-weight:800; color:#f9fafb; letter-spacing:-0.02em;">(series_count)</div><div style="font-size:12px; color:#6b7280;">"매뉴얼 시리즈"</div></div>
+                    </div>
+                    <div style="background:#1a1d27; border:1px solid #2a2d3a; border-radius:10px; padding:20px; display:flex; align-items:center; gap:16px;">
+                        <div style="width:44px; height:44px; border-radius:10px; background:rgba(96,165,250,0.1); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2" stroke-linecap="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                        </div>
+                        <div><div style="font-size:1.5rem; font-weight:800; color:#f9fafb; letter-spacing:-0.02em;">(chapter_count)</div><div style="font-size:12px; color:#6b7280;">"매뉴얼 챕터"</div></div>
                     </div>
                     <div style="background:#1a1d27; border:1px solid #2a2d3a; border-radius:10px; padding:20px; display:flex; align-items:center; gap:16px;">
                         <div style="width:44px; height:44px; border-radius:10px; background:rgba(167,139,250,0.1); display:flex; align-items:center; justify-content:center; flex-shrink:0;">

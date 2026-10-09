@@ -162,6 +162,11 @@ pub async fn new_post_page(cx: &Cx) -> Result<impl View + '_> {
                         </div>
                         <div>
                             <label style="display:block; font-size:13px; font-weight:600; color:#374151; margin-bottom:8px;">"내용 (Markdown)"</label>
+                            <div style="margin-bottom:12px; display:flex; align-items:center; gap:10px;">
+                                <label for="md-file" style="font-size:13px; color:#6b7280; cursor:pointer; border:1px dashed #d1d5db; border-radius:6px; padding:8px 14px;">".md 파일 불러오기"</label>
+                                <input type="file" id="md-file" accept=".md,.markdown,.txt" style="display:none;">
+                                <span style="font-size:12px; color:#9ca3af;">"또는 :::youtube[영상ID] 로 영상 삽입"</span>
+                            </div>
                             <textarea id="editor" name="content_md" rows="16" required="true" placeholder="글 내용을 마크다운으로 작성하세요..." class="input"></textarea>
                         </div>
                         <button type="submit" class="btn-primary" style="width:100%; justify-content:center; padding:14px;">"글 등록"</button>
@@ -174,7 +179,9 @@ pub async fn new_post_page(cx: &Cx) -> Result<impl View + '_> {
                 <link rel="stylesheet" href=(crate::admin_ui::EASYMDE_CSS_URL)>
                 <script src=(crate::admin_ui::EASYMDE_JS_URL)></script>
                 <script>
-                    {r#"new EasyMDE({element:document.getElementById('editor'),minHeight:'300px',status:false,toolbar:['bold','italic','heading','|','quote','unordered-list','ordered-list','|','link','image','code','preview','side-by-side','fullscreen','guide']})"#}
+                    {(crate::services::markdown::EASYMDE_INIT_JS)}
+                    {(crate::services::markdown::MD_UPLOAD_JS)}
+                    "var easymde=initEasyMDE('editor');bindMdUpload('md-file',easymde);"
                 </script>
             </div>
         </div>

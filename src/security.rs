@@ -45,8 +45,8 @@ impl Layer for SecurityHeaders {
             set(
                 "content-security-policy",
                 "default-src 'self'; \
-                 script-src 'self' 'unsafe-inline' https://www.youtube.com https://s.ytimg.com https://pagead2.googlesyndication.com https://www.googletagservices.com; \
-                 style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; \
+                 script-src 'self' 'unsafe-inline' https://www.youtube.com https://s.ytimg.com https://cdnjs.cloudflare.com https://pagead2.googlesyndication.com https://www.googletagservices.com; \
+                 style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; \
                  font-src 'self' https://fonts.gstatic.com; \
                  img-src 'self' data: https:; \
                  media-src 'self' https:; \

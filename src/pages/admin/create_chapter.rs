@@ -333,6 +333,19 @@ pub async fn pdf_import_chapter(
         &slug,
     )
     .await;
+    let new_id: Option<String> =
+        sqlx::query_scalar("SELECT id FROM manual_chapters WHERE series_id = $1 AND slug = $2")
+            .bind(&s.id)
+            .bind(&slug)
+            .fetch_optional(db)
+            .await
+            .ok()
+            .flatten();
+    if let Some(new_id) = new_id {
+        return Ok(topcoat::router::error::see_other(format!(
+            "/admin/manuals/chapters/edit?id={new_id}"
+        )));
+    }
     Ok(topcoat::router::error::see_other(format!(
         "/admin/manuals/{}",
         s.slug

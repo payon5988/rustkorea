@@ -158,6 +158,7 @@ pub async fn edit_chapter(cx: &Cx) -> Result<impl View + '_> {
                             <div style="margin-bottom:20px;">
                                 <label style="display:block; font-size:13px; font-weight:600; color:#9ca3af; margin-bottom:8px;">"챕터 슬러그"</label>
                                 <input type="text" name="slug" required="true" class="input" style="font-family:monospace;" value=(c.slug.clone())>
+                                <p style="font-size:11px; color:#fbbf24; margin-top:4px;">"주의: 슬러그를 바꾸면 기존 공유 링크가 깨집니다."</p>
                             </div>
                             <div style="margin-bottom:20px;">
                                 <label style="display:block; font-size:13px; font-weight:600; color:#9ca3af; margin-bottom:8px;">"챕터 제목"</label>
@@ -186,4 +187,125 @@ pub async fn edit_chapter(cx: &Cx) -> Result<impl View + '_> {
         }),
         _ => Err(topcoat::router::error::redirect("/admin/manuals").into()),
     }
+}
+
+#[derive(serde::Deserialize)]
+pub struct MoveChapterForm {
+    pub csrf_token: String,
+    pub id: String,
+    pub direction: String,
+}
+
+/// Swap a chapter with its neighbor (up/down) inside the same series.
+#[route(POST "/admin/manuals/chapters/move")]
+pub async fn move_chapter(
+    cx: &Cx,
+    Form(input): Form<MoveChapterForm>,
+) -> Result<topcoat::router::error::SeeOther> {
+    let db: &Db = topcoat::context::app_context(cx);
+
+    if !crate::auth::session::verify_csrf_logged(
+        db,
+        cx,
+        &input.csrf_token,
+        "admin.manuals.chapters.move",
+    )
+    .await
+    {
+        return Ok(topcoat::router::error::see_other("/admin/login"));
+    }
+    let __denied = {
+        let __adb: &crate::db::Db = topcoat::context::app_context(cx);
+        crate::auth::access::require_perm(__adb, cx, "manuals.manage")
+            .await
+            .is_none()
+    };
+    if __denied {
+        return Ok(topcoat::router::error::see_other("/admin/login"));
+    }
+
+    let current: Option<ManualChapter> =
+        sqlx::query_as::<_, ManualChapter>("SELECT * FROM manual_chapters WHERE id = $1")
+            .bind(&input.id)
+            .fetch_optional(db)
+            .await
+            .ok()
+            .flatten();
+    let Some(current) = current else {
+        return Ok(topcoat::router::error::see_other("/admin/manuals"));
+    };
+
+    let neighbor: Option<ManualChapter> = if input.direction == "up" {
+        sqlx::query_as::<_, ManualChapter>(
+            "SELECT * FROM manual_chapters WHERE series_id = $1 AND chapter_index < $2
+             ORDER BY chapter_index DESC LIMIT 1",
+        )
+        .bind(&current.series_id)
+        .bind(current.chapter_index)
+        .fetch_optional(db)
+        .await
+        .ok()
+        .flatten()
+    } else {
+        sqlx::query_as::<_, ManualChapter>(
+            "SELECT * FROM manual_chapters WHERE series_id = $1 AND chapter_index > $2
+             ORDER BY chapter_index ASC LIMIT 1",
+        )
+        .bind(&current.series_id)
+        .bind(current.chapter_index)
+        .fetch_optional(db)
+        .await
+        .ok()
+        .flatten()
+    };
+
+    if let Some(other) = neighbor {
+        let mut tx = match db.begin().await {
+            Ok(tx) => tx,
+            Err(e) => {
+                eprintln!("[admin] move chapter tx begin failed: {e}");
+                return Ok(topcoat::router::error::see_other("/admin/manuals?error=1"));
+            }
+        };
+        // Swap via a temporary out-of-range value to avoid transient ties.
+        let tmp_index = -1;
+        let ok = sqlx::query("UPDATE manual_chapters SET chapter_index = $1 WHERE id = $2")
+            .bind(tmp_index)
+            .bind(&current.id)
+            .execute(&mut *tx)
+            .await
+            .is_ok()
+            && sqlx::query("UPDATE manual_chapters SET chapter_index = $1 WHERE id = $2")
+                .bind(current.chapter_index)
+                .bind(&other.id)
+                .execute(&mut *tx)
+                .await
+                .is_ok()
+            && sqlx::query("UPDATE manual_chapters SET chapter_index = $1 WHERE id = $2")
+                .bind(other.chapter_index)
+                .bind(&current.id)
+                .execute(&mut *tx)
+                .await
+                .is_ok();
+        if ok && tx.commit().await.is_ok() {
+            let actor = crate::auth::access::load_access(db, cx)
+                .await
+                .map(|a| a.user.id)
+                .unwrap_or_default();
+            crate::auth::access::audit(
+                db,
+                cx,
+                &actor,
+                "admin.manuals.chapters.move",
+                "manual_chapters",
+                &current.id,
+                &input.direction,
+            )
+            .await;
+        } else {
+            eprintln!("[admin] move chapter tx failed: {}", current.id);
+        }
+    }
+
+    Ok(topcoat::router::error::see_other("/admin/manuals"))
 }

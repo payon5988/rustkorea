@@ -34,13 +34,14 @@ pub async fn admin_manuals(cx: &Cx) -> Result<impl View + '_> {
 
     let mut series_with_chapters = Vec::new();
     for s in series {
-        let count: (i64,) =
-            sqlx::query_as("SELECT COUNT(*) FROM manual_chapters WHERE series_id = $1")
-                .bind(&s.id)
-                .fetch_one(db)
-                .await
-                .unwrap_or((0,));
-        series_with_chapters.push((s, count.0));
+        let chapters: Vec<crate::models::ManualChapter> = sqlx::query_as(
+            "SELECT * FROM manual_chapters WHERE series_id = $1 ORDER BY chapter_index ASC",
+        )
+        .bind(&s.id)
+        .fetch_all(db)
+        .await
+        .unwrap_or_default();
+        series_with_chapters.push((s, chapters));
     }
 
     Ok(view! {
@@ -83,13 +84,13 @@ pub async fn admin_manuals(cx: &Cx) -> Result<impl View + '_> {
                                 </tr>
                             </thead>
                             <tbody>
-                                for (s, ch_count) in &series_with_chapters {
+                                for (s, chapters) in &series_with_chapters {
                                     <tr style="border-bottom:1px solid rgba(255,255,255,0.03);">
                                         <td style="padding:14px 20px; font-weight:600; color:#d1d5db;">
                                             <a href=(format!("/admin/manuals/{}", s.slug)) style="color:#d1d5db; text-decoration:none;">(s.title.clone())</a>
                                         </td>
                                         <td style="padding:14px 20px; color:#4b5563; font-family:monospace; font-size:12px;">(s.slug.clone())</td>
-                                        <td style="padding:14px 20px; color:#9ca3af;">(ch_count.to_string())</td>
+                                        <td style="padding:14px 20px; color:#9ca3af;">(chapters.len())</td>
                                         <td style="padding:14px 20px;">
                                             <span class="badge" style=((match s.difficulty.as_str() {
                                                     "advanced" => "background:rgba(248,113,113,0.1); color:#f87171;",
@@ -112,6 +113,43 @@ pub async fn admin_manuals(cx: &Cx) -> Result<impl View + '_> {
                                                     <button type="submit" style="background:none; border:none; padding:0; font-size:12px; color:#f87171; cursor:pointer; font-family:inherit;">"삭제"</button>
                                                 </form>
                                             </div>
+                                        </td>
+                                    </tr>
+                                    <tr style="border-bottom:1px solid rgba(255,255,255,0.06);">
+                                        <td colspan="7" style="padding:0 20px 14px 40px; background:rgba(255,255,255,0.015);">
+                                            <details>
+                                                <summary style="font-size:12px; color:#9ca3af; cursor:pointer; padding:8px 0;">(format!("챕터 {}개 (펼치기)", chapters.len()))</summary>
+                                                <div style="display:flex; flex-direction:column; gap:6px; padding:8px 0 4px;">
+                                                    for ch in chapters {
+                                                        <div style="display:flex; align-items:center; gap:10px; font-size:12px;">
+                                                            <span style="color:#4b5563; font-family:monospace; width:24px;">(ch.chapter_index)</span>
+                                                            <a href=(format!("/admin/manuals/chapters/edit?id={}", ch.id)) style="color:#d1d5db; font-weight:600; text-decoration:none;">(ch.title.clone())</a>
+                                                            <span style="color:#4b5563; font-family:monospace;">(ch.slug.clone())</span>
+                                                            <span style="display:inline-flex; gap:4px; margin-left:auto;">
+                                                                <form action="/admin/manuals/chapters/move" method="POST" style="display:inline;">
+                                                                    <input type="hidden" name="csrf_token" value=(csrf_token.clone())>
+                                                                    <input type="hidden" name="id" value=(ch.id.clone())>
+                                                                    <input type="hidden" name="direction" value="up">
+                                                                    <button type="submit" style="background:none; border:none; color:#6b7280; cursor:pointer; font-size:12px; padding:2px 4px;" title="위로">"▲"</button>
+                                                                </form>
+                                                                <form action="/admin/manuals/chapters/move" method="POST" style="display:inline;">
+                                                                    <input type="hidden" name="csrf_token" value=(csrf_token.clone())>
+                                                                    <input type="hidden" name="id" value=(ch.id.clone())>
+                                                                    <input type="hidden" name="direction" value="down">
+                                                                    <button type="submit" style="background:none; border:none; color:#6b7280; cursor:pointer; font-size:12px; padding:2px 4px;" title="아래로">"▼"</button>
+                                                                </form>
+                                                                <a href=(format!("/admin/manuals/chapters/edit?id={}", ch.id)) style="font-size:12px; color:#fbbf24;">"수정"</a>
+                                                                <form action="/admin/manuals/chapters/delete" method="POST" onsubmit="return confirm('이 챕터를 삭제하시겠습니까?')" style="display:inline;">
+                                                                    <input type="hidden" name="csrf_token" value=(csrf_token.clone())>
+                                                                    <input type="hidden" name="id" value=(ch.id.clone())>
+                                                                    <input type="hidden" name="series_slug" value=(s.slug.clone())>
+                                                                    <button type="submit" style="background:none; border:none; padding:0; font-size:12px; color:#f87171; cursor:pointer; font-family:inherit;">"삭제"</button>
+                                                                </form>
+                                                            </span>
+                                                        </div>
+                                                    }
+                                                </div>
+                                            </details>
                                         </td>
                                     </tr>
                                 }

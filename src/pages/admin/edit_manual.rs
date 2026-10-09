@@ -138,6 +138,7 @@ pub async fn edit_manual(cx: &Cx) -> Result<impl View + '_> {
                                     <label style="display:block; font-size:13px; font-weight:600; color:#9ca3af; margin-bottom:8px;">"URL 슬러그"</label>
                                     <input type="text" name="slug" required="true" class="input" style="font-family:monospace;" value=(s.slug.clone())>
                                     <p style="font-size:11px; color:#4b5563; margin-top:6px;">"영문, 하이픈 사용. 예: topcoat-getting-started"</p>
+                                    <p style="font-size:11px; color:#fbbf24; margin-top:4px;">"주의: 슬러그를 바꾸면 기존 공유 링크가 깨집니다."</p>
                                 </div>
                                 <div style="margin-bottom:20px;">
                                     <label style="display:block; font-size:13px; font-weight:600; color:#9ca3af; margin-bottom:8px;">"제목"</label>

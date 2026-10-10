@@ -53,6 +53,7 @@ pub async fn admin_manual_detail(cx: &Cx) -> Result<impl View + '_> {
                     <meta name="viewport" content="width=device-width, initial-scale=1.0">
                     <title>{(format!("{} - Rust Korea Admin", s.title))}</title>
                     <style>{(ADMIN_STYLE)}</style>
+                    <script>{(crate::admin_ui::ADMIN_THEME_JS)}</script>
                 </head>
                 <body style="display:flex; min-height:100vh;">
                     {AdminSidebar(active: "/admin/manuals".into())}
@@ -60,45 +61,45 @@ pub async fn admin_manual_detail(cx: &Cx) -> Result<impl View + '_> {
 
                         <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:24px;">
                             <div>
-                                <a href="/admin/manuals" style="font-size:12px; color:#6b7280; display:inline-flex; align-items:center; gap:6px; margin-bottom:12px;">
+                                <a href="/admin/manuals" style="font-size:12px; color:var(--muted2); display:inline-flex; align-items:center; gap:6px; margin-bottom:12px;">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
                                     "매뉴얼 목록"
                                 </a>
                                 <h1 style="font-size:1.25rem; font-weight:700; letter-spacing:-0.01em;">(s.title.clone())</h1>
-                                <p style="font-size:13px; color:#6b7280; margin-top:2px;">(s.description.clone())</p>
+                                <p style="font-size:13px; color:var(--muted2); margin-top:2px;">(s.description.clone())</p>
                             </div>
                             <div style="display:flex; gap:8px;">
-                                <a href=(format!("/admin/manuals/{}/chapters/new", s.slug.clone())) style="background:#1a1d27; color:#d1d5db; padding:10px 16px; border-radius:8px; font-size:13px; border:1px solid #2a2d3a;">"+ 새 챕터"</a>
-                                <a href=(format!("/admin/manuals/edit?id={}", s.id)) style="background:#1a1d27; color:#fbbf24; padding:10px 16px; border-radius:8px; font-size:13px; border:1px solid #2a2d3a;">"시리즈 수정"</a>
+                                <a href=(format!("/admin/manuals/{}/chapters/new", s.slug.clone())) style="background:var(--card); color:var(--text3); padding:10px 16px; border-radius:8px; font-size:13px; border:1px solid var(--border);">"+ 새 챕터"</a>
+                                <a href=(format!("/admin/manuals/edit?id={}", s.id)) style="background:var(--card); color:var(--amber); padding:10px 16px; border-radius:8px; font-size:13px; border:1px solid var(--border);">"시리즈 수정"</a>
                             </div>
                         </div>
 
-                        <div style="background:#1a1d27; border:1px solid #2a2d3a; border-radius:10px; overflow:hidden;">
-                            <div style="padding:14px 20px; border-bottom:1px solid #2a2d3a;">
-                                <h2 style="font-size:14px; font-weight:600; color:#d1d5db;">"챕터 목록"</h2>
+                        <div style="background:var(--card); border:1px solid var(--border); border-radius:10px; overflow:hidden;">
+                            <div style="padding:14px 20px; border-bottom:1px solid var(--border);">
+                                <h2 style="font-size:14px; font-weight:600; color:var(--text3);">"챕터 목록"</h2>
                             </div>
                             if chapters.is_empty() {
                                 <div style="padding:48px; text-align:center;">
-                                    <p style="font-size:13px; color:#6b7280; margin-bottom:12px;">"등록된 챕터가 없습니다"</p>
+                                    <p style="font-size:13px; color:var(--muted2); margin-bottom:12px;">"등록된 챕터가 없습니다"</p>
                                     <a href=(format!("/admin/manuals/{}/chapters/new", s.slug)) style="font-size:13px; color:#DE5B30; font-weight:600;">"첫 챕터 추가"</a>
                                 </div>
                             } else {
                                 for ch in &chapters {
-                                    <div style="padding:14px 20px; border-bottom:1px solid rgba(255,255,255,0.03); display:flex; align-items:center; justify-content:space-between;">
+                                    <div style="padding:14px 20px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between;">
                                         <div>
                                             <div style="display:flex; align-items:center; gap:10px;">
-                                                <span style="font-size:11px; color:#4b5563; font-family:monospace;">(format!("{:02}", ch.chapter_index))</span>
-                                                <span style="font-size:14px; font-weight:600; color:#d1d5db;">(ch.title.clone())</span>
+                                                <span style="font-size:11px; color:var(--dim); font-family:monospace;">(format!("{:02}", ch.chapter_index))</span>
+                                                <span style="font-size:14px; font-weight:600; color:var(--text3);">(ch.title.clone())</span>
                                             </div>
-                                            <p style="font-size:12px; color:#4b5563; margin-top:3px; font-family:monospace;">(ch.slug.clone())</p>
+                                            <p style="font-size:12px; color:var(--dim); margin-top:3px; font-family:monospace;">(ch.slug.clone())</p>
                                         </div>
                                         <div style="display:flex; gap:8px; align-items:center;">
-                                            <a href=(format!("/admin/manuals/chapters/edit?id={}", ch.id)) style="font-size:12px; color:#fbbf24;">"수정"</a>
+                                            <a href=(format!("/admin/manuals/chapters/edit?id={}", ch.id)) style="font-size:12px; color:var(--amber);">"수정"</a>
                                             <form action="/admin/manuals/chapters/delete" method="POST" onsubmit="return confirm('이 챕터를 삭제하시겠습니까?')" style="display:inline;">
                                                 <input type="hidden" name="csrf_token" value=(csrf_token.clone())>
                                                 <input type="hidden" name="id" value=(ch.id.clone())>
                                                 <input type="hidden" name="series_slug" value=(s.slug.clone())>
-                                                <button type="submit" style="background:none; border:none; padding:0; font-size:12px; color:#f87171; cursor:pointer; font-family:inherit;">"삭제"</button>
+                                                <button type="submit" style="background:none; border:none; padding:0; font-size:12px; color:var(--red); cursor:pointer; font-family:inherit;">"삭제"</button>
                                             </form>
                                         </div>
                                     </div>

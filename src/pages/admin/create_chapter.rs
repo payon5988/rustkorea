@@ -125,6 +125,7 @@ pub async fn new_chapter(cx: &Cx) -> Result<impl View + '_> {
                 <link rel="stylesheet" href=(crate::admin_ui::EASYMDE_CSS_URL)>
                 <script src=(crate::admin_ui::EASYMDE_JS_URL)></script>
                 <style>{(ADMIN_STYLE)}</style>
+                <script>{(crate::admin_ui::ADMIN_THEME_JS)}</script>
                 <style>{(crate::services::markdown::MARKDOWN_CSS)}</style>
             </head>
             <body style="display:flex; min-height:100vh;">
@@ -132,31 +133,31 @@ pub async fn new_chapter(cx: &Cx) -> Result<impl View + '_> {
                 <div style="flex:1; padding:24px 32px; overflow-y:auto;">
 
                     <div style="margin-bottom:24px;">
-                        <a href="/admin/chapters/new" style="font-size:12px; color:#6b7280; display:inline-flex; align-items:center; gap:6px; margin-bottom:12px;">
+                        <a href="/admin/chapters/new" style="font-size:12px; color:var(--muted2); display:inline-flex; align-items:center; gap:6px; margin-bottom:12px;">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
                             "시리즈 선택"
                         </a>
                         <h1 style="font-size:1.25rem; font-weight:700; letter-spacing:-0.01em;">"새 챕터 추가"</h1>
-                        <p style="font-size:13px; color:#6b7280; margin-top:2px;">(format!("시리즈: {}", s.title.clone()))</p>
+                        <p style="font-size:13px; color:var(--muted2); margin-top:2px;">(format!("시리즈: {}", s.title.clone()))</p>
                     </div>
 
                     <form action=(format!("/admin/manuals/{}/chapters/create", series_slug)) method="POST" style="max-width:720px;">
                         <input type="hidden" name="csrf_token" value=(csrf_token.clone())>
-                        <div style="background:#1a1d27; border:1px solid #2a2d3a; border-radius:10px; padding:24px; margin-bottom:16px;">
+                        <div style="background:var(--card); border:1px solid var(--border); border-radius:10px; padding:24px; margin-bottom:16px;">
                             <div style="margin-bottom:20px;">
-                                <label style="display:block; font-size:13px; font-weight:600; color:#9ca3af; margin-bottom:8px;">"챕터 슬러그"</label>
+                                <label style="display:block; font-size:13px; font-weight:600; color:var(--muted); margin-bottom:8px;">"챕터 슬러그"</label>
                                 <input type="text" name="slug" required="true" placeholder="01-introduction" class="input" style="font-family:monospace;">
                             </div>
                             <div style="margin-bottom:20px;">
-                                <label style="display:block; font-size:13px; font-weight:600; color:#9ca3af; margin-bottom:8px;">"챕터 제목"</label>
+                                <label style="display:block; font-size:13px; font-weight:600; color:var(--muted); margin-bottom:8px;">"챕터 제목"</label>
                                 <input type="text" name="title" required="true" placeholder="1장: Introduction" class="input">
                             </div>
                             <div>
-                                <label style="display:block; font-size:13px; font-weight:600; color:#9ca3af; margin-bottom:8px;">"내용 (Markdown)"</label>
+                                <label style="display:block; font-size:13px; font-weight:600; color:var(--muted); margin-bottom:8px;">"내용 (Markdown)"</label>
                                 <div style="margin-bottom:12px; display:flex; align-items:center; gap:10px;">
-                                <label for="md-file" style="font-size:12px; color:#9ca3af; cursor:pointer; border:1px dashed #2a2d3a; border-radius:6px; padding:8px 14px;">".md 파일 불러오기"</label>
+                                <label for="md-file" style="font-size:12px; color:var(--muted); cursor:pointer; border:1px dashed var(--border); border-radius:6px; padding:8px 14px;">".md 파일 불러오기"</label>
                                 <input type="file" id="md-file" accept=".md,.markdown,.txt" style="display:none;">
-                                <span style="font-size:11px; color:#4b5563;">"또는 :::youtube[영상ID] 로 영상 삽입"</span>
+                                <span style="font-size:11px; color:var(--dim);">"또는 :::youtube[영상ID] 로 영상 삽입"</span>
                                 </div>
                                 <textarea id="editor" name="content_md" rows="20" required="true" class="input" style="font-family:'SF Mono','Fira Code',monospace; font-size:13px; line-height:1.7;"></textarea>
                             </div>
@@ -166,12 +167,12 @@ pub async fn new_chapter(cx: &Cx) -> Result<impl View + '_> {
                     <form action="/admin/manuals/pdf-import" method="POST" enctype="multipart/form-data" style="max-width:720px; margin-top:16px;">
                         <input type="hidden" name="csrf_token" value=(csrf_token.clone())>
                         <input type="hidden" name="series_slug" value=(s.slug.clone())>
-                        <div style="background:#1a1d27; border:1px solid #2a2d3a; border-radius:10px; padding:24px;">
-                            <h2 style="font-size:15px; font-weight:700; color:#f9fafb; margin-bottom:4px;">"PDF 가져오기"</h2>
-                            <p style="font-size:12px; color:#6b7280; margin-bottom:16px;">"PDF 텍스트를 추출해 초안 챕터로 만듭니다 (최대 2MB, 표·이미지는 수동 보정 필요)."</p>
+                        <div style="background:var(--card); border:1px solid var(--border); border-radius:10px; padding:24px;">
+                            <h2 style="font-size:15px; font-weight:700; color:var(--text); margin-bottom:4px;">"PDF 가져오기"</h2>
+                            <p style="font-size:12px; color:var(--muted2); margin-bottom:16px;">"PDF 텍스트를 추출해 초안 챕터로 만듭니다 (최대 2MB, 표·이미지는 수동 보정 필요)."</p>
                             <div style="display:flex; gap:12px; align-items:center;">
-                                <input type="file" name="file" required="true" accept=".pdf,application/pdf" style="flex:1; font-size:13px; color:#9ca3af;">
-                                <button type="submit" style="background:#1a1d27; color:#e5e7eb; padding:10px 20px; border-radius:8px; font-size:14px; font-weight:600; border:1px solid #2a2d3a; cursor:pointer; white-space:nowrap;">"PDF에서 만들기"</button>
+                                <input type="file" name="file" required="true" accept=".pdf,application/pdf" style="flex:1; font-size:13px; color:var(--muted);">
+                                <button type="submit" style="background:var(--card); color:var(--text2); padding:10px 20px; border-radius:8px; font-size:14px; font-weight:600; border:1px solid var(--border); cursor:pointer; white-space:nowrap;">"PDF에서 만들기"</button>
                             </div>
                         </div>
                     </form>

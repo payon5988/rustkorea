@@ -356,7 +356,7 @@ pub async fn admin_categories(cx: &Cx) -> Result<impl View + '_> {
             .unwrap_or_default();
     let count_map: std::collections::HashMap<String, i64> = post_counts.into_iter().collect();
 
-    let input_style = "width:100%; background:#0f1117; border:1px solid #2a2d3a; border-radius:8px; padding:10px 14px; font-size:14px; color:#e5e7eb; outline:none;";
+    let input_style = "width:100%; background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:10px 14px; font-size:14px; color:var(--text2); outline:none;";
 
     Ok(view! {
         <html lang="ko">
@@ -365,6 +365,7 @@ pub async fn admin_categories(cx: &Cx) -> Result<impl View + '_> {
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>"카테고리 관리 - Rust Korea Admin"</title>
             <style>{(ADMIN_STYLE)}</style>
+            <script>{(crate::admin_ui::ADMIN_THEME_JS)}</script>
         </head>
         <body style="display:flex; min-height:100vh;">
             {AdminSidebar(active: "/admin/categories".into())}
@@ -373,35 +374,35 @@ pub async fn admin_categories(cx: &Cx) -> Result<impl View + '_> {
                 <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:24px;">
                     <div>
                         <h1 style="font-size:1.25rem; font-weight:700; letter-spacing:-0.01em;">"카테고리 관리"</h1>
-                        <p style="font-size:13px; color:#6b7280; margin-top:2px;">(format!("{}개 카테고리", categories.len()))</p>
+                        <p style="font-size:13px; color:var(--muted2); margin-top:2px;">(format!("{}개 카테고리", categories.len()))</p>
                     </div>
                 </div>
 
                 <div style="display:grid; grid-template-columns:1fr 320px; gap:24px;">
-                    <div style="background:#1a1d27; border:1px solid #2a2d3a; border-radius:10px; overflow:hidden;">
+                    <div style="background:var(--card); border:1px solid var(--border); border-radius:10px; overflow:hidden;">
                         <table style="width:100%; font-size:13px; border-collapse:collapse;">
                             <thead>
-                                <tr style="border-bottom:1px solid #2a2d3a; text-align:left;">
-                                    <th style="padding:12px 20px; font-size:11px; font-weight:600; color:#6b7280; text-transform:uppercase; letter-spacing:0.04em;">"색상"</th>
-                                    <th style="padding:12px 20px; font-size:11px; font-weight:600; color:#6b7280; text-transform:uppercase; letter-spacing:0.04em;">"이름"</th>
-                                    <th style="padding:12px 20px; font-size:11px; font-weight:600; color:#6b7280; text-transform:uppercase; letter-spacing:0.04em;">"슬러그"</th>
-                                    <th style="padding:12px 20px; font-size:11px; font-weight:600; color:#6b7280; text-transform:uppercase; letter-spacing:0.04em;">"쓰기 권한"</th>
-                                    <th style="padding:12px 20px; font-size:11px; font-weight:600; color:#6b7280; text-transform:uppercase; letter-spacing:0.04em;">"게시글"</th>
-                                    <th style="padding:12px 20px; font-size:11px; font-weight:600; color:#6b7280; text-transform:uppercase; letter-spacing:0.04em; text-align:right;">"관리"</th>
+                                <tr style="border-bottom:1px solid var(--border); text-align:left;">
+                                    <th style="padding:12px 20px; font-size:11px; font-weight:600; color:var(--muted2); text-transform:uppercase; letter-spacing:0.04em;">"색상"</th>
+                                    <th style="padding:12px 20px; font-size:11px; font-weight:600; color:var(--muted2); text-transform:uppercase; letter-spacing:0.04em;">"이름"</th>
+                                    <th style="padding:12px 20px; font-size:11px; font-weight:600; color:var(--muted2); text-transform:uppercase; letter-spacing:0.04em;">"슬러그"</th>
+                                    <th style="padding:12px 20px; font-size:11px; font-weight:600; color:var(--muted2); text-transform:uppercase; letter-spacing:0.04em;">"쓰기 권한"</th>
+                                    <th style="padding:12px 20px; font-size:11px; font-weight:600; color:var(--muted2); text-transform:uppercase; letter-spacing:0.04em;">"게시글"</th>
+                                    <th style="padding:12px 20px; font-size:11px; font-weight:600; color:var(--muted2); text-transform:uppercase; letter-spacing:0.04em; text-align:right;">"관리"</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 for cat in &categories {
                                     let cnt = count_map.get(&cat.slug).unwrap_or(&0);
                                     let opacity = if cat.visible == 0 { "0.5" } else { "1" };
-                                    let toggle_color = if cat.visible == 1 { "#fbbf24" } else { "#6b7280" };
+                                    let toggle_color = if cat.visible == 1 { "var(--amber)" } else { "var(--muted2)" };
                                     let toggle_label = if cat.visible == 1 { "숨기기" } else { "표시" };
-                                    <tr style=(format!("border-bottom:1px solid rgba(255,255,255,0.03); opacity:{};", opacity))>
+                                    <tr style=(format!("border-bottom:1px solid var(--line); opacity:{};", opacity))>
                                         <td style="padding:14px 20px;">
                                             <div style="width:12px; height:12px; border-radius:50%; background:(cat.color.clone());"></div>
                                         </td>
-                                        <td style="padding:14px 20px; font-weight:600; color:#d1d5db;">(cat.name.clone())</td>
-                                        <td style="padding:14px 20px; color:#9ca3af; font-family:monospace; font-size:12px;">(cat.slug.clone())</td>
+                                        <td style="padding:14px 20px; font-weight:600; color:var(--text3);">(cat.name.clone())</td>
+                                        <td style="padding:14px 20px; color:var(--muted); font-family:monospace; font-size:12px;">(cat.slug.clone())</td>
                                         <td style="padding:14px 20px;">
                                             <span style=(format!("font-size:11px; font-weight:600; padding:3px 8px; border-radius:9999px; color:{}; background:{}1a;",
                                                 match cat.write_permission.as_str() { "admin" => "#DC2626", "editor" => "#F59E0B", _ => "#10B981" },
@@ -410,18 +411,18 @@ pub async fn admin_categories(cx: &Cx) -> Result<impl View + '_> {
                                                 (match cat.write_permission.as_str() { "admin" => "관리자만", "editor" => "운영진", _ => "전체" })
                                             </span>
                                         </td>
-                                        <td style="padding:14px 20px; color:#9ca3af;">(cnt)</td>
+                                        <td style="padding:14px 20px; color:var(--muted);">(cnt)</td>
                                         <td style="padding:14px 20px; text-align:right;">
                                             <div style="display:flex; gap:8px; justify-content:flex-end; align-items:center;">
                                                 <form action=(format!("/admin/categories/{}/move_up", cat.id)) method="POST" style="display:inline;">
                                                     <input type="hidden" name="csrf_token" value=(csrf_token.clone())>
-                                                    <button type="submit" style="font-size:11px; color:#6b7280; background:none; border:none; cursor:pointer; padding:2px 4px;" title="위로">"▲"</button>
+                                                    <button type="submit" style="font-size:11px; color:var(--muted2); background:none; border:none; cursor:pointer; padding:2px 4px;" title="위로">"▲"</button>
                                                 </form>
                                                 <form action=(format!("/admin/categories/{}/move_down", cat.id)) method="POST" style="display:inline;">
                                                     <input type="hidden" name="csrf_token" value=(csrf_token.clone())>
-                                                    <button type="submit" style="font-size:11px; color:#6b7280; background:none; border:none; cursor:pointer; padding:2px 4px;" title="아래로">"▼"</button>
+                                                    <button type="submit" style="font-size:11px; color:var(--muted2); background:none; border:none; cursor:pointer; padding:2px 4px;" title="아래로">"▼"</button>
                                                 </form>
-                                                <button type="button" onclick="fillCatEdit(this)" data-id=(cat.id.clone()) data-name=(cat.name.clone()) data-color=(cat.color.clone()) data-desc=(cat.description.clone()) data-perm=(cat.write_permission.clone()) style="font-size:12px; color:#60a5fa; background:none; border:none; cursor:pointer; font-weight:600;">"수정"</button>
+                                                <button type="button" onclick="fillCatEdit(this)" data-id=(cat.id.clone()) data-name=(cat.name.clone()) data-color=(cat.color.clone()) data-desc=(cat.description.clone()) data-perm=(cat.write_permission.clone()) style="font-size:12px; color:var(--blue); background:none; border:none; cursor:pointer; font-weight:600;">"수정"</button>
                                                 <form action=(format!("/admin/categories/{}/toggle", cat.id)) method="POST" style="display:inline;">
                                                     <input type="hidden" name="csrf_token" value=(csrf_token.clone())>
                                                     <button type="submit" style=(format!("font-size:12px; color:{}; background:none; border:none; cursor:pointer; font-weight:600;", toggle_color))>
@@ -431,7 +432,7 @@ pub async fn admin_categories(cx: &Cx) -> Result<impl View + '_> {
                                                 if cat.slug != "general" {
                                                     <form action=(format!("/admin/categories/{}/delete", cat.id)) method="POST" style="display:inline;" onsubmit="return confirm('정말 삭제하시겠습니까?')">
                                                         <input type="hidden" name="csrf_token" value=(csrf_token.clone())>
-                                                        <button type="submit" style="font-size:12px; color:#f87171; background:none; border:none; cursor:pointer; font-weight:600;">"삭제"</button>
+                                                        <button type="submit" style="font-size:12px; color:var(--red); background:none; border:none; cursor:pointer; font-weight:600;">"삭제"</button>
                                                     </form>
                                                 }
                                             </div>
@@ -443,31 +444,31 @@ pub async fn admin_categories(cx: &Cx) -> Result<impl View + '_> {
                     </div>
 
                     <div>
-                        <div style="background:#1a1d27; border:1px solid #2a2d3a; border-radius:10px; padding:24px;">
-                            <h2 style="font-size:14px; font-weight:700; color:#e5e7eb; margin-bottom:16px;">"새 카테고리 추가"</h2>
+                        <div style="background:var(--card); border:1px solid var(--border); border-radius:10px; padding:24px;">
+                            <h2 style="font-size:14px; font-weight:700; color:var(--text2); margin-bottom:16px;">"새 카테고리 추가"</h2>
                             <form action="/admin/categories/create" method="POST" style="display:flex; flex-direction:column; gap:14px;">
                                 <input type="hidden" name="csrf_token" value=(csrf_token.clone())>
                                 <div>
-                                    <label style="display:block; font-size:12px; font-weight:600; color:#9ca3af; margin-bottom:6px;">"슬러그 (영문, 고유값)"</label>
+                                    <label style="display:block; font-size:12px; font-weight:600; color:var(--muted); margin-bottom:6px;">"슬러그 (영문, 고유값)"</label>
                                     <input type="text" name="slug" required="true" placeholder="예: rust-tips" style=(input_style)>
                                 </div>
                                 <div>
-                                    <label style="display:block; font-size:12px; font-weight:600; color:#9ca3af; margin-bottom:6px;">"이름"</label>
+                                    <label style="display:block; font-size:12px; font-weight:600; color:var(--muted); margin-bottom:6px;">"이름"</label>
                                     <input type="text" name="name" required="true" placeholder="예: Rust 팁" style=(input_style)>
                                 </div>
                                 <div>
-                                    <label style="display:block; font-size:12px; font-weight:600; color:#9ca3af; margin-bottom:6px;">"색상 (HEX)"</label>
+                                    <label style="display:block; font-size:12px; font-weight:600; color:var(--muted); margin-bottom:6px;">"색상 (HEX)"</label>
                                     <div style="display:flex; gap:8px; align-items:center;">
-                                        <input type="color" id="color-picker" value="#6b7280" style="width:40px; height:36px; border:none; cursor:pointer; background:transparent;" oninput="document.getElementById('color-hex').value=this.value">
-                                        <input type="text" name="color" id="color-hex" value="#6b7280" style="width:100px; background:#0f1117; border:1px solid #2a2d3a; border-radius:8px; padding:8px 10px; font-size:13px; color:#e5e7eb; outline:none; font-family:monospace;" oninput="document.getElementById('color-picker').value=this.value">
+                                        <input type="color" id="color-picker" value="var(--muted2)" style="width:40px; height:36px; border:none; cursor:pointer; background:transparent;" oninput="document.getElementById('color-hex').value=this.value">
+                                        <input type="text" name="color" id="color-hex" value="var(--muted2)" style="width:100px; background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:8px 10px; font-size:13px; color:var(--text2); outline:none; font-family:monospace;" oninput="document.getElementById('color-picker').value=this.value">
                                     </div>
                                 </div>
                                 <div>
-                                    <label style="display:block; font-size:12px; font-weight:600; color:#9ca3af; margin-bottom:6px;">"설명"</label>
+                                    <label style="display:block; font-size:12px; font-weight:600; color:var(--muted); margin-bottom:6px;">"설명"</label>
                                     <input type="text" name="description" placeholder="카테고리 설명" style=(input_style)>
                                 </div>
                                 <div>
-                                    <label style="display:block; font-size:12px; font-weight:600; color:#9ca3af; margin-bottom:6px;">"쓰기 권한"</label>
+                                    <label style="display:block; font-size:12px; font-weight:600; color:var(--muted); margin-bottom:6px;">"쓰기 권한"</label>
                                     <select name="write_permission" style=(input_style)>
                                         <option value="everyone">"전체 (로그인 사용자)"</option>
                                         <option value="editor">"운영진 (관리자 + 에디터)"</option>
@@ -485,28 +486,28 @@ pub async fn admin_categories(cx: &Cx) -> Result<impl View + '_> {
                 <script>
                     {r#"function fillCatEdit(btn){var d=btn.dataset;document.getElementById('edit-id').value=d.id;document.getElementById('edit-name').value=d.name;document.getElementById('edit-color').value=d.color;document.getElementById('edit-color-pick').value=d.color;document.getElementById('edit-desc').value=d.desc;document.getElementById('edit-perm').value=d.perm;document.getElementById('edit-modal').style.display='flex'}"#}
                 </script>
-                <div style="background:#1a1d27; border:1px solid #2a2d3a; border-radius:12px; padding:28px; width:420px; max-width:90vw;">
-                    <h3 style="font-size:16px; font-weight:700; color:#f9fafb; margin-bottom:20px;">"카테고리 수정"</h3>
+                <div style="background:var(--card); border:1px solid var(--border); border-radius:12px; padding:28px; width:420px; max-width:90vw;">
+                    <h3 style="font-size:16px; font-weight:700; color:var(--text); margin-bottom:20px;">"카테고리 수정"</h3>
                     <form action="/admin/categories/update" method="POST" style="display:flex; flex-direction:column; gap:14px;">
                         <input type="hidden" name="csrf_token" value=(csrf_token.clone())>
                         <input type="hidden" id="edit-id" name="id">
                         <div>
-                            <label style="display:block; font-size:12px; font-weight:600; color:#9ca3af; margin-bottom:6px;">"이름"</label>
+                            <label style="display:block; font-size:12px; font-weight:600; color:var(--muted); margin-bottom:6px;">"이름"</label>
                             <input type="text" id="edit-name" name="name" required="true" style=(input_style)>
                         </div>
                         <div>
-                            <label style="display:block; font-size:12px; font-weight:600; color:#9ca3af; margin-bottom:6px;">"색상"</label>
+                            <label style="display:block; font-size:12px; font-weight:600; color:var(--muted); margin-bottom:6px;">"색상"</label>
                             <div style="display:flex; gap:8px; align-items:center;">
-                                <input type="color" id="edit-color-pick" value="#6b7280" style="width:40px; height:36px; border:none; cursor:pointer; background:transparent;" oninput="document.getElementById('edit-color').value=this.value">
-                                <input type="text" id="edit-color" name="color" value="#6b7280" style="width:100px; background:#0f1117; border:1px solid #2a2d3a; border-radius:8px; padding:8px 10px; font-size:13px; color:#e5e7eb; outline:none; font-family:monospace;" oninput="document.getElementById('edit-color-pick').value=this.value">
+                                <input type="color" id="edit-color-pick" value="var(--muted2)" style="width:40px; height:36px; border:none; cursor:pointer; background:transparent;" oninput="document.getElementById('edit-color').value=this.value">
+                                <input type="text" id="edit-color" name="color" value="var(--muted2)" style="width:100px; background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:8px 10px; font-size:13px; color:var(--text2); outline:none; font-family:monospace;" oninput="document.getElementById('edit-color-pick').value=this.value">
                             </div>
                         </div>
                         <div>
-                            <label style="display:block; font-size:12px; font-weight:600; color:#9ca3af; margin-bottom:6px;">"설명"</label>
+                            <label style="display:block; font-size:12px; font-weight:600; color:var(--muted); margin-bottom:6px;">"설명"</label>
                             <input type="text" id="edit-desc" name="description" style=(input_style)>
                         </div>
                         <div>
-                            <label style="display:block; font-size:12px; font-weight:600; color:#9ca3af; margin-bottom:6px;">"쓰기 권한"</label>
+                            <label style="display:block; font-size:12px; font-weight:600; color:var(--muted); margin-bottom:6px;">"쓰기 권한"</label>
                             <select id="edit-perm" name="write_permission" style=(input_style)>
                                 <option value="everyone">"전체 (로그인 사용자)"</option>
                                 <option value="editor">"운영진 (관리자 + 에디터)"</option>
@@ -514,7 +515,7 @@ pub async fn admin_categories(cx: &Cx) -> Result<impl View + '_> {
                             </select>
                         </div>
                         <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:8px;">
-                            <button type="button" onclick="document.getElementById('edit-modal').style.display='none'" style="background:#2a2d3a; color:#9ca3af; padding:10px 20px; border-radius:8px; font-weight:500; font-size:14px; border:none; cursor:pointer;">"취소"</button>
+                            <button type="button" onclick="document.getElementById('edit-modal').style.display='none'" style="background:var(--border); color:var(--muted); padding:10px 20px; border-radius:8px; font-weight:500; font-size:14px; border:none; cursor:pointer;">"취소"</button>
                             <button type="submit" style="background:#DE5B30; color:#fff; padding:10px 20px; border-radius:8px; font-weight:600; font-size:14px; border:none; cursor:pointer;">"저장"</button>
                         </div>
                     </form>

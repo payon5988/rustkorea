@@ -49,38 +49,39 @@ pub async fn admin_reports(cx: &Cx) -> Result<impl View + '_> {
 
     Ok(view! {
         <html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>"신고 관리 - Admin"</title><style>{(ADMIN_STYLE)}</style></head>
+        <script>{(crate::admin_ui::ADMIN_THEME_JS)}</script>
         <body style="display:flex; min-height:100vh;">
             {AdminSidebar(active: "/admin/reports".into())}
             <div style="flex:1; padding:24px 32px; overflow-y:auto;">
                 <h1 style="font-size:1.25rem; font-weight:700; margin-bottom:24px;">"신고 관리"</h1>
                 if reports.is_empty() {
-                    <div style="background:#1a1d27; border:1px solid #2a2d3a; border-radius:10px; padding:64px; text-align:center;">
-                        <p style="font-size:14px; color:#6b7280;">"신고 내역이 없습니다."</p>
+                    <div style="background:var(--card); border:1px solid var(--border); border-radius:10px; padding:64px; text-align:center;">
+                        <p style="font-size:14px; color:var(--muted2);">"신고 내역이 없습니다."</p>
                     </div>
                 } else {
-                    <div style="background:#1a1d27; border:1px solid #2a2d3a; border-radius:10px; overflow:hidden;">
+                    <div style="background:var(--card); border:1px solid var(--border); border-radius:10px; overflow:hidden;">
                         <table style="width:100%; font-size:13px; border-collapse:collapse;">
-                            <thead><tr style="border-bottom:1px solid #2a2d3a; text-align:left;">
-                                <th style="padding:12px 16px; font-size:11px; font-weight:600; color:#6b7280; text-transform:uppercase;">"신고자"</th>
-                                <th style="padding:12px 16px; font-size:11px; font-weight:600; color:#6b7280; text-transform:uppercase;">"대상"</th>
-                                <th style="padding:12px 16px; font-size:11px; font-weight:600; color:#6b7280; text-transform:uppercase;">"사유"</th>
-                                <th style="padding:12px 16px; font-size:11px; font-weight:600; color:#6b7280; text-transform:uppercase;">"상태"</th>
-                                <th style="padding:12px 16px; font-size:11px; font-weight:600; color:#6b7280; text-transform:uppercase; text-align:right;">"관리"</th>
+                            <thead><tr style="border-bottom:1px solid var(--border); text-align:left;">
+                                <th style="padding:12px 16px; font-size:11px; font-weight:600; color:var(--muted2); text-transform:uppercase;">"신고자"</th>
+                                <th style="padding:12px 16px; font-size:11px; font-weight:600; color:var(--muted2); text-transform:uppercase;">"대상"</th>
+                                <th style="padding:12px 16px; font-size:11px; font-weight:600; color:var(--muted2); text-transform:uppercase;">"사유"</th>
+                                <th style="padding:12px 16px; font-size:11px; font-weight:600; color:var(--muted2); text-transform:uppercase;">"상태"</th>
+                                <th style="padding:12px 16px; font-size:11px; font-weight:600; color:var(--muted2); text-transform:uppercase; text-align:right;">"관리"</th>
                             </tr></thead>
                             <tbody>
                                 for r in &reports {
-                                    let status_color = match r.status.as_str() { "pending" => "#F59E0B", "resolved" => "#10B981", _ => "#6b7280" };
-                                    <tr style="border-bottom:1px solid rgba(255,255,255,0.03);">
-                                        <td style="padding:12px 16px; color:#9ca3af;">(r.reporter_name.clone())</td>
-                                        <td style="padding:12px 16px; color:#e5e7eb;">(format!("{}: {}", r.target_type, r.target_id))</td>
-                                        <td style="padding:12px 16px; color:#e5e7eb; max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">(r.reason.clone())</td>
+                                    let status_color = match r.status.as_str() { "pending" => "#F59E0B", "resolved" => "#10B981", _ => "var(--muted2)" };
+                                    <tr style="border-bottom:1px solid var(--line);">
+                                        <td style="padding:12px 16px; color:var(--muted);">(r.reporter_name.clone())</td>
+                                        <td style="padding:12px 16px; color:var(--text2);">(format!("{}: {}", r.target_type, r.target_id))</td>
+                                        <td style="padding:12px 16px; color:var(--text2); max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">(r.reason.clone())</td>
                                         <td style="padding:12px 16px;"><span style=(format!("font-size:12px; padding:2px 8px; border-radius:9999px; color:{status_color}; background:{status_color}1a;"))>(r.status.clone())</span></td>
                                         <td style="padding:12px 16px; text-align:right;">
                                             <div style="display:flex; gap:6px; justify-content:flex-end;">
                                                 if r.status == "pending" {
                                                     <form action=(format!("/admin/reports/{}/resolve", r.id)) method="POST" style="display:inline;"><button type="submit" style="font-size:12px; color:#10B981; background:none; border:none; cursor:pointer; font-weight:600;">"해결"</button></form>
                                                         <input type="hidden" name="csrf_token" value=(csrf_token.clone())>
-                                                    <form action=(format!("/admin/reports/{}/dismiss", r.id)) method="POST" style="display:inline;"><button type="submit" style="font-size:12px; color:#6b7280; background:none; border:none; cursor:pointer; font-weight:600;">"기각"</button></form>
+                                                    <form action=(format!("/admin/reports/{}/dismiss", r.id)) method="POST" style="display:inline;"><button type="submit" style="font-size:12px; color:var(--muted2); background:none; border:none; cursor:pointer; font-weight:600;">"기각"</button></form>
                                                         <input type="hidden" name="csrf_token" value=(csrf_token.clone())>
                                                 }
                                             </div>

@@ -40,6 +40,7 @@ pub async fn twofa_page(cx: &Cx) -> Result<impl View + '_> {
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>"2단계 인증 - Rust Korea Admin"</title>
             <style>{(ADMIN_STYLE)}</style>
+            <script>{(crate::admin_ui::ADMIN_THEME_JS)}</script>
         </head>
         <body>
             <div class="wrap">

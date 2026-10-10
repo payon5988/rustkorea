@@ -22,9 +22,9 @@ pub async fn AdminSidebar(cx: &Cx, active: String) -> Result<impl View + '_> {
     let nav_item = |href: &str, active: &str| -> String {
         let is_active = active == href || (href != "/admin" && active.starts_with(href));
         if is_active {
-            "display:flex; align-items:center; gap:10px; padding:9px 12px; font-size:13px; color:#f9fafb; background:rgba(222,91,48,0.12); border-radius:8px; font-weight:600; transition:all 0.15s;".to_string()
+            "display:flex; align-items:center; gap:10px; padding:9px 12px; font-size:13px; color:var(--text); background:rgba(222,91,48,0.12); border-radius:8px; font-weight:600; transition:all 0.15s;".to_string()
         } else {
-            "display:flex; align-items:center; gap:10px; padding:9px 12px; font-size:13px; color:#9ca3af; border-radius:8px; transition:all 0.15s;".to_string()
+            "display:flex; align-items:center; gap:10px; padding:9px 12px; font-size:13px; color:var(--muted); border-radius:8px; transition:all 0.15s;".to_string()
         }
     };
 
@@ -83,7 +83,7 @@ pub async fn AdminSidebar(cx: &Cx, active: String) -> Result<impl View + '_> {
         <div style="display:contents;">
             <style>
                 {r#"#admin-sidebar-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 30; }
-                    #admin-mobile-toggle { display: none; position: fixed; top: 12px; left: 12px; z-index: 32; background: #12141c; border: 1px solid #2a2d3a; color: #e5e7eb; width: 40px; height: 40px; border-radius: 8px; cursor: pointer; align-items: center; justify-content: center; }
+                    #admin-mobile-toggle { display: none; position: fixed; top: 12px; left: 12px; z-index: 32; background: var(--bg2); border: 1px solid var(--border); color: var(--text2); width: 40px; height: 40px; border-radius: 8px; cursor: pointer; align-items: center; justify-content: center; }
                     #sidebar-close-btn { display: none; }
                     .admin-mobile-warning { display: none; }
                     @media (max-width: 768px) {
@@ -97,6 +97,7 @@ pub async fn AdminSidebar(cx: &Cx, active: String) -> Result<impl View + '_> {
                 {r#"function toggleAdminSidebar(){var s=document.getElementById('admin-sidebar');var o=document.getElementById('admin-sidebar-overlay');if(!s)return;var open=s.dataset.open==='1';if(open){s.style.setProperty('transform','translateX(-100%)','important');s.dataset.open='0';if(o)o.style.display='none'}else{s.style.setProperty('transform','translateX(0)','important');s.dataset.open='1';if(o)o.style.display='block'}}
                     function closeAdminSidebar(){var s=document.getElementById('admin-sidebar');var o=document.getElementById('admin-sidebar-overlay');if(s){s.style.setProperty('transform','translateX(-100%)','important');s.dataset.open='0'}if(o)o.style.display='none'}"#}
             </script>
+            <script>{(crate::admin_ui::ADMIN_THEME_JS)}</script>
 
             <button id="admin-mobile-toggle" onclick="toggleAdminSidebar()" aria-label="관리자 메뉴 열기">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
@@ -107,7 +108,7 @@ pub async fn AdminSidebar(cx: &Cx, active: String) -> Result<impl View + '_> {
             </button>
             <div id="admin-sidebar-overlay" onclick="closeAdminSidebar()"></div>
 
-            <aside id="admin-sidebar" style="width:250px; background:#12141c; border-right:1px solid #1e2030; flex-shrink:0; display:flex; flex-direction:column; height:calc(100vh - 56px); position:sticky; top:56px; overflow-y:auto; transition:transform 0.2s ease;">
+            <aside id="admin-sidebar" style="width:250px; background:var(--bg2); border-right:1px solid var(--border-soft); flex-shrink:0; display:flex; flex-direction:column; height:calc(100vh - 56px); position:sticky; top:56px; overflow-y:auto; transition:transform 0.2s ease;">
 
                 <div class="admin-mobile-warning" style="background:rgba(245,158,11,0.1); border-bottom:1px solid rgba(245,158,11,0.2); padding:10px 16px; align-items:center; gap:8px; font-size:12px; color:#f59e0b; flex-shrink:0;">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="flex-shrink:0;">
@@ -118,8 +119,8 @@ pub async fn AdminSidebar(cx: &Cx, active: String) -> Result<impl View + '_> {
                     "관리자 패널은 PC 환경에서 이용해주세요"
                 </div>
 
-                <div style="padding:20px 16px 16px; border-bottom:1px solid #1e2030; display:flex; align-items:center; justify-content:space-between;">
-                    <a href="/admin" style="display:flex; align-items:center; gap:10px; font-weight:800; font-size:14px; color:#f9fafb; letter-spacing:-0.01em;">
+                <div style="padding:20px 16px 16px; border-bottom:1px solid var(--border-soft); display:flex; align-items:center; justify-content:space-between;">
+                    <a href="/admin" style="display:flex; align-items:center; gap:10px; font-weight:800; font-size:14px; color:var(--text); letter-spacing:-0.01em;">
                         <div style="width:32px; height:32px; border-radius:8px; background:rgba(222,91,48,0.12); display:flex; align-items:center; justify-content:center;">
                             if !logo_url.is_empty() {
                                 <img src=(logo_url.clone()) alt="logo" style="width:24px; height:24px; border-radius:4px; object-fit:contain;">
@@ -129,20 +130,20 @@ pub async fn AdminSidebar(cx: &Cx, active: String) -> Result<impl View + '_> {
                         </div>
                         "Admin Panel"
                     </a>
-                    <button onclick="closeAdminSidebar()" style="display:none; background:none; border:none; color:#9ca3af; cursor:pointer; padding:4px;" id="sidebar-close-btn">
+                    <button onclick="closeAdminSidebar()" style="display:none; background:none; border:none; color:var(--muted); cursor:pointer; padding:4px;" id="sidebar-close-btn">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                     </button>
                 </div>
 
                 <nav style="flex:1; padding:12px 10px;">
 
-                    <div style="font-size:10px; font-weight:700; color:#4b5563; text-transform:uppercase; letter-spacing:0.08em; padding:8px 12px 6px;">"메인"</div>
+                    <div style="font-size:10px; font-weight:700; color:var(--dim); text-transform:uppercase; letter-spacing:0.08em; padding:8px 12px 6px;">"메인"</div>
                     <a href="/admin" style=(d)>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
                         "대시보드"
                     </a>
 
-                    <div style="font-size:10px; font-weight:700; color:#4b5563; text-transform:uppercase; letter-spacing:0.08em; padding:16px 12px 6px;">"매뉴얼"</div>
+                    <div style="font-size:10px; font-weight:700; color:var(--dim); text-transform:uppercase; letter-spacing:0.08em; padding:16px 12px 6px;">"매뉴얼"</div>
                     if can_manuals {
                     <a href="/admin/manuals" style=(d_manuals)>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
@@ -162,7 +163,7 @@ pub async fn AdminSidebar(cx: &Cx, active: String) -> Result<impl View + '_> {
                     </a>
                     }
 
-                    <div style="font-size:10px; font-weight:700; color:#4b5563; text-transform:uppercase; letter-spacing:0.08em; padding:16px 12px 6px;">"커뮤니티"</div>
+                    <div style="font-size:10px; font-weight:700; color:var(--dim); text-transform:uppercase; letter-spacing:0.08em; padding:16px 12px 6px;">"커뮤니티"</div>
                     if can_posts {
                     <a href="/admin/posts" style=(d_posts)>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
@@ -194,7 +195,7 @@ pub async fn AdminSidebar(cx: &Cx, active: String) -> Result<impl View + '_> {
                     </a>
                     }
 
-                    <div style="font-size:10px; font-weight:700; color:#4b5563; text-transform:uppercase; letter-spacing:0.08em; padding:16px 12px 6px;">"영상"</div>
+                    <div style="font-size:10px; font-weight:700; color:var(--dim); text-transform:uppercase; letter-spacing:0.08em; padding:16px 12px 6px;">"영상"</div>
                     if can_videos {
                     <a href="/admin/videos" style=(d_videos)>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
@@ -209,16 +210,16 @@ pub async fn AdminSidebar(cx: &Cx, active: String) -> Result<impl View + '_> {
                     }
 
                     if !site_nav_items.is_empty() {
-                        <div style="font-size:10px; font-weight:700; color:#4b5563; text-transform:uppercase; letter-spacing:0.08em; padding:16px 12px 6px;">"사이트 메뉴"</div>
+                        <div style="font-size:10px; font-weight:700; color:var(--dim); text-transform:uppercase; letter-spacing:0.08em; padding:16px 12px 6px;">"사이트 메뉴"</div>
                         for item in &site_nav_items {
-                            <a href=(item.href.clone()) style="display:flex; align-items:center; gap:10px; padding:9px 12px; font-size:13px; color:#9ca3af; border-radius:8px; transition:all 0.15s;">
+                            <a href=(item.href.clone()) style="display:flex; align-items:center; gap:10px; padding:9px 12px; font-size:13px; color:var(--muted); border-radius:8px; transition:all 0.15s;">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
                                 (item.label.clone())
                             </a>
                         }
                     }
 
-                    <div style="font-size:10px; font-weight:700; color:#4b5563; text-transform:uppercase; letter-spacing:0.08em; padding:16px 12px 6px;">"설정"</div>
+                    <div style="font-size:10px; font-weight:700; color:var(--dim); text-transform:uppercase; letter-spacing:0.08em; padding:16px 12px 6px;">"설정"</div>
                     if can_settings {
                     <a href="/admin/settings" style=(d_settings)>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 1-1.51 1Z"/></svg>
@@ -256,12 +257,18 @@ pub async fn AdminSidebar(cx: &Cx, active: String) -> Result<impl View + '_> {
 
                 </nav>
 
-                <div style="padding:12px 10px; border-top:1px solid #1e2030;">
-                    <a href="/" style="display:flex; align-items:center; gap:10px; padding:9px 12px; font-size:13px; color:#6b7280; border-radius:8px; transition:all 0.15s;">
+                <div style="padding:12px 10px; border-top:1px solid var(--border-soft);">
+                    <div style="padding:2px 12px 8px; font-size:10px; font-weight:700; color:var(--dim); text-transform:uppercase; letter-spacing:0.08em;">"테마"</div>
+                    <div style="display:flex; gap:4px; padding:0 12px 10px;">
+                        <button type="button" class="atheme-btn" data-admin-theme-btn="system" onclick="__rkSetAdminTheme('system')">"시스템"</button>
+                        <button type="button" class="atheme-btn" data-admin-theme-btn="light" onclick="__rkSetAdminTheme('light')">"라이트"</button>
+                        <button type="button" class="atheme-btn" data-admin-theme-btn="dark" onclick="__rkSetAdminTheme('dark')">"다크"</button>
+                    </div>
+                    <a href="/" style="display:flex; align-items:center; gap:10px; padding:9px 12px; font-size:13px; color:var(--muted2); border-radius:8px; transition:all 0.15s;">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
                         "사이트 돌아가기"
                     </a>
-                    <a href="/admin/logout" style="display:flex; align-items:center; gap:10px; padding:9px 12px; font-size:13px; color:#6b7280; border-radius:8px; transition:all 0.15s;">
+                    <a href="/admin/logout" style="display:flex; align-items:center; gap:10px; padding:9px 12px; font-size:13px; color:var(--muted2); border-radius:8px; transition:all 0.15s;">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
                         "로그아웃"
                     </a>

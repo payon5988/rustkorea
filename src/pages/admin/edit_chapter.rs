@@ -136,6 +136,7 @@ pub async fn edit_chapter(cx: &Cx) -> Result<impl View + '_> {
                 <link rel="stylesheet" href=(crate::admin_ui::EASYMDE_CSS_URL)>
                 <script src=(crate::admin_ui::EASYMDE_JS_URL)></script>
                 <style>{(ADMIN_STYLE)}</style>
+                <script>{(crate::admin_ui::ADMIN_THEME_JS)}</script>
                 <style>{(crate::services::markdown::MARKDOWN_CSS)}</style>
             </head>
             <body style="display:flex; min-height:100vh;">
@@ -143,33 +144,33 @@ pub async fn edit_chapter(cx: &Cx) -> Result<impl View + '_> {
                 <div style="flex:1; padding:24px 32px; overflow-y:auto;">
 
                     <div style="margin-bottom:24px;">
-                        <a href=(format!("/admin/manuals/{}", s.slug)) style="font-size:12px; color:#6b7280; display:inline-flex; align-items:center; gap:6px; margin-bottom:12px;">
+                        <a href=(format!("/admin/manuals/{}", s.slug)) style="font-size:12px; color:var(--muted2); display:inline-flex; align-items:center; gap:6px; margin-bottom:12px;">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
                             "시리즈로 돌아가기"
                         </a>
                         <h1 style="font-size:1.25rem; font-weight:700; letter-spacing:-0.01em;">"챕터 수정"</h1>
-                        <p style="font-size:13px; color:#6b7280; margin-top:2px;">(format!("시리즈: {}", s.title.clone()))</p>
+                        <p style="font-size:13px; color:var(--muted2); margin-top:2px;">(format!("시리즈: {}", s.title.clone()))</p>
                     </div>
 
                     <form action="/admin/manuals/chapters/update" method="POST" style="max-width:720px;">
                         <input type="hidden" name="csrf_token" value=(csrf_token.clone())>
-                        <div style="background:#1a1d27; border:1px solid #2a2d3a; border-radius:10px; padding:24px; margin-bottom:16px;">
+                        <div style="background:var(--card); border:1px solid var(--border); border-radius:10px; padding:24px; margin-bottom:16px;">
                             <input type="hidden" name="id" value=(c.id.clone())>
                             <div style="margin-bottom:20px;">
-                                <label style="display:block; font-size:13px; font-weight:600; color:#9ca3af; margin-bottom:8px;">"챕터 슬러그"</label>
+                                <label style="display:block; font-size:13px; font-weight:600; color:var(--muted); margin-bottom:8px;">"챕터 슬러그"</label>
                                 <input type="text" name="slug" required="true" class="input" style="font-family:monospace;" value=(c.slug.clone())>
-                                <p style="font-size:11px; color:#fbbf24; margin-top:4px;">"주의: 슬러그를 바꾸면 기존 공유 링크가 깨집니다."</p>
+                                <p style="font-size:11px; color:var(--amber); margin-top:4px;">"주의: 슬러그를 바꾸면 기존 공유 링크가 깨집니다."</p>
                             </div>
                             <div style="margin-bottom:20px;">
-                                <label style="display:block; font-size:13px; font-weight:600; color:#9ca3af; margin-bottom:8px;">"챕터 제목"</label>
+                                <label style="display:block; font-size:13px; font-weight:600; color:var(--muted); margin-bottom:8px;">"챕터 제목"</label>
                                 <input type="text" name="title" required="true" class="input" value=(c.title.clone())>
                             </div>
                             <div>
-                                <label style="display:block; font-size:13px; font-weight:600; color:#9ca3af; margin-bottom:8px;">"내용 (Markdown)"</label>
+                                <label style="display:block; font-size:13px; font-weight:600; color:var(--muted); margin-bottom:8px;">"내용 (Markdown)"</label>
                                 <div style="margin-bottom:12px; display:flex; align-items:center; gap:10px;">
-                                <label for="md-file" style="font-size:12px; color:#9ca3af; cursor:pointer; border:1px dashed #2a2d3a; border-radius:6px; padding:8px 14px;">".md 파일 불러오기"</label>
+                                <label for="md-file" style="font-size:12px; color:var(--muted); cursor:pointer; border:1px dashed var(--border); border-radius:6px; padding:8px 14px;">".md 파일 불러오기"</label>
                                 <input type="file" id="md-file" accept=".md,.markdown,.txt" style="display:none;">
-                                <span style="font-size:11px; color:#4b5563;">"또는 :::youtube[영상ID] 로 영상 삽입"</span>
+                                <span style="font-size:11px; color:var(--dim);">"또는 :::youtube[영상ID] 로 영상 삽입"</span>
                                 </div>
                                 <textarea id="editor" name="content_md" rows="20" required="true" class="input" style="font-family:'SF Mono','Fira Code',monospace; font-size:13px; line-height:1.7;">(c.content_md.clone())</textarea>
                             </div>

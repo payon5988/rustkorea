@@ -76,64 +76,65 @@ pub async fn admin_roles_page(cx: &Cx) -> Result<impl View + '_> {
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>"역할/권한 - Rust Korea Admin"</title>
             <style>{(ADMIN_STYLE)}</style>
+            <script>{(crate::admin_ui::ADMIN_THEME_JS)}</script>
         </head>
         <body style="display:flex; min-height:100vh;">
             {AdminSidebar(active: "/admin/roles".into())}
             <div style="flex:1; padding:24px 32px; overflow-y:auto;">
                 <div style="margin-bottom:24px;">
-                    <h1 style="font-size:1.25rem; font-weight:700; color:#f9fafb; letter-spacing:-0.01em;">"역할/권한 관리"</h1>
-                    <p style="font-size:13px; color:#6b7280; margin-top:2px;">"역할을 만들고 기능별 권한을 부여합니다. 시스템 역할(관리자/에디터/일반)은 삭제할 수 없습니다."</p>
+                    <h1 style="font-size:1.25rem; font-weight:700; color:var(--text); letter-spacing:-0.01em;">"역할/권한 관리"</h1>
+                    <p style="font-size:13px; color:var(--muted2); margin-top:2px;">"역할을 만들고 기능별 권한을 부여합니다. 시스템 역할(관리자/에디터/일반)은 삭제할 수 없습니다."</p>
                 </div>
 
                 if query_str.contains("saved=1") {
-                    <div style="background:rgba(52,211,153,0.1); border:1px solid rgba(52,211,153,0.2); border-radius:8px; padding:12px 16px; margin-bottom:16px; font-size:13px; color:#34d399;">"권한 매트릭스가 저장되었습니다."</div>
+                    <div style="background:rgba(52,211,153,0.1); border:1px solid rgba(52,211,153,0.2); border-radius:8px; padding:12px 16px; margin-bottom:16px; font-size:13px; color:var(--green);">"권한 매트릭스가 저장되었습니다."</div>
                 }
                 if query_str.contains("created=1") {
-                    <div style="background:rgba(52,211,153,0.1); border:1px solid rgba(52,211,153,0.2); border-radius:8px; padding:12px 16px; margin-bottom:16px; font-size:13px; color:#34d399;">"역할이 생성되었습니다."</div>
+                    <div style="background:rgba(52,211,153,0.1); border:1px solid rgba(52,211,153,0.2); border-radius:8px; padding:12px 16px; margin-bottom:16px; font-size:13px; color:var(--green);">"역할이 생성되었습니다."</div>
                 }
                 if query_str.contains("deleted=1") {
-                    <div style="background:rgba(52,211,153,0.1); border:1px solid rgba(52,211,153,0.2); border-radius:8px; padding:12px 16px; margin-bottom:16px; font-size:13px; color:#34d399;">"역할이 삭제되고 소속 사용자는 일반 회원으로 이동했습니다."</div>
+                    <div style="background:rgba(52,211,153,0.1); border:1px solid rgba(52,211,153,0.2); border-radius:8px; padding:12px 16px; margin-bottom:16px; font-size:13px; color:var(--green);">"역할이 삭제되고 소속 사용자는 일반 회원으로 이동했습니다."</div>
                 }
                 if query_str.contains("error=") {
-                    <div style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.2); border-radius:8px; padding:12px 16px; margin-bottom:16px; font-size:13px; color:#fca5a5;">"요청을 처리할 수 없습니다. 이름을 확인하세요(소문자·숫자·밑줄, 32자 이내)."</div>
+                    <div style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.2); border-radius:8px; padding:12px 16px; margin-bottom:16px; font-size:13px; color:var(--red-soft);">"요청을 처리할 수 없습니다. 이름을 확인하세요(소문자·숫자·밑줄, 32자 이내)."</div>
                 }
 
-                <div style="background:#1a1d27; border:1px solid #2a2d3a; border-radius:10px; overflow:hidden; margin-bottom:20px;">
-                    <div style="padding:16px 20px; border-bottom:1px solid #2a2d3a;">
-                        <span style="font-size:14px; font-weight:700; color:#e5e7eb;">"역할 목록"</span>
+                <div style="background:var(--card); border:1px solid var(--border); border-radius:10px; overflow:hidden; margin-bottom:20px;">
+                    <div style="padding:16px 20px; border-bottom:1px solid var(--border);">
+                        <span style="font-size:14px; font-weight:700; color:var(--text2);">"역할 목록"</span>
                     </div>
                     <table style="width:100%; border-collapse:collapse; font-size:13px;">
                         <thead>
                             <tr>
-                                <th style="padding:12px 20px; text-align:left; font-size:11px; font-weight:600; color:#6b7280; text-transform:uppercase; letter-spacing:0.05em; border-bottom:1px solid #2a2d3a; background:rgba(255,255,255,0.02);">"역할"</th>
-                                <th style="padding:12px 20px; text-align:left; font-size:11px; font-weight:600; color:#6b7280; text-transform:uppercase; letter-spacing:0.05em; border-bottom:1px solid #2a2d3a; background:rgba(255,255,255,0.02);">"설명"</th>
-                                <th style="padding:12px 20px; text-align:left; font-size:11px; font-weight:600; color:#6b7280; text-transform:uppercase; letter-spacing:0.05em; border-bottom:1px solid #2a2d3a; background:rgba(255,255,255,0.02);">"회원수"</th>
-                                <th style="padding:12px 20px; text-align:left; font-size:11px; font-weight:600; color:#6b7280; text-transform:uppercase; letter-spacing:0.05em; border-bottom:1px solid #2a2d3a; background:rgba(255,255,255,0.02);">"권한수"</th>
-                                <th style="padding:12px 20px; text-align:left; font-size:11px; font-weight:600; color:#6b7280; text-transform:uppercase; letter-spacing:0.05em; border-bottom:1px solid #2a2d3a; background:rgba(255,255,255,0.02);">"관리"</th>
+                                <th style="padding:12px 20px; text-align:left; font-size:11px; font-weight:600; color:var(--muted2); text-transform:uppercase; letter-spacing:0.05em; border-bottom:1px solid var(--border); background:var(--line);">"역할"</th>
+                                <th style="padding:12px 20px; text-align:left; font-size:11px; font-weight:600; color:var(--muted2); text-transform:uppercase; letter-spacing:0.05em; border-bottom:1px solid var(--border); background:var(--line);">"설명"</th>
+                                <th style="padding:12px 20px; text-align:left; font-size:11px; font-weight:600; color:var(--muted2); text-transform:uppercase; letter-spacing:0.05em; border-bottom:1px solid var(--border); background:var(--line);">"회원수"</th>
+                                <th style="padding:12px 20px; text-align:left; font-size:11px; font-weight:600; color:var(--muted2); text-transform:uppercase; letter-spacing:0.05em; border-bottom:1px solid var(--border); background:var(--line);">"권한수"</th>
+                                <th style="padding:12px 20px; text-align:left; font-size:11px; font-weight:600; color:var(--muted2); text-transform:uppercase; letter-spacing:0.05em; border-bottom:1px solid var(--border); background:var(--line);">"관리"</th>
                             </tr>
                         </thead>
                         <tbody>
                             for r in &roles {
                                 <tr>
-                                    <td style="padding:14px 20px; border-bottom:1px solid rgba(255,255,255,0.03);">
-                                        <span style="font-weight:600; color:#d1d5db;">(crate::auth::access::role_label(&r.name))</span>
-                                        <span style="font-size:11px; color:#4b5563; font-family:monospace; margin-left:8px;">(r.id.clone())</span>
+                                    <td style="padding:14px 20px; border-bottom:1px solid var(--line);">
+                                        <span style="font-weight:600; color:var(--text3);">(crate::auth::access::role_label(&r.name))</span>
+                                        <span style="font-size:11px; color:var(--dim); font-family:monospace; margin-left:8px;">(r.id.clone())</span>
                                         if r.is_superuser == 1 {
-                                            <span style="background:rgba(239,68,68,0.1); color:#f87171; padding:2px 8px; border-radius:4px; font-size:11px; font-weight:600; margin-left:8px;">"슈퍼유저"</span>
+                                            <span style="background:rgba(239,68,68,0.1); color:var(--red); padding:2px 8px; border-radius:4px; font-size:11px; font-weight:600; margin-left:8px;">"슈퍼유저"</span>
                                         }
                                         if r.is_system == 1 {
-                                            <span style="background:rgba(107,114,128,0.1); color:#9ca3af; padding:2px 8px; border-radius:4px; font-size:11px; font-weight:600; margin-left:8px;">"시스템"</span>
+                                            <span style="background:rgba(107,114,128,0.1); color:var(--muted); padding:2px 8px; border-radius:4px; font-size:11px; font-weight:600; margin-left:8px;">"시스템"</span>
                                         }
                                     </td>
-                                    <td style="padding:14px 20px; border-bottom:1px solid rgba(255,255,255,0.03); color:#9ca3af;">(r.description.clone())</td>
-                                    <td style="padding:14px 20px; border-bottom:1px solid rgba(255,255,255,0.03); color:#9ca3af;">(member_counts.iter().find(|(id, _)| id == &r.id).map(|(_, c)| c.to_string()).unwrap_or_else(|| "0".to_string()))</td>
-                                    <td style="padding:14px 20px; border-bottom:1px solid rgba(255,255,255,0.03); color:#9ca3af;">(grants.iter().filter(|(rid, _)| rid == &r.id).count())</td>
-                                    <td style="padding:14px 20px; border-bottom:1px solid rgba(255,255,255,0.03);">
+                                    <td style="padding:14px 20px; border-bottom:1px solid var(--line); color:var(--muted);">(r.description.clone())</td>
+                                    <td style="padding:14px 20px; border-bottom:1px solid var(--line); color:var(--muted);">(member_counts.iter().find(|(id, _)| id == &r.id).map(|(_, c)| c.to_string()).unwrap_or_else(|| "0".to_string()))</td>
+                                    <td style="padding:14px 20px; border-bottom:1px solid var(--line); color:var(--muted);">(grants.iter().filter(|(rid, _)| rid == &r.id).count())</td>
+                                    <td style="padding:14px 20px; border-bottom:1px solid var(--line);">
                                         if r.is_system == 0 {
                                             <form action="/admin/roles/delete" method="POST" style="display:inline;" onsubmit="return confirm('이 역할을 삭제할까요? 소속 사용자는 일반 회원으로 이동합니다.')">
                                                 <input type="hidden" name="csrf_token" value=(csrf_token.clone())>
                                                 <input type="hidden" name="role_id" value=(r.id.clone())>
-                                                <button type="submit" style="background:none; border:1px solid rgba(239,68,68,0.3); color:#f87171; padding:4px 10px; border-radius:6px; font-size:11px; cursor:pointer; font-weight:600;">"삭제"</button>
+                                                <button type="submit" style="background:none; border:1px solid rgba(239,68,68,0.3); color:var(--red); padding:4px 10px; border-radius:6px; font-size:11px; cursor:pointer; font-weight:600;">"삭제"</button>
                                             </form>
                                         }
                                     </td>
@@ -145,29 +146,29 @@ pub async fn admin_roles_page(cx: &Cx) -> Result<impl View + '_> {
 
                 <form action="/admin/roles/matrix" method="POST">
                     <input type="hidden" name="csrf_token" value=(csrf_token.clone())>
-                    <div style="background:#1a1d27; border:1px solid #2a2d3a; border-radius:10px; overflow:hidden; margin-bottom:20px;">
-                        <div style="padding:16px 20px; border-bottom:1px solid #2a2d3a; display:flex; align-items:center; justify-content:space-between;">
-                            <span style="font-size:14px; font-weight:700; color:#e5e7eb;">"권한 매트릭스"</span>
+                    <div style="background:var(--card); border:1px solid var(--border); border-radius:10px; overflow:hidden; margin-bottom:20px;">
+                        <div style="padding:16px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between;">
+                            <span style="font-size:14px; font-weight:700; color:var(--text2);">"권한 매트릭스"</span>
                             <button type="submit" style="background:#DE5B30; color:#fff; padding:8px 16px; border-radius:8px; font-size:13px; font-weight:600; border:none; cursor:pointer;">"매트릭스 저장"</button>
                         </div>
                         <table style="width:100%; border-collapse:collapse; font-size:13px;">
                             <thead>
                                 <tr>
-                                    <th style="padding:12px 20px; text-align:left; font-size:11px; font-weight:600; color:#6b7280; border-bottom:1px solid #2a2d3a; background:rgba(255,255,255,0.02);">"권한"</th>
+                                    <th style="padding:12px 20px; text-align:left; font-size:11px; font-weight:600; color:var(--muted2); border-bottom:1px solid var(--border); background:var(--line);">"권한"</th>
                                     for r in &roles {
-                                        <th style="padding:12px 20px; text-align:center; font-size:11px; font-weight:600; color:#6b7280; border-bottom:1px solid #2a2d3a; background:rgba(255,255,255,0.02);">(crate::auth::access::role_label(&r.name))</th>
+                                        <th style="padding:12px 20px; text-align:center; font-size:11px; font-weight:600; color:var(--muted2); border-bottom:1px solid var(--border); background:var(--line);">(crate::auth::access::role_label(&r.name))</th>
                                     }
                                 </tr>
                             </thead>
                             <tbody>
                                 for p in &permissions {
                                     <tr>
-                                        <td style="padding:10px 20px; border-bottom:1px solid rgba(255,255,255,0.03);">
-                                            <div style="font-family:monospace; font-size:12px; color:#d1d5db;">(p.key.clone())</div>
-                                            <div style="font-size:11px; color:#4b5563;">(p.description.clone())</div>
+                                        <td style="padding:10px 20px; border-bottom:1px solid var(--line);">
+                                            <div style="font-family:monospace; font-size:12px; color:var(--text3);">(p.key.clone())</div>
+                                            <div style="font-size:11px; color:var(--dim);">(p.description.clone())</div>
                                         </td>
                                         for r in &roles {
-                                            <td style="padding:10px 20px; border-bottom:1px solid rgba(255,255,255,0.03); text-align:center;">
+                                            <td style="padding:10px 20px; border-bottom:1px solid var(--line); text-align:center;">
                                                 if grants.iter().any(|(rid, pid)| rid == &r.id && pid == &p.id) {
                                                     <input type="checkbox" name="grant" value=(format!("{}:{}", r.id, p.id)) checked="true" style="width:16px; height:16px; accent-color:#DE5B30; cursor:pointer;">
                                                 } else {
@@ -182,18 +183,18 @@ pub async fn admin_roles_page(cx: &Cx) -> Result<impl View + '_> {
                     </div>
                 </form>
 
-                <div style="background:#1a1d27; border:1px solid #2a2d3a; border-radius:10px; padding:24px; max-width:560px;">
-                    <h2 style="font-size:15px; font-weight:700; color:#f9fafb; margin-bottom:4px;">"역할 추가"</h2>
-                    <p style="font-size:12px; color:#6b7280; margin-bottom:20px;">"이름은 소문자·숫자·밑줄만, 32자 이내 (예: vip, partner)"</p>
+                <div style="background:var(--card); border:1px solid var(--border); border-radius:10px; padding:24px; max-width:560px;">
+                    <h2 style="font-size:15px; font-weight:700; color:var(--text); margin-bottom:4px;">"역할 추가"</h2>
+                    <p style="font-size:12px; color:var(--muted2); margin-bottom:20px;">"이름은 소문자·숫자·밑줄만, 32자 이내 (예: vip, partner)"</p>
                     <form action="/admin/roles/create" method="POST">
                         <input type="hidden" name="csrf_token" value=(csrf_token.clone())>
                         <div style="margin-bottom:16px;">
-                            <label style="display:block; font-size:12px; font-weight:600; color:#9ca3af; margin-bottom:6px;">"이름(키)"</label>
-                            <input type="text" name="name" required="true" placeholder="vip" style="width:100%; background:#0f1117; border:1px solid #2a2d3a; border-radius:8px; padding:10px 14px; font-size:14px; color:#e5e7eb; outline:none;">
+                            <label style="display:block; font-size:12px; font-weight:600; color:var(--muted); margin-bottom:6px;">"이름(키)"</label>
+                            <input type="text" name="name" required="true" placeholder="vip" style="width:100%; background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:10px 14px; font-size:14px; color:var(--text2); outline:none;">
                         </div>
                         <div style="margin-bottom:16px;">
-                            <label style="display:block; font-size:12px; font-weight:600; color:#9ca3af; margin-bottom:6px;">"설명"</label>
-                            <input type="text" name="description" placeholder="유료 회원" style="width:100%; background:#0f1117; border:1px solid #2a2d3a; border-radius:8px; padding:10px 14px; font-size:14px; color:#e5e7eb; outline:none;">
+                            <label style="display:block; font-size:12px; font-weight:600; color:var(--muted); margin-bottom:6px;">"설명"</label>
+                            <input type="text" name="description" placeholder="유료 회원" style="width:100%; background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:10px 14px; font-size:14px; color:var(--text2); outline:none;">
                         </div>
                         <button type="submit" style="background:#DE5B30; color:#fff; padding:10px 20px; border-radius:8px; font-size:14px; font-weight:600; border:none; cursor:pointer;">"역할 생성"</button>
                     </form>

@@ -2,9 +2,10 @@
 /// stylesheet and third-party editor CDN URLs.
 /// Previously each admin page embedded its own `ADMIN_STYLE` copy.
 pub const ADMIN_STYLE: &str = r#"
-:root { --brand: #DE5B30; --bg: #0f1117; --card: #1a1d27; --border: #2a2d3a; --text: #f9fafb; --muted: #6b7280; --dim: #4b5563; }
+:root { --brand: #DE5B30; color-scheme: dark; --bg: #0f1117; --bg2: #12141c; --card: #1a1d27; --border: #2a2d3a; --border-soft: #1e2030; --thumb: #27262b; --text: #f9fafb; --text2: #e5e7eb; --text3: #d1d5db; --muted: #9ca3af; --muted2: #6b7280; --dim: #4b5563; --faint: #3f3f46; --line: rgba(255,255,255,0.03); --line-strong: rgba(255,255,255,0.08); --red: #f87171; --red-soft: #fca5a5; --amber: #fbbf24; --green: #34d399; --blue: #60a5fa; --purple: #a78bfa; --blue-soft: #93c5fd; }
+:root[data-theme='light'] { color-scheme: light; --bg: #f1f2f4; --bg2: #ffffff; --card: #ffffff; --border: #e2e4e9; --border-soft: #e8eaee; --thumb: #e8eaee; --text: #111827; --text2: #1f2937; --text3: #4b5563; --muted: #5b6472; --muted2: #6b7280; --dim: #9ca3af; --faint: #d1d5db; --line: rgba(17,24,39,0.06); --line-strong: rgba(17,24,39,0.12); --red: #dc2626; --red-soft: #b91c1c; --amber: #b45309; --green: #059669; --blue: #2563eb; --purple: #7c3aed; --blue-soft: #1d4ed8; }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', system-ui, sans-serif; background: var(--bg); color: #e5e7eb; min-height: 100vh; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', system-ui, sans-serif; background: var(--bg); color: var(--text2); min-height: 100vh; }
 a { color: inherit; text-decoration: none; }
 .btn { background: var(--brand); color: #fff; padding: 10px 20px; border-radius: 8px; font-weight: 600; font-size: 14px; display: inline-flex; align-items: center; gap: 8px; transition: background 0.15s; border: none; cursor: pointer; }
 .btn:hover { background: #c94e28; }
@@ -12,6 +13,9 @@ a { color: inherit; text-decoration: none; }
 .input { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; font-size: 14px; color: var(--text); outline: none; transition: border-color 0.15s, box-shadow 0.15s; }
 .input:focus { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(222,91,48,0.15); }
 .input::placeholder { color: var(--dim); }
+.atheme-btn { flex: 1; background: transparent; border: 1px solid var(--border); color: var(--muted); border-radius: 6px; font-size: 11px; font-weight: 600; padding: 6px 4px; cursor: pointer; font-family: inherit; transition: all 0.15s; }
+.atheme-btn:hover { color: var(--text); border-color: var(--dim); }
+.atheme-btn[data-active='1'] { background: rgba(222,91,48,0.12); border-color: var(--brand); color: var(--text); }
 .EasyMDEEditor, .EasyMDEEditor .editor-toolbar, .EasyMDEEditor textarea, .EasyMDEEditor .CodeMirror, .editor-toolbar, .CodeMirror { background: #fff !important; color: #333 !important; border-color: #d1d5db !important; }
 .editor-toolbar button { color: #555 !important; background: none !important; }
 .editor-toolbar button.active { background: #ddd !important; }
@@ -20,21 +24,26 @@ a { color: inherit; text-decoration: none; }
 .logo { text-align: center; margin-bottom: 40px; }
 .logo-icon { width: 48px; height: 48px; border-radius: 12px; background: rgba(222,91,48,0.1); display: inline-flex; align-items: center; justify-content: center; margin-bottom: 16px; }
 .logo h1 { font-size: 22px; font-weight: 800; color: var(--text); letter-spacing: -0.02em; }
-.logo p { font-size: 14px; color: var(--muted); margin-top: 6px; }
+.logo p { font-size: 14px; color: var(--muted2); margin-top: 6px; }
 .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 32px; }
 .card h2 { font-size: 18px; font-weight: 700; margin-bottom: 4px; color: var(--text); }
-.card .sub { font-size: 13px; color: var(--muted); margin-bottom: 24px; }
+.card .sub { font-size: 13px; color: var(--muted2); margin-bottom: 24px; }
 .field { margin-bottom: 20px; }
-.field label { display: block; font-size: 13px; font-weight: 600; color: #9ca3af; margin-bottom: 6px; }
+.field label { display: block; font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 6px; }
 .field input { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; font-size: 15px; color: var(--text); outline: none; transition: border-color 0.15s, box-shadow 0.15s; }
 .field input:focus { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(222,91,48,0.15); }
 .field input::placeholder { color: var(--dim); }
 .site-link { text-align: center; margin-top: 28px; }
 .site-link a { font-size: 12px; color: var(--dim); display: inline-flex; align-items: center; gap: 6px; transition: color 0.15s; }
-.site-link a:hover { color: var(--muted); }
-.error { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2); border-radius: 8px; padding: 12px; margin-bottom: 20px; font-size: 13px; color: #fca5a5; display: none; }
+.site-link a:hover { color: var(--muted2); }
+.error { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2); border-radius: 8px; padding: 12px; margin-bottom: 20px; font-size: 13px; color: var(--red-soft); display: none; }
 .btn-block { width: 100%; }
 "#;
+
+/// Admin theme (dark / light / system) bootstrap + setter.
+/// Stored in `localStorage` under `rk-admin-theme`; `system` follows
+/// `prefers-color-scheme`. Include via `<script>{(ADMIN_THEME_JS)}</script>`.
+pub const ADMIN_THEME_JS: &str = r#"(function(){var K="rk-admin-theme";var cur="dark";try{cur=localStorage.getItem(K)||"dark"}catch(e){}function apply(m){var t=m;if(m==="system"){var mq=null;try{mq=window.matchMedia("(prefers-color-scheme: light)")}catch(e){}t=(mq&&mq.matches)?"light":"dark"}document.documentElement.setAttribute("data-theme",t);try{var bs=document.querySelectorAll("[data-admin-theme-btn]");for(var i=0;i<bs.length;i++){if(bs[i].getAttribute("data-admin-theme-btn")===m){bs[i].setAttribute("data-active","1")}else{bs[i].removeAttribute("data-active")}}}catch(e){}}try{window.__rkSetAdminTheme=function(m){try{localStorage.setItem(K,m)}catch(e){}apply(m)}}catch(e){}apply(cur);try{if(window.matchMedia){window.matchMedia("(prefers-color-scheme: light)").addEventListener("change",function(){var v="dark";try{v=localStorage.getItem(K)||"dark"}catch(e){}if(v==="system"){apply("system")}})}}catch(e){}})();"#;
 
 /// EasyMDE markdown editor CDN (jsdelivr, pinned version).
 pub const EASYMDE_CSS_URL: &str = "https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.css";

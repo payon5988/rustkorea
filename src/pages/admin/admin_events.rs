@@ -58,9 +58,9 @@ pub async fn admin_events_page(cx: &Cx) -> Result<impl View + '_> {
             .await
             .unwrap_or_default();
 
-    let input_style = "width:100%; background:#0f1117; border:1px solid #2a2d3a; border-radius:8px; padding:10px 14px; font-size:14px; color:#e5e7eb; outline:none;";
+    let input_style = "width:100%; background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:10px 14px; font-size:14px; color:var(--text2); outline:none;";
     let label_style =
-        "display:block; font-size:12px; font-weight:600; color:#9ca3af; margin-bottom:6px;";
+        "display:block; font-size:12px; font-weight:600; color:var(--muted); margin-bottom:6px;";
 
     let flatpickr_css = "https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css";
     let flatpickr_ko = "https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ko.js";
@@ -71,33 +71,34 @@ pub async fn admin_events_page(cx: &Cx) -> Result<impl View + '_> {
             <link rel="stylesheet" href=(flatpickr_css) />
             <style>
                 {r#"
-                .flatpickr-calendar { border-radius: 10px !important; border: 1px solid #2a2d3a !important; background: #1a1d27 !important; box-shadow: 0 8px 24px rgba(0,0,0,0.4) !important; font-family: inherit !important; }
-                .flatpickr-months { background: #1a1d27 !important; border-bottom: 1px solid #2a2d3a !important; }
-                .flatpickr-current-month { color: #e5e7eb !important; background: #1a1d27 !important; }
-                .flatpickr-current-month .flatpickr-monthDropdown-months { background: #1a1d27 !important; color: #e5e7eb !important; border: 1px solid #2a2d3a !important; border-radius: 4px !important; }
-                span.flatpickr-weekday { color: #9ca3af !important; background: #1a1d27 !important; }
-                .flatpickr-day { color: #e5e7eb !important; border-radius: 6px !important; border-color: transparent !important; }
-                .flatpickr-day:hover { background: rgba(222,91,48,0.2) !important; border-color: rgba(222,91,48,0.3) !important; color: #f9fafb !important; }
+                .flatpickr-calendar { border-radius: 10px !important; border: 1px solid var(--border) !important; background: var(--card) !important; box-shadow: 0 8px 24px rgba(0,0,0,0.4) !important; font-family: inherit !important; }
+                .flatpickr-months { background: var(--card) !important; border-bottom: 1px solid var(--border) !important; }
+                .flatpickr-current-month { color: var(--text2) !important; background: var(--card) !important; }
+                .flatpickr-current-month .flatpickr-monthDropdown-months { background: var(--card) !important; color: var(--text2) !important; border: 1px solid var(--border) !important; border-radius: 4px !important; }
+                span.flatpickr-weekday { color: var(--muted) !important; background: var(--card) !important; }
+                .flatpickr-day { color: var(--text2) !important; border-radius: 6px !important; border-color: transparent !important; }
+                .flatpickr-day:hover { background: rgba(222,91,48,0.2) !important; border-color: rgba(222,91,48,0.3) !important; color: var(--text) !important; }
                 .flatpickr-day.selected { background: #DE5B30 !important; border-color: #DE5B30 !important; color: #fff !important; }
-                .flatpickr-day.prevMonthDay, .flatpickr-day.nextMonthDay { color: #4b5563 !important; }
+                .flatpickr-day.prevMonthDay, .flatpickr-day.nextMonthDay { color: var(--dim) !important; }
                 .flatpickr-day.today { border-color: #DE5B30 !important; }
                 .flatpickr-day.today:hover { background: rgba(222,91,48,0.2) !important; }
-                .flatpickr-prev-month, .flatpickr-next-month { fill: #9ca3af !important; }
+                .flatpickr-prev-month, .flatpickr-next-month { fill: var(--muted) !important; }
                 .flatpickr-prev-month:hover, .flatpickr-next-month:hover { fill: #DE5B30 !important; }
-                .flatpickr-time { border-top: 1px solid #2a2d3a !important; background: #1a1d27 !important; }
-                .flatpickr-time input { color: #e5e7eb !important; background: #1a1d27 !important; text-shadow: 0 0 1px rgba(229,231,235,0.3) !important; }
-                .flatpickr-time .flatpickr-am-pm { color: #9ca3af !important; }
+                .flatpickr-time { border-top: 1px solid var(--border) !important; background: var(--card) !important; }
+                .flatpickr-time input { color: var(--text2) !important; background: var(--card) !important; text-shadow: 0 0 1px rgba(229,231,235,0.3) !important; }
+                .flatpickr-time .flatpickr-am-pm { color: var(--muted) !important; }
                 .flatpickr-time .flatpickr-am-pm:hover { color: #DE5B30 !important; }
                 span.numInputWrapper { background: transparent !important; }
-                span.numInputWrapper span.arrowUp, span.numInputWrapper span.arrowDown { border-color: #4b5563 !important; }
+                span.numInputWrapper span.arrowUp, span.numInputWrapper span.arrowDown { border-color: var(--dim) !important; }
                 span.numInputWrapper span.arrowUp:hover, span.numInputWrapper span.arrowDown:hover { border-color: #DE5B30 !important; background: rgba(222,91,48,0.1) !important; }
-                span.numInputWrapper span.arrowUp::after, span.numInputWrapper span.arrowDown::after { border-color: #9ca3af !important; }
+                span.numInputWrapper span.arrowUp::after, span.numInputWrapper span.arrowDown::after { border-color: var(--muted) !important; }
                 span.numInputWrapper:hover { background: transparent !important; }
-                .flatpickr-months .flatpickr-next-month flatpickr-monthDropdown-months { background: #1a1d27 !important; }
-                input.flatpickr-input { background: #0f1117 !important; color: #e5e7eb !important; border: 1px solid #2a2d3a !important; border-radius: 8px !important; padding: 10px 14px !important; }
+                .flatpickr-months .flatpickr-next-month flatpickr-monthDropdown-months { background: var(--card) !important; }
+                input.flatpickr-input { background: var(--bg) !important; color: var(--text2) !important; border: 1px solid var(--border) !important; border-radius: 8px !important; padding: 10px 14px !important; }
                 "#}
             </style>
             <style>{(ADMIN_STYLE)}</style>
+            <script>{(crate::admin_ui::ADMIN_THEME_JS)}</script>
             <script src=(flatpickr_js)></script>
             <script src=(flatpickr_ko)></script>
         </head>
@@ -108,7 +109,7 @@ pub async fn admin_events_page(cx: &Cx) -> Result<impl View + '_> {
                     <h1 style="font-size:1.25rem; font-weight:700;">"이벤트 관리"</h1>
                 </div>
 
-                <div style="background:#1a1d27; border:1px solid #2a2d3a; border-radius:10px; padding:24px; margin-bottom:24px;">
+                <div style="background:var(--card); border:1px solid var(--border); border-radius:10px; padding:24px; margin-bottom:24px;">
                     <h2 style="font-size:15px; font-weight:700; margin-bottom:16px;">"새 이벤트"</h2>
                     <form action="/admin/events/create" method="POST" style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
                         <input type="hidden" name="csrf_token" value=(csrf_token.clone())>
@@ -122,35 +123,35 @@ pub async fn admin_events_page(cx: &Cx) -> Result<impl View + '_> {
                     </form>
                 </div>
 
-                <div style="background:#1a1d27; border:1px solid #2a2d3a; border-radius:10px; padding:16px 20px; margin-bottom:16px; display:flex; gap:12px; align-items:center;">
-                    <input type="text" id="event-search" placeholder="제목으로 검색..." oninput=(r#"var q=this.value.toLowerCase();document.querySelectorAll('#events-tbody tr').forEach(function(r){r.style.display=r.textContent.toLowerCase().includes(q)?'':'none'})"#) style="flex:1; background:#0f1117; border:1px solid #2a2d3a; border-radius:8px; padding:10px 14px; font-size:14px; color:#e5e7eb; outline:none;">
-                    <input type="date" id="event-date-filter" onchange=(r#"var d=this.value;document.querySelectorAll('#events-tbody tr').forEach(function(r){if(!d){r.style.display=''}else{var c=r.querySelector('td:nth-child(2)');r.style.display=c&&c.textContent.trim()===d?'':'none'}})"#) style="background:#0f1117; border:1px solid #2a2d3a; border-radius:8px; padding:10px 14px; font-size:14px; color:#e5e7eb; outline:none;">
+                <div style="background:var(--card); border:1px solid var(--border); border-radius:10px; padding:16px 20px; margin-bottom:16px; display:flex; gap:12px; align-items:center;">
+                    <input type="text" id="event-search" placeholder="제목으로 검색..." oninput=(r#"var q=this.value.toLowerCase();document.querySelectorAll('#events-tbody tr').forEach(function(r){r.style.display=r.textContent.toLowerCase().includes(q)?'':'none'})"#) style="flex:1; background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:10px 14px; font-size:14px; color:var(--text2); outline:none;">
+                    <input type="date" id="event-date-filter" onchange=(r#"var d=this.value;document.querySelectorAll('#events-tbody tr').forEach(function(r){if(!d){r.style.display=''}else{var c=r.querySelector('td:nth-child(2)');r.style.display=c&&c.textContent.trim()===d?'':'none'}})"#) style="background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:10px 14px; font-size:14px; color:var(--text2); outline:none;">
                 </div>
 
                 if events.is_empty() {
-                    <div style="background:#1a1d27; border:1px solid #2a2d3a; border-radius:10px; padding:48px; text-align:center;">
-                        <p style="color:#6b7280;">"이벤트가 없습니다."</p>
+                    <div style="background:var(--card); border:1px solid var(--border); border-radius:10px; padding:48px; text-align:center;">
+                        <p style="color:var(--muted2);">"이벤트가 없습니다."</p>
                     </div>
                 } else {
-                    <div style="background:#1a1d27; border:1px solid #2a2d3a; border-radius:10px; overflow:hidden;">
+                    <div style="background:var(--card); border:1px solid var(--border); border-radius:10px; overflow:hidden;">
                         <table style="width:100%; font-size:13px; border-collapse:collapse;">
-                            <thead><tr style="border-bottom:1px solid #2a2d3a; text-align:left;">
-                                <th style="padding:12px 16px; font-size:11px; font-weight:600; color:#6b7280; text-transform:uppercase;">"제목"</th>
-                                <th style="padding:12px 16px; font-size:11px; font-weight:600; color:#6b7280; text-transform:uppercase;">"날짜"</th>
-                                <th style="padding:12px 16px; font-size:11px; font-weight:600; color:#6b7280; text-transform:uppercase;">"장소"</th>
-                                <th style="padding:12px 16px; font-size:11px; font-weight:600; color:#6b7280; text-transform:uppercase; text-align:right;">"관리"</th>
+                            <thead><tr style="border-bottom:1px solid var(--border); text-align:left;">
+                                <th style="padding:12px 16px; font-size:11px; font-weight:600; color:var(--muted2); text-transform:uppercase;">"제목"</th>
+                                <th style="padding:12px 16px; font-size:11px; font-weight:600; color:var(--muted2); text-transform:uppercase;">"날짜"</th>
+                                <th style="padding:12px 16px; font-size:11px; font-weight:600; color:var(--muted2); text-transform:uppercase;">"장소"</th>
+                                <th style="padding:12px 16px; font-size:11px; font-weight:600; color:var(--muted2); text-transform:uppercase; text-align:right;">"관리"</th>
                             </tr></thead>
                             <tbody id="events-tbody">
                                 for ev in &events {
-                                    <tr style="border-bottom:1px solid rgba(255,255,255,0.03);">
-                                        <td style="padding:12px 16px; color:#e5e7eb; font-weight:600;">(ev.title.clone())</td>
-                                        <td style="padding:12px 16px; color:#9ca3af;">(ev.event_date.clone())</td>
-                                        <td style="padding:12px 16px; color:#9ca3af;">(ev.location.clone())</td>
+                                    <tr style="border-bottom:1px solid var(--line);">
+                                        <td style="padding:12px 16px; color:var(--text2); font-weight:600;">(ev.title.clone())</td>
+                                        <td style="padding:12px 16px; color:var(--muted);">(ev.event_date.clone())</td>
+                                        <td style="padding:12px 16px; color:var(--muted);">(ev.location.clone())</td>
                                         <td style="padding:12px 16px; text-align:right;">
-                                            <a href=(format!("/admin/events/edit?id={}", ev.id)) style="font-size:12px; color:#93c5fd; background:none; border:none; cursor:pointer; font-weight:600; text-decoration:none; margin-right:8px;">"수정"</a>
+                                            <a href=(format!("/admin/events/edit?id={}", ev.id)) style="font-size:12px; color:var(--blue-soft); background:none; border:none; cursor:pointer; font-weight:600; text-decoration:none; margin-right:8px;">"수정"</a>
                                             <form action=(format!("/admin/events/{}/delete", ev.id)) method="POST" onsubmit="return confirm('이벤트를 삭제하시겠습니까?')" style="display:inline;">
                                                 <input type="hidden" name="csrf_token" value=(csrf_token.clone())>
-                                                <button type="submit" style="font-size:12px; color:#f87171; background:none; border:none; cursor:pointer; font-weight:600;">"삭제"</button>
+                                                <button type="submit" style="font-size:12px; color:var(--red); background:none; border:none; cursor:pointer; font-weight:600;">"삭제"</button>
                                             </form>
                                         </td>
                                     </tr>
@@ -250,9 +251,9 @@ pub async fn admin_event_edit_page(cx: &Cx) -> Result<impl View + '_> {
         None => return Err(topcoat::router::error::redirect("/admin/events").into()),
     };
 
-    let input_style = "width:100%; background:#0f1117; border:1px solid #2a2d3a; border-radius:8px; padding:10px 14px; font-size:14px; color:#e5e7eb; outline:none;";
+    let input_style = "width:100%; background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:10px 14px; font-size:14px; color:var(--text2); outline:none;";
     let label_style =
-        "display:block; font-size:12px; font-weight:600; color:#9ca3af; margin-bottom:6px;";
+        "display:block; font-size:12px; font-weight:600; color:var(--muted); margin-bottom:6px;";
 
     let flatpickr_css = "https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css";
     let flatpickr_ko = "https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ko.js";
@@ -263,33 +264,34 @@ pub async fn admin_event_edit_page(cx: &Cx) -> Result<impl View + '_> {
             <link rel="stylesheet" href=(flatpickr_css) />
             <style>
                 {r#"
-                .flatpickr-calendar { border-radius: 10px !important; border: 1px solid #2a2d3a !important; background: #1a1d27 !important; box-shadow: 0 8px 24px rgba(0,0,0,0.4) !important; font-family: inherit !important; }
-                .flatpickr-months { background: #1a1d27 !important; border-bottom: 1px solid #2a2d3a !important; }
-                .flatpickr-current-month { color: #e5e7eb !important; background: #1a1d27 !important; }
-                .flatpickr-current-month .flatpickr-monthDropdown-months { background: #1a1d27 !important; color: #e5e7eb !important; border: 1px solid #2a2d3a !important; border-radius: 4px !important; }
-                span.flatpickr-weekday { color: #9ca3af !important; background: #1a1d27 !important; }
-                .flatpickr-day { color: #e5e7eb !important; border-radius: 6px !important; border-color: transparent !important; }
-                .flatpickr-day:hover { background: rgba(222,91,48,0.2) !important; border-color: rgba(222,91,48,0.3) !important; color: #f9fafb !important; }
+                .flatpickr-calendar { border-radius: 10px !important; border: 1px solid var(--border) !important; background: var(--card) !important; box-shadow: 0 8px 24px rgba(0,0,0,0.4) !important; font-family: inherit !important; }
+                .flatpickr-months { background: var(--card) !important; border-bottom: 1px solid var(--border) !important; }
+                .flatpickr-current-month { color: var(--text2) !important; background: var(--card) !important; }
+                .flatpickr-current-month .flatpickr-monthDropdown-months { background: var(--card) !important; color: var(--text2) !important; border: 1px solid var(--border) !important; border-radius: 4px !important; }
+                span.flatpickr-weekday { color: var(--muted) !important; background: var(--card) !important; }
+                .flatpickr-day { color: var(--text2) !important; border-radius: 6px !important; border-color: transparent !important; }
+                .flatpickr-day:hover { background: rgba(222,91,48,0.2) !important; border-color: rgba(222,91,48,0.3) !important; color: var(--text) !important; }
                 .flatpickr-day.selected { background: #DE5B30 !important; border-color: #DE5B30 !important; color: #fff !important; }
-                .flatpickr-day.prevMonthDay, .flatpickr-day.nextMonthDay { color: #4b5563 !important; }
+                .flatpickr-day.prevMonthDay, .flatpickr-day.nextMonthDay { color: var(--dim) !important; }
                 .flatpickr-day.today { border-color: #DE5B30 !important; }
                 .flatpickr-day.today:hover { background: rgba(222,91,48,0.2) !important; }
-                .flatpickr-prev-month, .flatpickr-next-month { fill: #9ca3af !important; }
+                .flatpickr-prev-month, .flatpickr-next-month { fill: var(--muted) !important; }
                 .flatpickr-prev-month:hover, .flatpickr-next-month:hover { fill: #DE5B30 !important; }
-                .flatpickr-time { border-top: 1px solid #2a2d3a !important; background: #1a1d27 !important; }
-                .flatpickr-time input { color: #e5e7eb !important; background: #1a1d27 !important; text-shadow: 0 0 1px rgba(229,231,235,0.3) !important; }
-                .flatpickr-time .flatpickr-am-pm { color: #9ca3af !important; }
+                .flatpickr-time { border-top: 1px solid var(--border) !important; background: var(--card) !important; }
+                .flatpickr-time input { color: var(--text2) !important; background: var(--card) !important; text-shadow: 0 0 1px rgba(229,231,235,0.3) !important; }
+                .flatpickr-time .flatpickr-am-pm { color: var(--muted) !important; }
                 .flatpickr-time .flatpickr-am-pm:hover { color: #DE5B30 !important; }
                 span.numInputWrapper { background: transparent !important; }
-                span.numInputWrapper span.arrowUp, span.numInputWrapper span.arrowDown { border-color: #4b5563 !important; }
+                span.numInputWrapper span.arrowUp, span.numInputWrapper span.arrowDown { border-color: var(--dim) !important; }
                 span.numInputWrapper span.arrowUp:hover, span.numInputWrapper span.arrowDown:hover { border-color: #DE5B30 !important; background: rgba(222,91,48,0.1) !important; }
-                span.numInputWrapper span.arrowUp::after, span.numInputWrapper span.arrowDown::after { border-color: #9ca3af !important; }
+                span.numInputWrapper span.arrowUp::after, span.numInputWrapper span.arrowDown::after { border-color: var(--muted) !important; }
                 span.numInputWrapper:hover { background: transparent !important; }
-                .flatpickr-months .flatpickr-next-month flatpickr-monthDropdown-months { background: #1a1d27 !important; }
-                input.flatpickr-input { background: #0f1117 !important; color: #e5e7eb !important; border: 1px solid #2a2d3a !important; border-radius: 8px !important; padding: 10px 14px !important; }
+                .flatpickr-months .flatpickr-next-month flatpickr-monthDropdown-months { background: var(--card) !important; }
+                input.flatpickr-input { background: var(--bg) !important; color: var(--text2) !important; border: 1px solid var(--border) !important; border-radius: 8px !important; padding: 10px 14px !important; }
                 "#}
             </style>
             <style>{(ADMIN_STYLE)}</style>
+            <script>{(crate::admin_ui::ADMIN_THEME_JS)}</script>
             <script src=(flatpickr_js)></script>
             <script src=(flatpickr_ko)></script>
         </head>
@@ -300,7 +302,7 @@ pub async fn admin_event_edit_page(cx: &Cx) -> Result<impl View + '_> {
                     <h1 style="font-size:1.25rem; font-weight:700;">"이벤트 수정"</h1>
                 </div>
 
-                <div style="background:#1a1d27; border:1px solid #2a2d3a; border-radius:10px; padding:24px; margin-bottom:24px;">
+                <div style="background:var(--card); border:1px solid var(--border); border-radius:10px; padding:24px; margin-bottom:24px;">
                     <form action="/admin/events/update" method="POST" style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
                         <input type="hidden" name="csrf_token" value=(csrf_token.clone())>
                         <input type="hidden" name="id" value=(ev.id.clone())>

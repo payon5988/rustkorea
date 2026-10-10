@@ -54,7 +54,7 @@ async fn save_setting(db: &Db, key: &str, value: &str) {
 }
 
 const FIELD_LABEL_STYLE: &str =
-    "display:block; font-size:12px; font-weight:600; color:#9ca3af; margin-bottom:6px;";
+    "display:block; font-size:12px; font-weight:600; color:var(--muted); margin-bottom:6px;";
 
 #[page("/admin/settings")]
 pub async fn admin_settings_page(cx: &Cx) -> Result<impl View + '_> {
@@ -98,12 +98,12 @@ pub async fn admin_settings_page(cx: &Cx) -> Result<impl View + '_> {
     let yt_premium = youtube_visibility == "premium";
 
     let query_str = uri(cx).query().unwrap_or("");
-    let input_style = "width:100%; background:#0f1117; border:1px solid #2a2d3a; border-radius:8px; padding:10px 14px; font-size:14px; color:#e5e7eb; outline:none;";
-    let textarea_style = "width:100%; background:#0f1117; border:1px solid #2a2d3a; border-radius:8px; padding:10px 14px; font-size:14px; color:#e5e7eb; outline:none; resize:vertical; font-family:inherit; line-height:1.6;";
+    let input_style = "width:100%; background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:10px 14px; font-size:14px; color:var(--text2); outline:none;";
+    let textarea_style = "width:100%; background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:10px 14px; font-size:14px; color:var(--text2); outline:none; resize:vertical; font-family:inherit; line-height:1.6;";
     let preview_box_style = if logo_url.is_empty() {
-        "margin-top:12px; display:none; align-items:center; gap:16px; background:#0f1117; border:1px solid #2a2d3a; border-radius:8px; padding:16px;"
+        "margin-top:12px; display:none; align-items:center; gap:16px; background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:16px;"
     } else {
-        "margin-top:12px; display:flex; align-items:center; gap:16px; background:#0f1117; border:1px solid #2a2d3a; border-radius:8px; padding:16px;"
+        "margin-top:12px; display:flex; align-items:center; gap:16px; background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:16px;"
     };
 
     Ok(view! {
@@ -113,27 +113,28 @@ pub async fn admin_settings_page(cx: &Cx) -> Result<impl View + '_> {
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>"사이트 설정 - Rust Korea Admin"</title>
             <style>{(ADMIN_STYLE)}</style>
+            <script>{(crate::admin_ui::ADMIN_THEME_JS)}</script>
         </head>
         <body style="display:flex; min-height:100vh;">
             {AdminSidebar(active: "/admin/settings".into())}
             <div style="flex:1; padding:24px 32px; overflow-y:auto;">
                 <div style="margin-bottom:24px;">
-                    <h1 style="font-size:1.25rem; font-weight:700; color:#f9fafb; letter-spacing:-0.01em;">"사이트 설정"</h1>
-                    <p style="font-size:13px; color:#6b7280; margin-top:2px;">"사이트 전역에서 사용하는 기본 정보를 설정합니다."</p>
+                    <h1 style="font-size:1.25rem; font-weight:700; color:var(--text); letter-spacing:-0.01em;">"사이트 설정"</h1>
+                    <p style="font-size:13px; color:var(--muted2); margin-top:2px;">"사이트 전역에서 사용하는 기본 정보를 설정합니다."</p>
                 </div>
 
                 if query_str.contains("saved=1") {
-                    <div style="background:rgba(52,211,153,0.1); border:1px solid rgba(52,211,153,0.2); border-radius:8px; padding:12px 16px; margin-bottom:16px; font-size:13px; color:#34d399;">"설정이 저장되었습니다."</div>
+                    <div style="background:rgba(52,211,153,0.1); border:1px solid rgba(52,211,153,0.2); border-radius:8px; padding:12px 16px; margin-bottom:16px; font-size:13px; color:var(--green);">"설정이 저장되었습니다."</div>
                 }
                 if query_str.contains("error=invalid") {
-                    <div style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.2); border-radius:8px; padding:12px 16px; margin-bottom:16px; font-size:13px; color:#fca5a5;">"페이지당 게시글 수는 1 이상의 숫자여야 합니다."</div>
+                    <div style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.2); border-radius:8px; padding:12px 16px; margin-bottom:16px; font-size:13px; color:var(--red-soft);">"페이지당 게시글 수는 1 이상의 숫자여야 합니다."</div>
                 }
 
                 <form action="/admin/settings" method="POST" style="max-width:720px;">
                     <input type="hidden" name="csrf_token" value=(csrf_token.clone())>
-                    <div style="background:#1a1d27; border:1px solid #2a2d3a; border-radius:10px; padding:24px; margin-bottom:20px;">
-                        <h2 style="font-size:15px; font-weight:700; color:#f9fafb; margin-bottom:4px;">"기본 정보"</h2>
-                        <p style="font-size:12px; color:#6b7280; margin-bottom:20px;">"사이트 이름과 소개글"</p>
+                    <div style="background:var(--card); border:1px solid var(--border); border-radius:10px; padding:24px; margin-bottom:20px;">
+                        <h2 style="font-size:15px; font-weight:700; color:var(--text); margin-bottom:4px;">"기본 정보"</h2>
+                        <p style="font-size:12px; color:var(--muted2); margin-bottom:20px;">"사이트 이름과 소개글"</p>
 
                         <div style="margin-bottom:20px;">
                             <label for="site_title" style=(FIELD_LABEL_STYLE)>"사이트 제목"</label>
@@ -150,14 +151,14 @@ pub async fn admin_settings_page(cx: &Cx) -> Result<impl View + '_> {
                         <div>
                             <label for="logo_url" style=(FIELD_LABEL_STYLE)>"로고 이미지 URL"</label>
                             <input type="text" id="logo_url" name="logo_url" value=(logo_url.clone()) placeholder="https://example.com/logo.png (비워두면 기본 Rust 로고)" style=(input_style) oninput="updateLogoPreview(this.value)">
-                            <p style="font-size:11px; color:#4b5563; margin-top:4px;">"PNG, JPG, SVG, WebP 등. 비워두면 Rust 기어 로고가 표시됩니다."</p>
+                            <p style="font-size:11px; color:var(--dim); margin-top:4px;">"PNG, JPG, SVG, WebP 등. 비워두면 Rust 기어 로고가 표시됩니다."</p>
                             <div id="logo-preview-box" style=(preview_box_style)>
                                 <div style="flex-shrink:0;">
-                                    <img id="logo-preview-img" src=(logo_url.clone()) alt="logo" style="width:48px; height:48px; border-radius:8px; object-fit:contain; background:#fff; padding:4px;" onerror="this.parentElement.innerHTML='<div style=\\'width:48px;height:48px;border-radius:8px;background:#1a1d27;border:1px solid #ef4444;display:flex;align-items:center;justify-content:center;color:#f87171;font-size:11px;font-weight:600;\\'>에러</div>'">
+                                    <img id="logo-preview-img" src=(logo_url.clone()) alt="logo" style="width:48px; height:48px; border-radius:8px; object-fit:contain; background:#fff; padding:4px;" onerror="this.parentElement.innerHTML='<div style=\\'width:48px;height:48px;border-radius:8px;background:var(--card);border:1px solid #ef4444;display:flex;align-items:center;justify-content:center;color:var(--red);font-size:11px;font-weight:600;\\'>에러</div>'">
                                 </div>
                                 <div>
-                                    <div style="font-size:13px; font-weight:600; color:#e5e7eb;">"로고 미리보기"</div>
-                                    <div style="font-size:11px; color:#6b7280; margin-top:2px;">"헤더에서 48x48로 표시됩니다"</div>
+                                    <div style="font-size:13px; font-weight:600; color:var(--text2);">"로고 미리보기"</div>
+                                    <div style="font-size:11px; color:var(--muted2); margin-top:2px;">"헤더에서 48x48로 표시됩니다"</div>
                                 </div>
                             </div>
                             <script type="text/javascript">
@@ -175,9 +176,9 @@ pub async fn admin_settings_page(cx: &Cx) -> Result<impl View + '_> {
                         </div>
                     </div>
 
-                    <div style="background:#1a1d27; border:1px solid #2a2d3a; border-radius:10px; padding:24px; margin-bottom:20px;">
-                        <h2 style="font-size:15px; font-weight:700; color:#f9fafb; margin-bottom:4px;">"표시 설정"</h2>
-                        <p style="font-size:12px; color:#6b7280; margin-bottom:20px;">"푸터 문구와 목록 표시 개수"</p>
+                    <div style="background:var(--card); border:1px solid var(--border); border-radius:10px; padding:24px; margin-bottom:20px;">
+                        <h2 style="font-size:15px; font-weight:700; color:var(--text); margin-bottom:4px;">"표시 설정"</h2>
+                        <p style="font-size:12px; color:var(--muted2); margin-bottom:20px;">"푸터 문구와 목록 표시 개수"</p>
 
                         <div style="margin-bottom:20px;">
                             <label for="footer_text" style=(FIELD_LABEL_STYLE)>"푸터 문구"</label>
@@ -189,9 +190,9 @@ pub async fn admin_settings_page(cx: &Cx) -> Result<impl View + '_> {
                         </div>
                     </div>
 
-                    <div style="background:#1a1d27; border:1px solid #2a2d3a; border-radius:10px; padding:24px; margin-bottom:20px;">
-                        <h2 style="font-size:15px; font-weight:700; color:#f9fafb; margin-bottom:4px;">"외부 연동"</h2>
-                        <p style="font-size:12px; color:#6b7280; margin-bottom:20px;">"YouTube 영상을 가져올 채널"</p>
+                    <div style="background:var(--card); border:1px solid var(--border); border-radius:10px; padding:24px; margin-bottom:20px;">
+                        <h2 style="font-size:15px; font-weight:700; color:var(--text); margin-bottom:4px;">"외부 연동"</h2>
+                        <p style="font-size:12px; color:var(--muted2); margin-bottom:20px;">"YouTube 영상을 가져올 채널"</p>
 
                         <div style="margin-bottom:20px;">
                             <label for="youtube_channel_id" style=(FIELD_LABEL_STYLE)>"YouTube 채널 ID"</label>
@@ -208,9 +209,9 @@ pub async fn admin_settings_page(cx: &Cx) -> Result<impl View + '_> {
                         </div>
                     </div>
 
-                    <div style="background:#1a1d27; border:1px solid #2a2d3a; border-radius:10px; padding:24px; margin-bottom:20px;">
-                        <h2 style="font-size:15px; font-weight:700; color:#f9fafb; margin-bottom:4px;">"접근 제어"</h2>
-                        <p style="font-size:12px; color:#6b7280; margin-bottom:20px;">"회원가입 승인제와 공개 범위를 설정합니다."</p>
+                    <div style="background:var(--card); border:1px solid var(--border); border-radius:10px; padding:24px; margin-bottom:20px;">
+                        <h2 style="font-size:15px; font-weight:700; color:var(--text); margin-bottom:4px;">"접근 제어"</h2>
+                        <p style="font-size:12px; color:var(--muted2); margin-bottom:20px;">"회원가입 승인제와 공개 범위를 설정합니다."</p>
 
                         <label style="display:flex; align-items:center; gap:12px; cursor:pointer;">
                             if require_approval {
@@ -219,15 +220,15 @@ pub async fn admin_settings_page(cx: &Cx) -> Result<impl View + '_> {
                                 <input type="checkbox" name="require_approval" value="true" style="width:18px; height:18px; accent-color:#DE5B30; cursor:pointer;">
                             }
                             <div>
-                                <div style="font-size:14px; font-weight:600; color:#e5e7eb;">"가입 승인제"</div>
-                                <div style="font-size:12px; color:#6b7280;">"켜면 신규 가입이 승인대기 상태가 되어 관리자가 승인해야 로그인할 수 있습니다."</div>
+                                <div style="font-size:14px; font-weight:600; color:var(--text2);">"가입 승인제"</div>
+                                <div style="font-size:12px; color:var(--muted2);">"켜면 신규 가입이 승인대기 상태가 되어 관리자가 승인해야 로그인할 수 있습니다."</div>
                             </div>
                         </label>
                     </div>
 
-                    <div style="background:#1a1d27; border:1px solid #2a2d3a; border-radius:10px; padding:24px; margin-bottom:20px;">
-                        <h2 style="font-size:15px; font-weight:700; color:#f9fafb; margin-bottom:4px;">"Google AdSense"</h2>
-                        <p style="font-size:12px; color:#6b7280; margin-bottom:20px;">"사이트에 광고를 게재하기 위한 설정입니다. Publisher ID는 Google AdSense 대시보드에서 확인할 수 있습니다."</p>
+                    <div style="background:var(--card); border:1px solid var(--border); border-radius:10px; padding:24px; margin-bottom:20px;">
+                        <h2 style="font-size:15px; font-weight:700; color:var(--text); margin-bottom:4px;">"Google AdSense"</h2>
+                        <p style="font-size:12px; color:var(--muted2); margin-bottom:20px;">"사이트에 광고를 게재하기 위한 설정입니다. Publisher ID는 Google AdSense 대시보드에서 확인할 수 있습니다."</p>
 
                         <div style="display:flex; flex-direction:column; gap:16px;">
                             <label style="display:flex; align-items:center; gap:12px; cursor:pointer;">
@@ -237,8 +238,8 @@ pub async fn admin_settings_page(cx: &Cx) -> Result<impl View + '_> {
                                     <input type="checkbox" name="adsense_enabled" value="true" style="width:18px; height:18px; accent-color:#DE5B30; cursor:pointer;">
                                 }
                                 <div>
-                                    <div style="font-size:14px; font-weight:600; color:#e5e7eb;">"AdSense 활성화"</div>
-                                    <div style="font-size:12px; color:#6b7280;">"활성화하면 페이지에 광고 슬롯이 표시됩니다."</div>
+                                    <div style="font-size:14px; font-weight:600; color:var(--text2);">"AdSense 활성화"</div>
+                                    <div style="font-size:12px; color:var(--muted2);">"활성화하면 페이지에 광고 슬롯이 표시됩니다."</div>
                                 </div>
                             </label>
                         </div>
@@ -246,13 +247,13 @@ pub async fn admin_settings_page(cx: &Cx) -> Result<impl View + '_> {
                         <div style="margin-top:16px;">
                             <label for="adsense_client" style=(FIELD_LABEL_STYLE)>"Publisher ID (ca-pub-xxxxxxxxxx)"</label>
                             <input type="text" id="adsense_client" name="adsense_client" value=(adsense_client) placeholder="ca-pub-XXXXXXXXXXXXXXXX" style=(input_style)>
-                            <p style="font-size:11px; color:#4b5563; margin-top:4px;">"Google AdSense 대시보드 → 사이트 → 광고 설정 에서 확인할 수 있습니다."</p>
+                            <p style="font-size:11px; color:var(--dim); margin-top:4px;">"Google AdSense 대시보드 → 사이트 → 광고 설정 에서 확인할 수 있습니다."</p>
                         </div>
                     </div>
 
-                    <div style="background:#1a1d27; border:1px solid #2a2d3a; border-radius:10px; padding:24px; margin-bottom:20px;">
-                        <h2 style="font-size:15px; font-weight:700; color:#f9fafb; margin-bottom:4px;">"OAuth 로그인"</h2>
-                        <p style="font-size:12px; color:#6b7280; margin-bottom:20px;">"소셜 로그인 제공자를 활성화 또는 비활성화합니다."</p>
+                    <div style="background:var(--card); border:1px solid var(--border); border-radius:10px; padding:24px; margin-bottom:20px;">
+                        <h2 style="font-size:15px; font-weight:700; color:var(--text); margin-bottom:4px;">"OAuth 로그인"</h2>
+                        <p style="font-size:12px; color:var(--muted2); margin-bottom:20px;">"소셜 로그인 제공자를 활성화 또는 비활성화합니다."</p>
 
                         <div style="display:flex; flex-direction:column; gap:16px;">
                             <label style="display:flex; align-items:center; gap:12px; cursor:pointer;">
@@ -262,8 +263,8 @@ pub async fn admin_settings_page(cx: &Cx) -> Result<impl View + '_> {
                                     <input type="checkbox" name="github_oauth_enabled" value="true" style="width:18px; height:18px; accent-color:#DE5B30; cursor:pointer;">
                                 }
                                 <div>
-                                    <div style="font-size:14px; font-weight:600; color:#e5e7eb;">"GitHub 로그인"</div>
-                                    <div style="font-size:12px; color:#6b7280;">"GitHub OAuth를 통한 소셜 로그인"</div>
+                                    <div style="font-size:14px; font-weight:600; color:var(--text2);">"GitHub 로그인"</div>
+                                    <div style="font-size:12px; color:var(--muted2);">"GitHub OAuth를 통한 소셜 로그인"</div>
                                 </div>
                             </label>
                             <label style="display:flex; align-items:center; gap:12px; cursor:pointer;">
@@ -273,8 +274,8 @@ pub async fn admin_settings_page(cx: &Cx) -> Result<impl View + '_> {
                                     <input type="checkbox" name="google_oauth_enabled" value="true" style="width:18px; height:18px; accent-color:#DE5B30; cursor:pointer;">
                                 }
                                 <div>
-                                    <div style="font-size:14px; font-weight:600; color:#e5e7eb;">"Google 로그인"</div>
-                                    <div style="font-size:12px; color:#6b7280;">"Google OAuth를 통한 소셜 로그인"</div>
+                                    <div style="font-size:14px; font-weight:600; color:var(--text2);">"Google 로그인"</div>
+                                    <div style="font-size:12px; color:var(--muted2);">"Google OAuth를 통한 소셜 로그인"</div>
                                 </div>
                             </label>
                         </div>

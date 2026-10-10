@@ -13,9 +13,9 @@ use crate::components::admin_sidebar::AdminSidebar;
 use crate::db::Db;
 use crate::models::User;
 
-const INPUT_STYLE: &str = "width:100%; background:#0f1117; border:1px solid #2a2d3a; border-radius:8px; padding:10px 14px; font-size:14px; color:#e5e7eb; outline:none;";
+const INPUT_STYLE: &str = "width:100%; background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:10px 14px; font-size:14px; color:var(--text2); outline:none;";
 const LABEL_STYLE: &str =
-    "display:block; font-size:12px; font-weight:600; color:#9ca3af; margin-bottom:6px;";
+    "display:block; font-size:12px; font-weight:600; color:var(--muted); margin-bottom:6px;";
 
 #[derive(serde::Deserialize)]
 pub struct DeleteForm {
@@ -95,112 +95,113 @@ pub async fn admin_users_page(cx: &Cx) -> Result<impl View + '_> {
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>"사용자 관리 - Rust Korea Admin"</title>
             <style>{(ADMIN_STYLE)}</style>
+            <script>{(crate::admin_ui::ADMIN_THEME_JS)}</script>
         </head>
         <body style="display:flex; min-height:100vh;">
             {AdminSidebar(active: "/admin/users".into())}
             <div style="flex:1; padding:24px 32px; overflow-y:auto;">
                 <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:24px;">
                     <div>
-                        <h1 style="font-size:1.25rem; font-weight:700; color:#f9fafb; letter-spacing:-0.01em;">"사용자 관리"</h1>
-                        <p style="font-size:13px; color:#6b7280; margin-top:2px;">"전체 사용자 목록 및 관리"</p>
+                        <h1 style="font-size:1.25rem; font-weight:700; color:var(--text); letter-spacing:-0.01em;">"사용자 관리"</h1>
+                        <p style="font-size:13px; color:var(--muted2); margin-top:2px;">"전체 사용자 목록 및 관리"</p>
                     </div>
                     <a href="/admin/users/new" style="background:#DE5B30; color:#fff; padding:8px 16px; border-radius:8px; font-size:13px; font-weight:600; text-decoration:none; transition:background 0.15s;" onmouseover="this.style.background='#c94e28'" onmouseout="this.style.background='#DE5B30'">"+ 사용자 추가"</a>
                 </div>
 
                 if query_str.contains("created=1") {
-                    <div style="background:rgba(52,211,153,0.1); border:1px solid rgba(52,211,153,0.2); border-radius:8px; padding:12px 16px; margin-bottom:16px; font-size:13px; color:#34d399;">"사용자가 생성되었습니다."</div>
+                    <div style="background:rgba(52,211,153,0.1); border:1px solid rgba(52,211,153,0.2); border-radius:8px; padding:12px 16px; margin-bottom:16px; font-size:13px; color:var(--green);">"사용자가 생성되었습니다."</div>
                 }
                 if query_str.contains("updated=1") {
-                    <div style="background:rgba(52,211,153,0.1); border:1px solid rgba(52,211,153,0.2); border-radius:8px; padding:12px 16px; margin-bottom:16px; font-size:13px; color:#34d399;">"사용자 정보가 수정되었습니다."</div>
+                    <div style="background:rgba(52,211,153,0.1); border:1px solid rgba(52,211,153,0.2); border-radius:8px; padding:12px 16px; margin-bottom:16px; font-size:13px; color:var(--green);">"사용자 정보가 수정되었습니다."</div>
                 }
                 if query_str.contains("password_reset=1") {
-                    <div style="background:rgba(52,211,153,0.1); border:1px solid rgba(52,211,153,0.2); border-radius:8px; padding:12px 16px; margin-bottom:16px; font-size:13px; color:#34d399;">"비밀번호가 초기화되었습니다."</div>
+                    <div style="background:rgba(52,211,153,0.1); border:1px solid rgba(52,211,153,0.2); border-radius:8px; padding:12px 16px; margin-bottom:16px; font-size:13px; color:var(--green);">"비밀번호가 초기화되었습니다."</div>
                 }
                 if pending_count > 0 {
-                    <div style="background:rgba(251,191,36,0.1); border:1px solid rgba(251,191,36,0.2); border-radius:8px; padding:12px 16px; margin-bottom:16px; font-size:13px; color:#fbbf24;">(format!("승인 대기 중인 사용자가 {pending_count}명 있습니다."))</div>
+                    <div style="background:rgba(251,191,36,0.1); border:1px solid rgba(251,191,36,0.2); border-radius:8px; padding:12px 16px; margin-bottom:16px; font-size:13px; color:var(--amber);">(format!("승인 대기 중인 사용자가 {pending_count}명 있습니다."))</div>
                 }
 
-                <div style="background:#1a1d27; border:1px solid #2a2d3a; border-radius:10px; overflow:hidden;">
-                    <div style="padding:16px 20px; border-bottom:1px solid #2a2d3a;">
-                        <span style="font-size:14px; font-weight:700; color:#e5e7eb;">"전체 "(users.len())"명"</span>
+                <div style="background:var(--card); border:1px solid var(--border); border-radius:10px; overflow:hidden;">
+                    <div style="padding:16px 20px; border-bottom:1px solid var(--border);">
+                        <span style="font-size:14px; font-weight:700; color:var(--text2);">"전체 "(users.len())"명"</span>
                     </div>
 
                     if users.is_empty() {
                         <div style="padding:60px; text-align:center;">
-                            <p style="font-size:14px; color:#4b5563;">"등록된 사용자가 없습니다"</p>
+                            <p style="font-size:14px; color:var(--dim);">"등록된 사용자가 없습니다"</p>
                         </div>
                     } else {
                         <table style="width:100%; border-collapse:collapse; font-size:13px;">
                             <thead>
                                 <tr>
-                                    <th style="padding:12px 20px; text-align:left; font-size:11px; font-weight:600; color:#6b7280; text-transform:uppercase; letter-spacing:0.05em; border-bottom:1px solid #2a2d3a; background:rgba(255,255,255,0.02);">"사용자"</th>
-                                    <th style="padding:12px 20px; text-align:left; font-size:11px; font-weight:600; color:#6b7280; text-transform:uppercase; letter-spacing:0.05em; border-bottom:1px solid #2a2d3a; background:rgba(255,255,255,0.02);">"이메일"</th>
-                                    <th style="padding:12px 20px; text-align:left; font-size:11px; font-weight:600; color:#6b7280; text-transform:uppercase; letter-spacing:0.05em; border-bottom:1px solid #2a2d3a; background:rgba(255,255,255,0.02);">"역할"</th>
-                                    <th style="padding:12px 20px; text-align:left; font-size:11px; font-weight:600; color:#6b7280; text-transform:uppercase; letter-spacing:0.05em; border-bottom:1px solid #2a2d3a; background:rgba(255,255,255,0.02);">"상태"</th>
-                                    <th style="padding:12px 20px; text-align:left; font-size:11px; font-weight:600; color:#6b7280; text-transform:uppercase; letter-spacing:0.05em; border-bottom:1px solid #2a2d3a; background:rgba(255,255,255,0.02);">"인증"</th>
-                                    <th style="padding:12px 20px; text-align:left; font-size:11px; font-weight:600; color:#6b7280; text-transform:uppercase; letter-spacing:0.05em; border-bottom:1px solid #2a2d3a; background:rgba(255,255,255,0.02);">"가입일"</th>
-                                    <th style="padding:12px 20px; text-align:left; font-size:11px; font-weight:600; color:#6b7280; text-transform:uppercase; letter-spacing:0.05em; border-bottom:1px solid #2a2d3a; background:rgba(255,255,255,0.02);">"관리"</th>
+                                    <th style="padding:12px 20px; text-align:left; font-size:11px; font-weight:600; color:var(--muted2); text-transform:uppercase; letter-spacing:0.05em; border-bottom:1px solid var(--border); background:var(--line);">"사용자"</th>
+                                    <th style="padding:12px 20px; text-align:left; font-size:11px; font-weight:600; color:var(--muted2); text-transform:uppercase; letter-spacing:0.05em; border-bottom:1px solid var(--border); background:var(--line);">"이메일"</th>
+                                    <th style="padding:12px 20px; text-align:left; font-size:11px; font-weight:600; color:var(--muted2); text-transform:uppercase; letter-spacing:0.05em; border-bottom:1px solid var(--border); background:var(--line);">"역할"</th>
+                                    <th style="padding:12px 20px; text-align:left; font-size:11px; font-weight:600; color:var(--muted2); text-transform:uppercase; letter-spacing:0.05em; border-bottom:1px solid var(--border); background:var(--line);">"상태"</th>
+                                    <th style="padding:12px 20px; text-align:left; font-size:11px; font-weight:600; color:var(--muted2); text-transform:uppercase; letter-spacing:0.05em; border-bottom:1px solid var(--border); background:var(--line);">"인증"</th>
+                                    <th style="padding:12px 20px; text-align:left; font-size:11px; font-weight:600; color:var(--muted2); text-transform:uppercase; letter-spacing:0.05em; border-bottom:1px solid var(--border); background:var(--line);">"가입일"</th>
+                                    <th style="padding:12px 20px; text-align:left; font-size:11px; font-weight:600; color:var(--muted2); text-transform:uppercase; letter-spacing:0.05em; border-bottom:1px solid var(--border); background:var(--line);">"관리"</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 for u in &users {
                                     <tr>
-                                        <td style="padding:14px 20px; border-bottom:1px solid rgba(255,255,255,0.03);">
+                                        <td style="padding:14px 20px; border-bottom:1px solid var(--line);">
                                             <div style="display:flex; align-items:center; gap:10px;">
                                                 <div style="width:32px; height:32px; border-radius:8px; background:rgba(222,91,48,0.1); display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:13px; font-weight:700; color:#DE5B30;">(u.username.chars().next().unwrap_or('?').to_string())</div>
                                                 <div>
-                                                    <div style="font-weight:600; color:#d1d5db;">(u.username.clone())</div>
-                                                    <div style="font-size:11px; color:#4b5563; font-family:monospace;">(format!("ID {}", u.id))</div>
+                                                    <div style="font-weight:600; color:var(--text3);">(u.username.clone())</div>
+                                                    <div style="font-size:11px; color:var(--dim); font-family:monospace;">(format!("ID {}", u.id))</div>
                                                 </div>
                                             </div>
                                         </td>
-                                        <td style="padding:14px 20px; border-bottom:1px solid rgba(255,255,255,0.03); color:#9ca3af;">
+                                        <td style="padding:14px 20px; border-bottom:1px solid var(--line); color:var(--muted);">
                                             (u.email.clone().unwrap_or_else(|| "-".into()))
                                         </td>
-                                        <td style="padding:14px 20px; border-bottom:1px solid rgba(255,255,255,0.03);">
+                                        <td style="padding:14px 20px; border-bottom:1px solid var(--line);">
                                             if roles.iter().any(|r| r.id == u.role_id && r.name == "admin") {
-                                                <span style="background:rgba(239,68,68,0.1); color:#f87171; padding:3px 8px; border-radius:4px; font-size:11px; font-weight:600;">"관리자"</span>
+                                                <span style="background:rgba(239,68,68,0.1); color:var(--red); padding:3px 8px; border-radius:4px; font-size:11px; font-weight:600;">"관리자"</span>
                                             } else if roles.iter().any(|r| r.id == u.role_id && r.name == "editor") {
-                                                <span style="background:rgba(96,165,250,0.1); color:#60a5fa; padding:3px 8px; border-radius:4px; font-size:11px; font-weight:600;">"에디터"</span>
+                                                <span style="background:rgba(96,165,250,0.1); color:var(--blue); padding:3px 8px; border-radius:4px; font-size:11px; font-weight:600;">"에디터"</span>
                                             } else if roles.iter().any(|r| r.id == u.role_id && r.name == "member") {
-                                                <span style="background:rgba(107,114,128,0.1); color:#9ca3af; padding:3px 8px; border-radius:4px; font-size:11px; font-weight:600;">"일반"</span>
+                                                <span style="background:rgba(107,114,128,0.1); color:var(--muted); padding:3px 8px; border-radius:4px; font-size:11px; font-weight:600;">"일반"</span>
                                             } else {
-                                                <span style="background:rgba(167,139,250,0.1); color:#a78bfa; padding:3px 8px; border-radius:4px; font-size:11px; font-weight:600;">"커스텀"</span>
+                                                <span style="background:rgba(167,139,250,0.1); color:var(--purple); padding:3px 8px; border-radius:4px; font-size:11px; font-weight:600;">"커스텀"</span>
                                             }
                                         </td>
-                                        <td style="padding:14px 20px; border-bottom:1px solid rgba(255,255,255,0.03);">
+                                        <td style="padding:14px 20px; border-bottom:1px solid var(--line);">
                                             if u.status == "active" {
-                                                <span style="background:rgba(52,211,153,0.1); color:#34d399; padding:3px 8px; border-radius:4px; font-size:11px; font-weight:600;">"활성"</span>
+                                                <span style="background:rgba(52,211,153,0.1); color:var(--green); padding:3px 8px; border-radius:4px; font-size:11px; font-weight:600;">"활성"</span>
                                             } else if u.status == "pending" {
-                                                <span style="background:rgba(251,191,36,0.1); color:#fbbf24; padding:3px 8px; border-radius:4px; font-size:11px; font-weight:600;">"승인대기"</span>
+                                                <span style="background:rgba(251,191,36,0.1); color:var(--amber); padding:3px 8px; border-radius:4px; font-size:11px; font-weight:600;">"승인대기"</span>
                                             } else {
-                                                <span style="background:rgba(239,68,68,0.1); color:#f87171; padding:3px 8px; border-radius:4px; font-size:11px; font-weight:600;">"정지"</span>
+                                                <span style="background:rgba(239,68,68,0.1); color:var(--red); padding:3px 8px; border-radius:4px; font-size:11px; font-weight:600;">"정지"</span>
                                             }
                                         </td>
-                                        <td style="padding:14px 20px; border-bottom:1px solid rgba(255,255,255,0.03);">
+                                        <td style="padding:14px 20px; border-bottom:1px solid var(--line);">
                                             if u.password_hash.is_some() {
-                                                <span style="background:rgba(52,211,153,0.1); color:#34d399; padding:3px 8px; border-radius:4px; font-size:11px; font-weight:600;">"이메일"</span>
+                                                <span style="background:rgba(52,211,153,0.1); color:var(--green); padding:3px 8px; border-radius:4px; font-size:11px; font-weight:600;">"이메일"</span>
                                             } else if u.github_id.is_some() {
-                                                <span style="background:rgba(167,139,250,0.1); color:#a78bfa; padding:3px 8px; border-radius:4px; font-size:11px; font-weight:600;">"GitHub"</span>
+                                                <span style="background:rgba(167,139,250,0.1); color:var(--purple); padding:3px 8px; border-radius:4px; font-size:11px; font-weight:600;">"GitHub"</span>
                                             } else if u.google_id.is_some() {
-                                                <span style="background:rgba(96,165,250,0.1); color:#60a5fa; padding:3px 8px; border-radius:4px; font-size:11px; font-weight:600;">"Google"</span>
+                                                <span style="background:rgba(96,165,250,0.1); color:var(--blue); padding:3px 8px; border-radius:4px; font-size:11px; font-weight:600;">"Google"</span>
                                             } else {
-                                                <span style="background:rgba(251,191,36,0.1); color:#fbbf24; padding:3px 8px; border-radius:4px; font-size:11px; font-weight:600;">"게스트"</span>
+                                                <span style="background:rgba(251,191,36,0.1); color:var(--amber); padding:3px 8px; border-radius:4px; font-size:11px; font-weight:600;">"게스트"</span>
                                             }
                                         </td>
-                                        <td style="padding:14px 20px; border-bottom:1px solid rgba(255,255,255,0.03); color:#6b7280; font-size:12px;">
+                                        <td style="padding:14px 20px; border-bottom:1px solid var(--line); color:var(--muted2); font-size:12px;">
                                             (u.created_at.get(..10).unwrap_or("").to_string())
                                         </td>
-                                        <td style="padding:14px 20px; border-bottom:1px solid rgba(255,255,255,0.03);">
+                                        <td style="padding:14px 20px; border-bottom:1px solid var(--line);">
                                             <div style="display:flex; gap:6px;">
-                                                <a href=(format!("/admin/users/edit?user_id={}", u.id)) style="background:rgba(96,165,250,0.1); color:#60a5fa; padding:4px 10px; border-radius:6px; font-size:11px; text-decoration:none; font-weight:600;">"편집"</a>
-                                                <a href=(format!("/admin/users/reset-password?user_id={}", u.id)) style="background:rgba(251,191,36,0.1); color:#fbbf24; padding:4px 10px; border-radius:6px; font-size:11px; text-decoration:none; font-weight:600;">"비밀번호"</a>
+                                                <a href=(format!("/admin/users/edit?user_id={}", u.id)) style="background:rgba(96,165,250,0.1); color:var(--blue); padding:4px 10px; border-radius:6px; font-size:11px; text-decoration:none; font-weight:600;">"편집"</a>
+                                                <a href=(format!("/admin/users/reset-password?user_id={}", u.id)) style="background:rgba(251,191,36,0.1); color:var(--amber); padding:4px 10px; border-radius:6px; font-size:11px; text-decoration:none; font-weight:600;">"비밀번호"</a>
                                                 if u.status == "pending" {
                                                     <form action="/admin/users/status" method="POST" style="display:inline;">
                                                         <input type="hidden" name="csrf_token" value=(csrf_token.clone())>
                                                         <input type="hidden" name="user_id" value=(u.id.clone())>
                                                         <input type="hidden" name="status" value="active">
-                                                        <button type="submit" style="background:rgba(52,211,153,0.1); border:1px solid rgba(52,211,153,0.3); color:#34d399; padding:4px 10px; border-radius:6px; font-size:11px; cursor:pointer; font-weight:600;">"승인"</button>
+                                                        <button type="submit" style="background:rgba(52,211,153,0.1); border:1px solid rgba(52,211,153,0.3); color:var(--green); padding:4px 10px; border-radius:6px; font-size:11px; cursor:pointer; font-weight:600;">"승인"</button>
                                                     </form>
                                                 }
                                                 if u.status == "active" && u.username != "guest" {
@@ -208,7 +209,7 @@ pub async fn admin_users_page(cx: &Cx) -> Result<impl View + '_> {
                                                         <input type="hidden" name="csrf_token" value=(csrf_token.clone())>
                                                         <input type="hidden" name="user_id" value=(u.id.clone())>
                                                         <input type="hidden" name="status" value="suspended">
-                                                        <button type="submit" style="background:none; border:1px solid rgba(251,191,36,0.3); color:#fbbf24; padding:4px 10px; border-radius:6px; font-size:11px; cursor:pointer; font-weight:600;">"정지"</button>
+                                                        <button type="submit" style="background:none; border:1px solid rgba(251,191,36,0.3); color:var(--amber); padding:4px 10px; border-radius:6px; font-size:11px; cursor:pointer; font-weight:600;">"정지"</button>
                                                     </form>
                                                 }
                                                 if u.status == "suspended" {
@@ -216,14 +217,14 @@ pub async fn admin_users_page(cx: &Cx) -> Result<impl View + '_> {
                                                         <input type="hidden" name="csrf_token" value=(csrf_token.clone())>
                                                         <input type="hidden" name="user_id" value=(u.id.clone())>
                                                         <input type="hidden" name="status" value="active">
-                                                        <button type="submit" style="background:rgba(52,211,153,0.1); border:1px solid rgba(52,211,153,0.3); color:#34d399; padding:4px 10px; border-radius:6px; font-size:11px; cursor:pointer; font-weight:600;">"해제"</button>
+                                                        <button type="submit" style="background:rgba(52,211,153,0.1); border:1px solid rgba(52,211,153,0.3); color:var(--green); padding:4px 10px; border-radius:6px; font-size:11px; cursor:pointer; font-weight:600;">"해제"</button>
                                                     </form>
                                                 }
                                                 if u.username != "guest" && u.username != "admin" {
                                                     <form action="/admin/users/delete" method="POST" style="display:inline;" onsubmit="return confirm('정말 이 사용자를 삭제하시겠습니까?')">
                                                         <input type="hidden" name="csrf_token" value=(csrf_token.clone())>
                                                         <input type="hidden" name="user_id" value=(u.id.clone())>
-                                                        <button type="submit" style="background:none; border:1px solid rgba(239,68,68,0.3); color:#f87171; padding:4px 10px; border-radius:6px; font-size:11px; cursor:pointer; font-weight:600;">"삭제"</button>
+                                                        <button type="submit" style="background:none; border:1px solid rgba(239,68,68,0.3); color:var(--red); padding:4px 10px; border-radius:6px; font-size:11px; cursor:pointer; font-weight:600;">"삭제"</button>
                                                     </form>
                                                 }
                                             </div>
@@ -353,16 +354,17 @@ pub async fn admin_user_new_page(cx: &Cx) -> Result<impl View + '_> {
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>"사용자 추가 - Rust Korea Admin"</title>
             <style>{(ADMIN_STYLE)}</style>
+            <script>{(crate::admin_ui::ADMIN_THEME_JS)}</script>
         </head>
         <body style="display:flex; min-height:100vh;">
             {AdminSidebar(active: "/admin/users".into())}
             <div style="flex:1; padding:24px 32px; overflow-y:auto;">
                 <div style="margin-bottom:24px;">
-                    <h1 style="font-size:1.25rem; font-weight:700; color:#f9fafb; letter-spacing:-0.01em;">"사용자 추가"</h1>
-                    <p style="font-size:13px; color:#6b7280; margin-top:2px;">"새로운 사용자를 생성합니다."</p>
+                    <h1 style="font-size:1.25rem; font-weight:700; color:var(--text); letter-spacing:-0.01em;">"사용자 추가"</h1>
+                    <p style="font-size:13px; color:var(--muted2); margin-top:2px;">"새로운 사용자를 생성합니다."</p>
                 </div>
 
-                <div style="background:#1a1d27; border:1px solid #2a2d3a; border-radius:10px; padding:24px; max-width:560px;">
+                <div style="background:var(--card); border:1px solid var(--border); border-radius:10px; padding:24px; max-width:560px;">
                     <form action="/admin/users/create" method="POST">
                         <input type="hidden" name="csrf_token" value=(csrf_token.clone())>
                         <div style="margin-bottom:16px;">
@@ -387,7 +389,7 @@ pub async fn admin_user_new_page(cx: &Cx) -> Result<impl View + '_> {
                         </div>
                         <div style="display:flex; gap:10px;">
                             <button type="submit" style="background:#DE5B30; color:#fff; padding:10px 20px; border-radius:8px; font-size:14px; font-weight:600; border:none; cursor:pointer;">"사용자 추가"</button>
-                            <a href="/admin/users" style="background:none; border:1px solid #2a2d3a; color:#9ca3af; padding:10px 20px; border-radius:8px; font-size:14px; font-weight:600; text-decoration:none;">"취소"</a>
+                            <a href="/admin/users" style="background:none; border:1px solid var(--border); color:var(--muted); padding:10px 20px; border-radius:8px; font-size:14px; font-weight:600; text-decoration:none;">"취소"</a>
                         </div>
                     </form>
                 </div>
@@ -525,16 +527,17 @@ pub async fn admin_user_edit_page(cx: &Cx) -> Result<impl View + '_> {
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>"사용자 편집 - Rust Korea Admin"</title>
             <style>{(ADMIN_STYLE)}</style>
+            <script>{(crate::admin_ui::ADMIN_THEME_JS)}</script>
         </head>
         <body style="display:flex; min-height:100vh;">
             {AdminSidebar(active: "/admin/users".into())}
             <div style="flex:1; padding:24px 32px; overflow-y:auto;">
                 <div style="margin-bottom:24px;">
-                    <h1 style="font-size:1.25rem; font-weight:700; color:#f9fafb; letter-spacing:-0.01em;">"사용자 편집"</h1>
-                    <p style="font-size:13px; color:#6b7280; margin-top:2px;">(format!("{} 사용자의 정보를 수정합니다.", username_display))</p>
+                    <h1 style="font-size:1.25rem; font-weight:700; color:var(--text); letter-spacing:-0.01em;">"사용자 편집"</h1>
+                    <p style="font-size:13px; color:var(--muted2); margin-top:2px;">(format!("{} 사용자의 정보를 수정합니다.", username_display))</p>
                 </div>
 
-                <div style="background:#1a1d27; border:1px solid #2a2d3a; border-radius:10px; padding:24px; max-width:560px;">
+                <div style="background:var(--card); border:1px solid var(--border); border-radius:10px; padding:24px; max-width:560px;">
                     <form action="/admin/users/update" method="POST">
                         <input type="hidden" name="csrf_token" value=(csrf_token.clone())>
                         <input type="hidden" name="user_id" value=(id_display.clone())>
@@ -580,7 +583,7 @@ pub async fn admin_user_edit_page(cx: &Cx) -> Result<impl View + '_> {
                         </div>
                         <div style="display:flex; gap:10px;">
                             <button type="submit" style="background:#DE5B30; color:#fff; padding:10px 20px; border-radius:8px; font-size:14px; font-weight:600; border:none; cursor:pointer;">"저장"</button>
-                            <a href="/admin/users" style="background:none; border:1px solid #2a2d3a; color:#9ca3af; padding:10px 20px; border-radius:8px; font-size:14px; font-weight:600; text-decoration:none;">"취소"</a>
+                            <a href="/admin/users" style="background:none; border:1px solid var(--border); color:var(--muted); padding:10px 20px; border-radius:8px; font-size:14px; font-weight:600; text-decoration:none;">"취소"</a>
                         </div>
                     </form>
                 </div>
@@ -783,16 +786,17 @@ pub async fn admin_user_reset_password_page(cx: &Cx) -> Result<impl View + '_> {
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>"비밀번호 초기화 - Rust Korea Admin"</title>
             <style>{(ADMIN_STYLE)}</style>
+            <script>{(crate::admin_ui::ADMIN_THEME_JS)}</script>
         </head>
         <body style="display:flex; min-height:100vh;">
             {AdminSidebar(active: "/admin/users".into())}
             <div style="flex:1; padding:24px 32px; overflow-y:auto;">
                 <div style="margin-bottom:24px;">
-                    <h1 style="font-size:1.25rem; font-weight:700; color:#f9fafb; letter-spacing:-0.01em;">"비밀번호 초기화"</h1>
-                    <p style="font-size:13px; color:#6b7280; margin-top:2px;">(format!("{} 사용자의 비밀번호를 변경합니다.", username_display))</p>
+                    <h1 style="font-size:1.25rem; font-weight:700; color:var(--text); letter-spacing:-0.01em;">"비밀번호 초기화"</h1>
+                    <p style="font-size:13px; color:var(--muted2); margin-top:2px;">(format!("{} 사용자의 비밀번호를 변경합니다.", username_display))</p>
                 </div>
 
-                <div style="background:#1a1d27; border:1px solid #2a2d3a; border-radius:10px; padding:24px; max-width:560px;">
+                <div style="background:var(--card); border:1px solid var(--border); border-radius:10px; padding:24px; max-width:560px;">
                     <form action="/admin/users/reset-password" method="POST">
                         <input type="hidden" name="csrf_token" value=(csrf_token.clone())>
                         <input type="hidden" name="user_id" value=(id_display.clone())>
@@ -802,7 +806,7 @@ pub async fn admin_user_reset_password_page(cx: &Cx) -> Result<impl View + '_> {
                         </div>
                         <div style="display:flex; gap:10px;">
                             <button type="submit" style="background:#DE5B30; color:#fff; padding:10px 20px; border-radius:8px; font-size:14px; font-weight:600; border:none; cursor:pointer;">"비밀번호 변경"</button>
-                            <a href="/admin/users" style="background:none; border:1px solid #2a2d3a; color:#9ca3af; padding:10px 20px; border-radius:8px; font-size:14px; font-weight:600; text-decoration:none;">"취소"</a>
+                            <a href="/admin/users" style="background:none; border:1px solid var(--border); color:var(--muted); padding:10px 20px; border-radius:8px; font-size:14px; font-weight:600; text-decoration:none;">"취소"</a>
                         </div>
                     </form>
                 </div>

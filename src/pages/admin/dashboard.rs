@@ -156,6 +156,7 @@ pub async fn admin_login_page(cx: &Cx) -> Result<impl View + '_> {
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>"관리자 로그인 - Rust Korea"</title>
             <style>{(ADMIN_STYLE)}</style>
+            <script>{(crate::admin_ui::ADMIN_THEME_JS)}</script>
         </head>
         <body>
             <div class="wrap">
@@ -297,136 +298,137 @@ pub async fn admin_dashboard(cx: &Cx) -> Result<impl View + '_> {
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>"대시보드 - Rust Korea Admin"</title>
             <style>{(ADMIN_STYLE)}</style>
+            <script>{(crate::admin_ui::ADMIN_THEME_JS)}</script>
         </head>
         <body style="display:flex; min-height:100vh;">
             {AdminSidebar(active: "/admin".into())}
             <div style="flex:1; padding:24px 32px; overflow-y:auto;">
                 <div style="margin-bottom:24px;">
-                    <h1 style="font-size:1.25rem; font-weight:700; color:#f9fafb; letter-spacing:-0.01em;">"대시보드"</h1>
-                    <p style="font-size:13px; color:#6b7280; margin-top:2px;">"Rust Korea Hub 관리 현황"</p>
+                    <h1 style="font-size:1.25rem; font-weight:700; color:var(--text); letter-spacing:-0.01em;">"대시보드"</h1>
+                    <p style="font-size:13px; color:var(--muted2); margin-top:2px;">"Rust Korea Hub 관리 현황"</p>
                 </div>
 
                 <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:24px;">
-                    <div style="background:#1a1d27; border:1px solid #2a2d3a; border-radius:10px; padding:20px; display:flex; align-items:center; gap:16px;">
+                    <div style="background:var(--card); border:1px solid var(--border); border-radius:10px; padding:20px; display:flex; align-items:center; gap:16px;">
                         <div style="width:44px; height:44px; border-radius:10px; background:rgba(96,165,250,0.1); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                         </div>
-                        <div><div style="font-size:1.5rem; font-weight:800; color:#f9fafb; letter-spacing:-0.02em;">(post_count)</div><div style="font-size:12px; color:#6b7280;">"게시글"</div></div>
+                        <div><div style="font-size:1.5rem; font-weight:800; color:var(--text); letter-spacing:-0.02em;">(post_count)</div><div style="font-size:12px; color:var(--muted2);">"게시글"</div></div>
                     </div>
-                    <div style="background:#1a1d27; border:1px solid #2a2d3a; border-radius:10px; padding:20px; display:flex; align-items:center; gap:16px;">
+                    <div style="background:var(--card); border:1px solid var(--border); border-radius:10px; padding:20px; display:flex; align-items:center; gap:16px;">
                         <div style="width:44px; height:44px; border-radius:10px; background:rgba(251,191,36,0.1); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2" stroke-linecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2" stroke-linecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                         </div>
-                        <div><div style="font-size:1.5rem; font-weight:800; color:#f9fafb; letter-spacing:-0.02em;">(user_count)</div><div style="font-size:12px; color:#6b7280;">"사용자"</div></div>
+                        <div><div style="font-size:1.5rem; font-weight:800; color:var(--text); letter-spacing:-0.02em;">(user_count)</div><div style="font-size:12px; color:var(--muted2);">"사용자"</div></div>
                     </div>
-                    <div style="background:#1a1d27; border:1px solid #2a2d3a; border-radius:10px; padding:20px; display:flex; align-items:center; gap:16px;">
+                    <div style="background:var(--card); border:1px solid var(--border); border-radius:10px; padding:20px; display:flex; align-items:center; gap:16px;">
                         <div style="width:44px; height:44px; border-radius:10px; background:rgba(167,139,250,0.1); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                         </div>
-                        <div><div style="font-size:1.5rem; font-weight:800; color:#f9fafb; letter-spacing:-0.02em;">(total_views)</div><div style="font-size:12px; color:#6b7280;">"총 조회수"</div></div>
+                        <div><div style="font-size:1.5rem; font-weight:800; color:var(--text); letter-spacing:-0.02em;">(total_views)</div><div style="font-size:12px; color:var(--muted2);">"총 조회수"</div></div>
                     </div>
-                    <div style="background:#1a1d27; border:1px solid #2a2d3a; border-radius:10px; padding:20px; display:flex; align-items:center; gap:16px;">
+                    <div style="background:var(--card); border:1px solid var(--border); border-radius:10px; padding:20px; display:flex; align-items:center; gap:16px;">
                         <div style="width:44px; height:44px; border-radius:10px; background:rgba(222,91,48,0.1); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#DE5B30" stroke-width="2" stroke-linecap="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
                         </div>
-                        <div><div style="font-size:1.5rem; font-weight:800; color:#f9fafb; letter-spacing:-0.02em;">(series_count)</div><div style="font-size:12px; color:#6b7280;">"매뉴얼 시리즈"</div></div>
+                        <div><div style="font-size:1.5rem; font-weight:800; color:var(--text); letter-spacing:-0.02em;">(series_count)</div><div style="font-size:12px; color:var(--muted2);">"매뉴얼 시리즈"</div></div>
                     </div>
-                    <div style="background:#1a1d27; border:1px solid #2a2d3a; border-radius:10px; padding:20px; display:flex; align-items:center; gap:16px;">
+                    <div style="background:var(--card); border:1px solid var(--border); border-radius:10px; padding:20px; display:flex; align-items:center; gap:16px;">
                         <div style="width:44px; height:44px; border-radius:10px; background:rgba(96,165,250,0.1); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2" stroke-linecap="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2" stroke-linecap="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
                         </div>
-                        <div><div style="font-size:1.5rem; font-weight:800; color:#f9fafb; letter-spacing:-0.02em;">(chapter_count)</div><div style="font-size:12px; color:#6b7280;">"매뉴얼 챕터"</div></div>
+                        <div><div style="font-size:1.5rem; font-weight:800; color:var(--text); letter-spacing:-0.02em;">(chapter_count)</div><div style="font-size:12px; color:var(--muted2);">"매뉴얼 챕터"</div></div>
                     </div>
-                    <div style="background:#1a1d27; border:1px solid #2a2d3a; border-radius:10px; padding:20px; display:flex; align-items:center; gap:16px;">
+                    <div style="background:var(--card); border:1px solid var(--border); border-radius:10px; padding:20px; display:flex; align-items:center; gap:16px;">
                         <div style="width:44px; height:44px; border-radius:10px; background:rgba(167,139,250,0.1); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2" stroke-linecap="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2" stroke-linecap="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
                         </div>
-                        <div><div style="font-size:1.5rem; font-weight:800; color:#f9fafb; letter-spacing:-0.02em;">(comment_count)</div><div style="font-size:12px; color:#6b7280;">"댓글"</div></div>
+                        <div><div style="font-size:1.5rem; font-weight:800; color:var(--text); letter-spacing:-0.02em;">(comment_count)</div><div style="font-size:12px; color:var(--muted2);">"댓글"</div></div>
                     </div>
-                    <div style="background:#1a1d27; border:1px solid #2a2d3a; border-radius:10px; padding:20px; display:flex; align-items:center; gap:16px;">
+                    <div style="background:var(--card); border:1px solid var(--border); border-radius:10px; padding:20px; display:flex; align-items:center; gap:16px;">
                         <div style="width:44px; height:44px; border-radius:10px; background:rgba(248,113,113,0.1); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2" stroke-linecap="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2" stroke-linecap="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
                         </div>
-                        <div><div style="font-size:1.5rem; font-weight:800; color:#f9fafb; letter-spacing:-0.02em;">(video_count)</div><div style="font-size:12px; color:#6b7280;">"영상"</div></div>
+                        <div><div style="font-size:1.5rem; font-weight:800; color:var(--text); letter-spacing:-0.02em;">(video_count)</div><div style="font-size:12px; color:var(--muted2);">"영상"</div></div>
                     </div>
-                    <div style="background:#1a1d27; border:1px solid #2a2d3a; border-radius:10px; padding:20px; display:flex; align-items:center; gap:16px;">
+                    <div style="background:var(--card); border:1px solid var(--border); border-radius:10px; padding:20px; display:flex; align-items:center; gap:16px;">
                         <div style="width:44px; height:44px; border-radius:10px; background:rgba(52,211,153,0.1); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2" stroke-linecap="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2" stroke-linecap="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
                         </div>
-                        <div><div style="font-size:1.5rem; font-weight:800; color:#f9fafb; letter-spacing:-0.02em;">(bookmark_count)</div><div style="font-size:12px; color:#6b7280;">"북마크"</div></div>
+                        <div><div style="font-size:1.5rem; font-weight:800; color:var(--text); letter-spacing:-0.02em;">(bookmark_count)</div><div style="font-size:12px; color:var(--muted2);">"북마크"</div></div>
                     </div>
-                    <div style="background:#1a1d27; border:1px solid #2a2d3a; border-radius:10px; padding:20px; display:flex; align-items:center; gap:16px;">
+                    <div style="background:var(--card); border:1px solid var(--border); border-radius:10px; padding:20px; display:flex; align-items:center; gap:16px;">
                         <div style="width:44px; height:44px; border-radius:10px; background:rgba(251,146,60,0.1); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fb923c" stroke-width="2" stroke-linecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                         </div>
-                        <div><div style="font-size:1.5rem; font-weight:800; color:#f9fafb; letter-spacing:-0.02em;">(report_count)</div><div style="font-size:12px; color:#6b7280;">"미처리 신고"</div></div>
+                        <div><div style="font-size:1.5rem; font-weight:800; color:var(--text); letter-spacing:-0.02em;">(report_count)</div><div style="font-size:12px; color:var(--muted2);">"미처리 신고"</div></div>
                     </div>
                 </div>
 
                 <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-bottom:16px;">
-                    <div style="background:#1a1d27; border:1px solid #2a2d3a; border-radius:10px; overflow:hidden;">
-                        <div style="padding:16px 20px; border-bottom:1px solid #2a2d3a; display:flex; align-items:center; justify-content:space-between;">
-                            <h2 style="font-size:14px; font-weight:700; color:#e5e7eb;">"최근 가입 사용자"</h2>
+                    <div style="background:var(--card); border:1px solid var(--border); border-radius:10px; overflow:hidden;">
+                        <div style="padding:16px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between;">
+                            <h2 style="font-size:14px; font-weight:700; color:var(--text2);">"최근 가입 사용자"</h2>
                             <a href="/admin/users" style="font-size:12px; color:#DE5B30; font-weight:600;">"전체 보기"</a>
                         </div>
                         <div>
                             if recent_users.is_empty() {
-                                <p style="padding:40px; text-align:center; font-size:13px; color:#4b5563;">"등록된 사용자가 없습니다"</p>
+                                <p style="padding:40px; text-align:center; font-size:13px; color:var(--dim);">"등록된 사용자가 없습니다"</p>
                             } else {
                                 for u in &recent_users {
-                                    <div style="display:flex; align-items:center; justify-content:space-between; padding:12px 20px; border-bottom:1px solid rgba(255,255,255,0.03);">
+                                    <div style="display:flex; align-items:center; justify-content:space-between; padding:12px 20px; border-bottom:1px solid var(--line);">
                                         <div style="display:flex; align-items:center; gap:10px; min-width:0;">
                                             <div style="width:32px; height:32px; border-radius:8px; background:rgba(222,91,48,0.1); display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:13px; font-weight:700; color:#DE5B30;">(u.username.chars().next().unwrap_or('?').to_string())</div>
                                             <div style="min-width:0;">
-                                                <div style="font-size:13px; font-weight:600; color:#d1d5db; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">(u.username.clone())</div>
-                                                <div style="font-size:11px; color:#4b5563; margin-top:2px;">(u.email.clone().unwrap_or_default())</div>
+                                                <div style="font-size:13px; font-weight:600; color:var(--text3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">(u.username.clone())</div>
+                                                <div style="font-size:11px; color:var(--dim); margin-top:2px;">(u.email.clone().unwrap_or_default())</div>
                                             </div>
                                         </div>
-                                        <span style="font-size:11px; color:#3f3f46; flex-shrink:0;">(u.created_at.get(..10).unwrap_or("").to_string())</span>
+                                        <span style="font-size:11px; color:var(--faint); flex-shrink:0;">(u.created_at.get(..10).unwrap_or("").to_string())</span>
                                     </div>
                                 }
                             }
                         </div>
                     </div>
 
-                    <div style="background:#1a1d27; border:1px solid #2a2d3a; border-radius:10px; overflow:hidden;">
-                        <div style="padding:16px 20px; border-bottom:1px solid #2a2d3a; display:flex; align-items:center; justify-content:space-between;">
-                            <h2 style="font-size:14px; font-weight:700; color:#e5e7eb;">"최근 게시글"</h2>
+                    <div style="background:var(--card); border:1px solid var(--border); border-radius:10px; overflow:hidden;">
+                        <div style="padding:16px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between;">
+                            <h2 style="font-size:14px; font-weight:700; color:var(--text2);">"최근 게시글"</h2>
                             <a href="/admin/posts" style="font-size:12px; color:#DE5B30; font-weight:600;">"전체 보기"</a>
                         </div>
                         <div>
                             if recent_posts.is_empty() {
-                                <p style="padding:40px; text-align:center; font-size:13px; color:#4b5563;">"등록된 게시글이 없습니다"</p>
+                                <p style="padding:40px; text-align:center; font-size:13px; color:var(--dim);">"등록된 게시글이 없습니다"</p>
                             } else {
                                 for p in &recent_posts {
-                                    <a href=(format!("/community/{}", p.id)) style="display:flex; align-items:center; justify-content:space-between; padding:12px 20px; border-bottom:1px solid rgba(255,255,255,0.03); transition:background 0.15s;">
+                                    <a href=(format!("/community/{}", p.id)) style="display:flex; align-items:center; justify-content:space-between; padding:12px 20px; border-bottom:1px solid var(--line); transition:background 0.15s;">
                                         <div style="min-width:0;">
-                                            <div style="font-size:13px; font-weight:600; color:#d1d5db;">(p.title.clone())</div>
-                                            <div style="font-size:11px; color:#4b5563; margin-top:2px;">(p.author_id.clone())</div>
+                                            <div style="font-size:13px; font-weight:600; color:var(--text3);">(p.title.clone())</div>
+                                            <div style="font-size:11px; color:var(--dim); margin-top:2px;">(p.author_id.clone())</div>
                                         </div>
-                                        <span style="font-size:11px; color:#3f3f46; flex-shrink:0;">(p.created_at.get(..10).unwrap_or("").to_string())</span>
+                                        <span style="font-size:11px; color:var(--faint); flex-shrink:0;">(p.created_at.get(..10).unwrap_or("").to_string())</span>
                                     </a>
                                 }
                             }
                         </div>
                     </div>
 
-                    <div style="background:#1a1d27; border:1px solid #2a2d3a; border-radius:10px; overflow:hidden;">
-                        <div style="padding:16px 20px; border-bottom:1px solid #2a2d3a; display:flex; align-items:center; justify-content:space-between;">
-                            <h2 style="font-size:14px; font-weight:700; color:#e5e7eb;">"인기 게시글"</h2>
+                    <div style="background:var(--card); border:1px solid var(--border); border-radius:10px; overflow:hidden;">
+                        <div style="padding:16px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between;">
+                            <h2 style="font-size:14px; font-weight:700; color:var(--text2);">"인기 게시글"</h2>
                             <a href="/admin/posts" style="font-size:12px; color:#DE5B30; font-weight:600;">"전체 보기"</a>
                         </div>
                         <div>
                             if popular_posts.is_empty() {
-                                <p style="padding:40px; text-align:center; font-size:13px; color:#4b5563;">"등록된 게시글이 없습니다"</p>
+                                <p style="padding:40px; text-align:center; font-size:13px; color:var(--dim);">"등록된 게시글이 없습니다"</p>
                             } else {
                                 for p in &popular_posts {
-                                    <a href=(format!("/community/{}", p.id)) style="display:flex; align-items:center; justify-content:space-between; padding:12px 20px; border-bottom:1px solid rgba(255,255,255,0.03); transition:background 0.15s;">
+                                    <a href=(format!("/community/{}", p.id)) style="display:flex; align-items:center; justify-content:space-between; padding:12px 20px; border-bottom:1px solid var(--line); transition:background 0.15s;">
                                         <div style="min-width:0;">
-                                            <div style="font-size:13px; font-weight:600; color:#d1d5db;">(p.title.clone())</div>
-                                            <div style="font-size:11px; color:#4b5563; margin-top:2px;">(format!("{} \u{c9c8} \u{bcf4}\u{ae30}", p.view_count))</div>
+                                            <div style="font-size:13px; font-weight:600; color:var(--text3);">(p.title.clone())</div>
+                                            <div style="font-size:11px; color:var(--dim); margin-top:2px;">(format!("{} \u{c9c8} \u{bcf4}\u{ae30}", p.view_count))</div>
                                         </div>
-                                        <span style="font-size:11px; color:#3f3f46; flex-shrink:0;">(format!("{}\u{c9c8}", p.view_count))</span>
+                                        <span style="font-size:11px; color:var(--faint); flex-shrink:0;">(format!("{}\u{c9c8}", p.view_count))</span>
                                     </a>
                                 }
                             }

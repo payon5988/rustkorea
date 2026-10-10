@@ -117,13 +117,14 @@ pub async fn edit_manual(cx: &Cx) -> Result<impl View + '_> {
                     <meta name="viewport" content="width=device-width, initial-scale=1.0">
                     <title>"매뉴얼 수정 - Rust Korea Admin"</title>
                     <style>{(ADMIN_STYLE)}</style>
+                    <script>{(crate::admin_ui::ADMIN_THEME_JS)}</script>
                 </head>
                 <body style="display:flex; min-height:100vh;">
                     {AdminSidebar(active: "/admin/manuals".into())}
                     <div style="flex:1; padding:24px 32px; overflow-y:auto;">
 
                         <div style="margin-bottom:24px;">
-                            <a href="/admin/manuals" style="font-size:12px; color:#6b7280; display:inline-flex; align-items:center; gap:6px; margin-bottom:12px;">
+                            <a href="/admin/manuals" style="font-size:12px; color:var(--muted2); display:inline-flex; align-items:center; gap:6px; margin-bottom:12px;">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
                                 "매뉴얼 목록"
                             </a>
@@ -132,25 +133,25 @@ pub async fn edit_manual(cx: &Cx) -> Result<impl View + '_> {
 
                         <form action="/admin/manuals/update" method="POST" style="max-width:640px;">
                             <input type="hidden" name="csrf_token" value=(csrf_token.clone())>
-                            <div style="background:#1a1d27; border:1px solid #2a2d3a; border-radius:10px; padding:24px; margin-bottom:16px;">
+                            <div style="background:var(--card); border:1px solid var(--border); border-radius:10px; padding:24px; margin-bottom:16px;">
                                 <input type="hidden" name="id" value=(s.id.clone())>
                                 <div style="margin-bottom:20px;">
-                                    <label style="display:block; font-size:13px; font-weight:600; color:#9ca3af; margin-bottom:8px;">"URL 슬러그"</label>
+                                    <label style="display:block; font-size:13px; font-weight:600; color:var(--muted); margin-bottom:8px;">"URL 슬러그"</label>
                                     <input type="text" name="slug" required="true" class="input" style="font-family:monospace;" value=(s.slug.clone())>
-                                    <p style="font-size:11px; color:#4b5563; margin-top:6px;">"영문, 하이픈 사용. 예: topcoat-getting-started"</p>
-                                    <p style="font-size:11px; color:#fbbf24; margin-top:4px;">"주의: 슬러그를 바꾸면 기존 공유 링크가 깨집니다."</p>
+                                    <p style="font-size:11px; color:var(--dim); margin-top:6px;">"영문, 하이픈 사용. 예: topcoat-getting-started"</p>
+                                    <p style="font-size:11px; color:var(--amber); margin-top:4px;">"주의: 슬러그를 바꾸면 기존 공유 링크가 깨집니다."</p>
                                 </div>
                                 <div style="margin-bottom:20px;">
-                                    <label style="display:block; font-size:13px; font-weight:600; color:#9ca3af; margin-bottom:8px;">"제목"</label>
+                                    <label style="display:block; font-size:13px; font-weight:600; color:var(--muted); margin-bottom:8px;">"제목"</label>
                                     <input type="text" name="title" required="true" class="input" value=(s.title.clone())>
                                 </div>
                                 <div style="margin-bottom:20px;">
-                                    <label style="display:block; font-size:13px; font-weight:600; color:#9ca3af; margin-bottom:8px;">"설명"</label>
+                                    <label style="display:block; font-size:13px; font-weight:600; color:var(--muted); margin-bottom:8px;">"설명"</label>
                                     <textarea name="description" rows="3" class="input">(s.description.clone())</textarea>
                                 </div>
                                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
                                     <div>
-                                        <label style="display:block; font-size:13px; font-weight:600; color:#9ca3af; margin-bottom:8px;">"난이도"</label>
+                                        <label style="display:block; font-size:13px; font-weight:600; color:var(--muted); margin-bottom:8px;">"난이도"</label>
                                         <select name="difficulty" class="input">
                                             <option value="beginner" selected=(diff_beginner)>"초급"</option>
                                             <option value="intermediate" selected=(diff_intermediate)>"중급"</option>
@@ -158,12 +159,12 @@ pub async fn edit_manual(cx: &Cx) -> Result<impl View + '_> {
                                         </select>
                                     </div>
                                     <div>
-                                        <label style="display:block; font-size:13px; font-weight:600; color:#9ca3af; margin-bottom:8px;">"예상 소요시간 (분)"</label>
+                                        <label style="display:block; font-size:13px; font-weight:600; color:var(--muted); margin-bottom:8px;">"예상 소요시간 (분)"</label>
                                         <input type="number" name="estimated_minutes" min="0" class="input" value=(s.estimated_minutes.to_string())>
                                     </div>
                                 </div>
                                 <div style="margin-top:16px;">
-                                    <label style="display:block; font-size:13px; font-weight:600; color:#9ca3af; margin-bottom:8px;">"공개 범위"</label>
+                                    <label style="display:block; font-size:13px; font-weight:600; color:var(--muted); margin-bottom:8px;">"공개 범위"</label>
                                     <select name="visibility" class="input">
                                         <option value="public" selected=(vis_public)>"전체공개 (비회원 포함)"</option>
                                         <option value="members" selected=(vis_members)>"회원전용 (로그인 필요)"</option>

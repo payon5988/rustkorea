@@ -34,6 +34,10 @@ pub async fn root_layout(
     let site_keywords = crate::services::site_settings::get_setting(db, "site_keywords").await;
     let adsense_enabled = crate::services::site_settings::get_setting(db, "adsense_enabled").await;
     let adsense_client = crate::services::site_settings::get_setting(db, "adsense_client").await;
+    // Search-console ownership tokens (empty until the owner verifies in each
+    // console and sets them via env; meta-tag method on both engines).
+    let google_verification = crate::config::env_or("GOOGLE_SITE_VERIFICATION", "");
+    let naver_verification = crate::config::env_or("NAVER_SITE_VERIFICATION", "");
 
     let theme_color = "#2563EB";
     let apple_meta_name = "apple-mobile-web-app-capable";
@@ -60,6 +64,12 @@ pub async fn root_layout(
                 <meta property="og:locale" content="ko_KR" />
                 <meta name="twitter:card" content="summary" />
                 <meta name="robots" content=(robots_content) />
+                if !google_verification.is_empty() {
+                    <meta name="google-site-verification" content=(google_verification.clone()) />
+                }
+                if !naver_verification.is_empty() {
+                    <meta name="naver-site-verification" content=(naver_verification.clone()) />
+                }
                 <meta name="keywords" content=(site_keywords.clone()) />
                 <link rel="canonical" href=(canonical.clone()) />
                 <link rel="alternate" type="application/rss+xml" title="Rust Korea Hub" href="/feed.xml" />

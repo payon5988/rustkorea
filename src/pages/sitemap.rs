@@ -55,13 +55,36 @@ pub async fn sitemap_xml(cx: &Cx) -> Result<TypedBody> {
         }
     }
 
-    let slugs: Vec<String> =
-        sqlx::query_scalar("SELECT slug FROM manual_series WHERE visibility = 'public'")
+    let slugs: Vec<(String, String)> =
+        sqlx::query_as("SELECT slug, updated_at FROM manual_series WHERE visibility = 'public'")
             .fetch_all(db)
             .await
             .unwrap_or_default();
-    for slug in &slugs {
-        entries.push(format!(r#"  <url><loc>{domain}/manuals/{slug}</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>"#));
+    for (slug, updated) in &slugs {
+        let lastmod = to_iso_date(updated);
+        if lastmod.is_empty() {
+            entries.push(format!(r#"  <url><loc>{domain}/manuals/{slug}</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>"#));
+        } else {
+            entries.push(format!(r#"  <url><loc>{domain}/manuals/{slug}</loc><lastmod>{lastmod}</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>"#));
+        }
+    }
+
+    // Public chapters only: anonymous crawlers hit the lock page otherwise.
+    let chapters: Vec<(String, String, String)> = sqlx::query_as(
+        "SELECT ms.slug, mc.slug, mc.updated_at FROM manual_chapters mc
+         JOIN manual_series ms ON ms.id = mc.series_id
+         WHERE mc.visibility = 'public' ORDER BY mc.updated_at DESC LIMIT 2000",
+    )
+    .fetch_all(db)
+    .await
+    .unwrap_or_default();
+    for (series_slug, chapter_slug, updated) in &chapters {
+        let lastmod = to_iso_date(updated);
+        if lastmod.is_empty() {
+            entries.push(format!(r#"  <url><loc>{domain}/manuals/{series_slug}/{chapter_slug}</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>"#));
+        } else {
+            entries.push(format!(r#"  <url><loc>{domain}/manuals/{series_slug}/{chapter_slug}</loc><lastmod>{lastmod}</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>"#));
+        }
     }
 
     let xml = format!(

@@ -28,6 +28,44 @@ struct PostWithAuthor {
     username: String,
 }
 
+/// Article + Breadcrumb JSON-LD for search engines (emitted raw, so `</`
+/// sequences are neutralized to block `</script>` breakout).
+pub fn article_json_ld(
+    domain: &str,
+    id: &str,
+    title: &str,
+    author: &str,
+    created_at: &str,
+    category: &str,
+) -> String {
+    let date = created_at.split_whitespace().next().unwrap_or(created_at);
+    let url = format!("{domain}/community/{id}");
+    let body = serde_json::json!({
+        "@context": "https://schema.org",
+        "@graph": [
+            {
+                "@type": "Article",
+                "headline": title,
+                "author": {"@type": "Person", "name": author},
+                "datePublished": date,
+                "articleSection": category,
+                "mainEntityOfPage": {"@type": "WebPage", "@id": url},
+            },
+            {
+                "@type": "BreadcrumbList",
+                "itemListElement": [
+                    {"@type": "ListItem", "position": 1, "name": "홈", "item": format!("{domain}/")},
+                    {"@type": "ListItem", "position": 2, "name": "커뮤니티", "item": format!("{domain}/community")},
+                    {"@type": "ListItem", "position": 3, "name": title, "item": url},
+                ],
+            },
+        ],
+    });
+    serde_json::to_string(&body)
+        .unwrap_or_default()
+        .replace("</", "<\\/")
+}
+
 #[derive(sqlx::FromRow)]
 struct CommentWithAuthor {
     id: String,
@@ -176,6 +214,8 @@ pub async fn post_detail(cx: &Cx) -> Result<impl View + '_> {
                 <a href="/community" style="font-size:13px; color:#6b7280; display:inline-flex; align-items:center; gap:6px; margin-bottom:24px;">
                     "<- 커뮤니티"
                 </a>
+
+                <script type="application/ld+json">{(topcoat::view::Unescaped::new_unchecked(article_json_ld(&crate::config::site_url(), &p.id, &p.title, &p.username, &p.created_at, category_label(&p.category))))}</script>
 
                 <div style="margin-bottom:10px;">
                     <span style=(format!("font-size:11px; font-weight:600; padding:3px 9px; border-radius:9999px; color:{}; background:{}1a;", category_color(&p.category), category_color(&p.category)))>
@@ -573,4 +613,26 @@ pub async fn toggle_bookmark(
     Ok(topcoat::router::error::see_other(format!(
         "/community/{id}"
     )))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::article_json_ld;
+
+    #[test]
+    fn json_ld_is_valid_and_breakout_safe() {
+        let s = article_json_ld(
+            "https://rustkorea.kr",
+            "abc",
+            "제목</script><script>alert(1)",
+            "admin&co",
+            "2026-10-12 01:02:03",
+            "공지사항",
+        );
+        assert!(!s.contains("</script>"), "script breakout possible");
+        let v: serde_json::Value = serde_json::from_str(&s).unwrap();
+        assert_eq!(v["@graph"][0]["@type"], "Article");
+        assert_eq!(v["@graph"][0]["datePublished"], "2026-10-12");
+        assert_eq!(v["@graph"][1]["@type"], "BreadcrumbList");
+    }
 }

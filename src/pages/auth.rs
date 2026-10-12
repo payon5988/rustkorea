@@ -259,9 +259,7 @@ pub async fn login_page(cx: &Cx) -> Result<impl View + '_> {
             <div style="width:100%; max-width:400px;">
                 <div style="text-align:center; margin-bottom:32px;">
                     <a href="/" style="display:inline-flex; align-items:center; gap:8px; font-weight:800; font-size:20px; color:#16181d; letter-spacing:-0.02em; margin-bottom:8px;">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-                        </svg>
+                        <img src="/logo.svg" alt="Rust Korea" width="28" height="28" style="object-fit:contain;">
                         "Rust Korea"
                     </a>
                     <p style="font-size:14px; color:#6b7280;">"계정에 로그인하세요"</p>
@@ -339,9 +337,7 @@ pub async fn register_page(cx: &Cx) -> Result<impl View + '_> {
             <div style="width:100%; max-width:400px;">
                 <div style="text-align:center; margin-bottom:32px;">
                     <a href="/" style="display:inline-flex; align-items:center; gap:8px; font-weight:800; font-size:20px; color:#16181d; letter-spacing:-0.02em; margin-bottom:8px;">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-                        </svg>
+                        <img src="/logo.svg" alt="Rust Korea" width="28" height="28" style="object-fit:contain;">
                         "Rust Korea"
                     </a>
                     <p style="font-size:14px; color:#6b7280;">"새 계정을 만드세요"</p>

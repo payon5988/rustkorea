@@ -8,7 +8,7 @@ use topcoat::{
 
 use crate::components::ad_unit::AdUnit;
 use crate::db::Db;
-use crate::models::Post;
+use crate::models::PostListItem;
 
 use super::helpers::{
     category_color, category_label, get_current_user, load_categories, query_param, valid_category,
@@ -108,8 +108,10 @@ pub async fn community_index(cx: &Cx) -> Result<impl View + '_> {
     let (total_pages, page_num, offset) = crate::util::paginate(total, requested_page, PER_PAGE);
 
     let posts = if let Some(cat) = &cat_filter {
-        sqlx::query_as::<_, Post>(
-            "SELECT * FROM posts WHERE category = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3",
+        sqlx::query_as::<_, PostListItem>(
+            "SELECT p.*, COALESCE(u.username, p.author_id) AS username FROM posts p
+             LEFT JOIN users u ON u.id = p.author_id
+             WHERE p.category = $1 ORDER BY p.created_at DESC LIMIT $2 OFFSET $3",
         )
         .bind(cat)
         .bind(PER_PAGE)
@@ -118,12 +120,16 @@ pub async fn community_index(cx: &Cx) -> Result<impl View + '_> {
         .await
         .unwrap_or_default()
     } else {
-        sqlx::query_as::<_, Post>("SELECT * FROM posts ORDER BY created_at DESC LIMIT $1 OFFSET $2")
-            .bind(PER_PAGE)
-            .bind(offset)
-            .fetch_all(db)
-            .await
-            .unwrap_or_default()
+        sqlx::query_as::<_, PostListItem>(
+            "SELECT p.*, COALESCE(u.username, p.author_id) AS username FROM posts p
+             LEFT JOIN users u ON u.id = p.author_id
+             ORDER BY p.created_at DESC LIMIT $1 OFFSET $2",
+        )
+        .bind(PER_PAGE)
+        .bind(offset)
+        .fetch_all(db)
+        .await
+        .unwrap_or_default()
     };
 
     let page_items = build_page_items(page_num, total_pages);
@@ -193,7 +199,7 @@ pub async fn community_index(cx: &Cx) -> Result<impl View + '_> {
                                 <p style="font-size:12px; color:#9ca3af; margin-top:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">(preview)</p>
                             </div>
                             <div style="display:flex; align-items:center; gap:16px; flex-shrink:0; margin-left:24px;">
-                                <span class="post-author" style="font-size:12px; color:#9ca3af;">(post.author_id.clone())</span>
+                                <span class="post-author" style="font-size:12px; color:#9ca3af;">(post.username.clone())</span>
                                 <span style="font-size:12px; color:#9ca3af;">(post.created_at.split(' ').next().unwrap_or(""))</span>
                                 <span class="post-view-count" style="display:inline-flex; align-items:center; gap:4px; font-size:12px; color:#9ca3af;">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

@@ -10,7 +10,7 @@ use topcoat::{
 use crate::admin_ui::ADMIN_STYLE;
 use crate::components::admin_sidebar::AdminSidebar;
 use crate::db::Db;
-use crate::models::{Category, Post};
+use crate::models::{Category, Post, PostListItem};
 use crate::services::markdown::render_markdown;
 
 #[page("/admin/posts")]
@@ -28,10 +28,14 @@ pub async fn admin_posts(cx: &Cx) -> Result<impl View + '_> {
     let db: &Db = topcoat::context::app_context(cx);
     let csrf_token = crate::auth::session::csrf_token(db, cx).await;
 
-    let posts = sqlx::query_as::<_, Post>("SELECT * FROM posts ORDER BY created_at DESC")
-        .fetch_all(db)
-        .await
-        .unwrap_or_default();
+    let posts = sqlx::query_as::<_, PostListItem>(
+        "SELECT p.*, COALESCE(u.username, p.author_id) AS username FROM posts p
+         LEFT JOIN users u ON u.id = p.author_id
+         ORDER BY p.created_at DESC",
+    )
+    .fetch_all(db)
+    .await
+    .unwrap_or_default();
 
     Ok(view! {
         <html lang="ko">
@@ -75,7 +79,7 @@ pub async fn admin_posts(cx: &Cx) -> Result<impl View + '_> {
                                         <td style="padding:14px 20px;">
                                             <a href=(format!("/community/{}", p.id)) style="font-weight:600; color:var(--text3);">(p.title.clone())</a>
                                         </td>
-                                        <td style="padding:14px 20px; color:var(--muted);">(p.author_id.clone())</td>
+                                        <td style="padding:14px 20px; color:var(--muted);">(p.username.clone())</td>
                                         <td style="padding:14px 20px; color:var(--dim); font-size:12px;">(p.created_at.get(..10).unwrap_or("").to_string())</td>
                                         <td style="padding:14px 20px; text-align:right;">
                                             <div style="display:flex; gap:8px; justify-content:flex-end; align-items:center;">

@@ -263,8 +263,10 @@ pub async fn admin_dashboard(cx: &Cx) -> Result<impl View + '_> {
         .await
         .unwrap_or(0);
 
-    let recent_posts = sqlx::query_as::<_, crate::models::Post>(
-        "SELECT * FROM posts ORDER BY created_at DESC LIMIT 5",
+    let recent_posts = sqlx::query_as::<_, crate::models::PostListItem>(
+        "SELECT p.*, COALESCE(u.username, p.author_id) AS username FROM posts p
+         LEFT JOIN users u ON u.id = p.author_id
+         ORDER BY p.created_at DESC LIMIT 5",
     )
     .fetch_all(db)
     .await
@@ -404,7 +406,7 @@ pub async fn admin_dashboard(cx: &Cx) -> Result<impl View + '_> {
                                     <a href=(format!("/community/{}", p.id)) style="display:flex; align-items:center; justify-content:space-between; padding:12px 20px; border-bottom:1px solid var(--line); transition:background 0.15s;">
                                         <div style="min-width:0;">
                                             <div style="font-size:13px; font-weight:600; color:var(--text3);">(p.title.clone())</div>
-                                            <div style="font-size:11px; color:var(--dim); margin-top:2px;">(p.author_id.clone())</div>
+                                            <div style="font-size:11px; color:var(--dim); margin-top:2px;">(p.username.clone())</div>
                                         </div>
                                         <span style="font-size:11px; color:var(--faint); flex-shrink:0;">(p.created_at.get(..10).unwrap_or("").to_string())</span>
                                     </a>

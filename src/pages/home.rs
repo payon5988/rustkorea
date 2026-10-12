@@ -7,7 +7,7 @@ use topcoat::view::{View, view};
 use crate::components::ad_unit::AdUnit;
 use crate::components::video_card::VideoCard;
 use crate::db::Db;
-use crate::models::{ManualSeries, Post, YoutubeVideo};
+use crate::models::{ManualSeries, PostListItem, YoutubeVideo};
 
 #[page("/")]
 pub async fn home(cx: &Cx) -> Result<impl View + '_> {
@@ -27,10 +27,14 @@ pub async fn home(cx: &Cx) -> Result<impl View + '_> {
     .await
     .unwrap_or_default();
 
-    let posts = sqlx::query_as::<_, Post>("SELECT * FROM posts ORDER BY created_at DESC LIMIT 5")
-        .fetch_all(db)
-        .await
-        .unwrap_or_default();
+    let posts = sqlx::query_as::<_, PostListItem>(
+        "SELECT p.*, COALESCE(u.username, p.author_id) AS username FROM posts p
+         LEFT JOIN users u ON u.id = p.author_id
+         ORDER BY p.created_at DESC LIMIT 5",
+    )
+    .fetch_all(db)
+    .await
+    .unwrap_or_default();
 
     let series_count: i64 =
         sqlx::query_scalar("SELECT COUNT(*) FROM manual_series WHERE visibility = 'public'")
@@ -164,7 +168,7 @@ pub async fn home(cx: &Cx) -> Result<impl View + '_> {
                                     <span style="font-size:14px; font-weight:600; color:#16181d; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">(item.title.clone())</span>
                                 </div>
                                 <div style="display:flex; align-items:center; gap:16px; flex-shrink:0; margin-left:20px;">
-                                    <span style="font-size:12px; color:#6b7280;">(item.author_id.clone())</span>
+                                    <span style="font-size:12px; color:#6b7280;">(item.username.clone())</span>
                                     <span style="font-size:12px; color:#9ca3af;">(item.created_at.split(' ').next().unwrap_or(""))</span>
                                 </div>
                             </a>

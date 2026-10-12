@@ -108,6 +108,20 @@ impl Post {
     }
 }
 
+/// Post row with resolved author display name for list surfaces.
+/// `username` falls back to `author_id` when the user row is gone.
+#[allow(dead_code)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct PostListItem {
+    pub id: String,
+    pub title: String,
+    pub category: String,
+    pub content_md: String,
+    pub view_count: i64,
+    pub created_at: String,
+    pub username: String,
+}
+
 #[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Comment {

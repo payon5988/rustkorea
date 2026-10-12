@@ -17,7 +17,23 @@ gunzip -c /backup/rustkorea-<DATE>.sql.gz \
   | docker exec -i rustkorea-db-1 psql -U postgres rustkorea
 ```
 
-## 배포
+## 배포 (CloudPanel 리버스 프록시 — 현재 표준)
+
+TLS는 CloudPanel nginx가 종단(80/443 점유)하므로 Caddy 오버레이는 쓰지 않는다.
+
+```bash
+cp .env.example .env   # 작성 후 chmod 600 .env (POSTGRES_PASSWORD 필수)
+docker compose -f docker-compose.yml -f docker-compose.cloudpanel.yml up -d --build
+docker compose logs -f app            # 마이그레이션/시드 확인
+curl -sf http://127.0.0.1:3005/healthz  # 200 {"status":"ok"}
+```
+
+CloudPanel UI (CLI 미지원 항목, 수동 1회): Sites > Add Site > Reverse Proxy:
+domain `rustkorea.kr` + alias `www.rustkorea.kr` → target
+`http://127.0.0.1:3005`, SSL(Let's Encrypt) + Force HTTPS ON.
+이후 `curl -sf https://rustkorea.kr/healthz` 확인.
+
+## 배포 (Caddy 직접 종단 — CloudPanel 미사용 호스트 전용)
 
 ```bash
 cp .env.example .env   # 작성 후 chmod 600 .env

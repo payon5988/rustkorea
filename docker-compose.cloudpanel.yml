@@ -1,0 +1,13 @@
+# CloudPanel overlay — use with:
+#   docker compose -f docker-compose.yml -f docker-compose.cloudpanel.yml up -d --build
+#
+# TLS terminates at CloudPanel nginx (it owns ports 80/443 on this host),
+# so the Caddy service from docker-compose.prod.yml is NOT used here.
+# The app listens on loopback :3005 only; CloudPanel "Reverse Proxy" site
+# for rustkorea.kr forwards to http://127.0.0.1:3005.
+services:
+  app:
+    # Loopback-only; container still serves :3000 internally so the
+    # base-file healthcheck (curl localhost:3000/healthz) keeps working.
+    ports:
+      - "127.0.0.1:3005:3000"

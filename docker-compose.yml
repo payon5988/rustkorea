@@ -3,8 +3,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.pg
-    ports:
-      - "3000:3000"
+    # No published ports here: inter-container traffic uses the internal
+    # network (app:3000). Publish via an overlay:
+    #  - CloudPanel: docker-compose.cloudpanel.yml (127.0.0.1:3005)
+    #  - Caddy stack: no publishing needed (caddy reaches app internally).
     environment:
       DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@db:5432/rustkorea
       # First-boot admin (remove after the admin account exists).

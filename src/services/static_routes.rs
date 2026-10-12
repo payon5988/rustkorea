@@ -39,7 +39,7 @@ impl IntoResponse for BinBody {
 fn manifest_json_body(name: &str, desc: &str) -> String {
     format!(
         concat!(
-            r##"{{"name":"{}","short_name":"RustKorea","id":"/","start_url":"/","scope":"/","display":"standalone","orientation":"portrait","background_color":"#ffffff","theme_color":"#2563EB","description":"{}","categories":["education","developer tools"],"shortcuts":[{{"name":"매뉴얼","url":"/manuals"}},{{"name":"커뮤니티","url":"/community"}}],"icons":[{{"src":"/icon-192.png","sizes":"192x192","type":"image/png","purpose":"any"}},{{"src":"/icon-512.png","sizes":"512x512","type":"image/png","purpose":"any"}},{{"src":"/maskable-512.png","sizes":"512x512","type":"image/png","purpose":"maskable"}}]}}"##
+            r##"{{"name":"{}","short_name":"RustKorea","id":"/","start_url":"/","scope":"/","display":"standalone","orientation":"portrait","background_color":"#0f1117","theme_color":"#DE5B30","description":"{}","categories":["education","developer tools"],"shortcuts":[{{"name":"매뉴얼","url":"/manuals"}},{{"name":"커뮤니티","url":"/community"}}],"icons":[{{"src":"/icon-192.png","sizes":"192x192","type":"image/png","purpose":"any"}},{{"src":"/icon-512.png","sizes":"512x512","type":"image/png","purpose":"any"}},{{"src":"/maskable-512.png","sizes":"512x512","type":"image/png","purpose":"maskable"}}]}}"##
         ),
         name, desc,
     )

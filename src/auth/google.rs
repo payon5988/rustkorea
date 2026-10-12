@@ -70,6 +70,11 @@ pub async fn google_login(cx: &Cx) -> Result<topcoat::router::error::SeeOther> {
         "GOOGLE_REDIRECT_URI",
         "http://localhost:3000/auth/google/callback",
     );
+    if client_id.is_empty() || crate::config::env_or("GOOGLE_CLIENT_SECRET", "").is_empty() {
+        return Ok(topcoat::router::error::see_other(
+            "/auth/login?error=oauth_not_configured",
+        ));
+    }
     let state = generate_state();
 
     cookies(cx).add(hardened_state_cookie(state.clone()));

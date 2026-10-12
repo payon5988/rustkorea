@@ -57,6 +57,11 @@ pub async fn github_login(cx: &Cx) -> Result<topcoat::router::error::SeeOther> {
         "GITHUB_REDIRECT_URI",
         "http://localhost:3000/auth/github/callback",
     );
+    if client_id.is_empty() || crate::config::env_or("GITHUB_CLIENT_SECRET", "").is_empty() {
+        return Ok(topcoat::router::error::see_other(
+            "/auth/login?error=oauth_not_configured",
+        ));
+    }
     let state = generate_state();
 
     cookies(cx).add(hardened_state_cookie(state.clone()));

@@ -3,8 +3,8 @@
   "short_name": "RustKorea",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#2563EB",
+  "background_color": "#0f1117",
+  "theme_color": "#DE5B30",
   "description": "한국 Rust 생태계의 단일 진실 공급원",
   "icons": [
     {
@@ -16,6 +16,12 @@
       "src": "/icon-512.png",
       "sizes": "512x512",
       "type": "image/png"
+    },
+    {
+      "src": "/maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }

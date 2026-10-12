@@ -248,8 +248,10 @@ pub async fn login_page(cx: &Cx) -> Result<impl View + '_> {
         })
         .unwrap_or_default();
 
-    let github_enabled = get_setting(db, "github_oauth_enabled").await != "false";
-    let google_enabled = get_setting(db, "google_oauth_enabled").await == "true";
+    let github_enabled = get_setting(db, "github_oauth_enabled").await != "false"
+        && !crate::config::env_or("GITHUB_CLIENT_ID", "").is_empty();
+    let google_enabled = get_setting(db, "google_oauth_enabled").await == "true"
+        && !crate::config::env_or("GOOGLE_CLIENT_ID", "").is_empty();
     let has_oauth = github_enabled || google_enabled;
 
     Ok(view! {
@@ -326,8 +328,10 @@ pub async fn register_page(cx: &Cx) -> Result<impl View + '_> {
         return Err(topcoat::router::error::redirect("/").into());
     }
 
-    let github_enabled = get_setting(db, "github_oauth_enabled").await != "false";
-    let google_enabled = get_setting(db, "google_oauth_enabled").await == "true";
+    let github_enabled = get_setting(db, "github_oauth_enabled").await != "false"
+        && !crate::config::env_or("GITHUB_CLIENT_ID", "").is_empty();
+    let google_enabled = get_setting(db, "google_oauth_enabled").await == "true"
+        && !crate::config::env_or("GOOGLE_CLIENT_ID", "").is_empty();
     let has_oauth = github_enabled || google_enabled;
 
     Ok(view! {

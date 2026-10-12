@@ -10,8 +10,9 @@ services:
     environment:
       DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@db:5432/rustkorea
       # First-boot admin (remove after the admin account exists).
+      # First-boot admin: pass ADMIN_PASSWORD only on the command line for
+      # initial bootstrap (never commit it), then omit it on later boots.
       ADMIN_EMAIL: ${ADMIN_EMAIL:-}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       SITE_URL: ${SITE_URL:-https://rustkorea.kr}
       SECURE_COOKIES: 1
       OAUTH_SECURE_COOKIES: 1

@@ -126,6 +126,7 @@ pub async fn admin_manuals(cx: &Cx) -> Result<impl View + '_> {
                                                             <span style="color:var(--dim); font-family:monospace; width:24px;">(ch.chapter_index)</span>
                                                             <a href=(format!("/admin/manuals/chapters/edit?id={}", ch.id)) style="color:var(--text3); font-weight:600; text-decoration:none;">(ch.title.clone())</a>
                                                             <span style="color:var(--dim); font-family:monospace;">(ch.slug.clone())</span>
+                                                            <span style="font-size:11px; color:var(--blue);">(crate::auth::access::visibility_label(&ch.visibility))</span>
                                                             <span style="display:inline-flex; gap:4px; margin-left:auto;">
                                                                 <form action="/admin/manuals/chapters/move" method="POST" style="display:inline;">
                                                                     <input type="hidden" name="csrf_token" value=(csrf_token.clone())>

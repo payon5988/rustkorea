@@ -23,20 +23,26 @@ pub async fn chapter_detail(cx: &Cx) -> Result<impl View + '_> {
     let csrf_token = crate::auth::session::csrf_token(db, cx).await;
     let access = crate::auth::access::load_access(db, cx).await;
 
-    let series_visibility: Option<String> =
-        sqlx::query_scalar("SELECT visibility FROM manual_series WHERE slug = $1")
-            .bind(series_slug)
-            .fetch_optional(db)
-            .await
-            .ok()
-            .flatten();
+    // Effective gate is the chapter's own tier: a series can mix public
+    // previews with members/staff-only chapters.
+    let chapter: Option<ManualChapter> = sqlx::query_as::<_, ManualChapter>(
+        r#"SELECT mc.* FROM manual_chapters mc
+            JOIN manual_series ms ON mc.series_id = ms.id
+            WHERE ms.slug = $1 AND mc.slug = $2"#,
+    )
+    .bind(series_slug)
+    .bind(chapter_slug)
+    .fetch_optional(db)
+    .await
+    .ok()
+    .flatten();
 
-    let gate = series_visibility
-        .as_deref()
-        .map(|v| {
+    let gate = chapter
+        .as_ref()
+        .map(|c| {
             crate::auth::access::visibility_gate(
                 access.as_ref(),
-                v,
+                &c.visibility,
                 "manuals.view_staff",
                 "premium.access",
             )
@@ -49,31 +55,16 @@ pub async fn chapter_detail(cx: &Cx) -> Result<impl View + '_> {
         .into());
     }
     let forbidden = gate == crate::auth::access::Gate::Forbidden;
-    let forbidden_msg: String = series_visibility
-        .as_deref()
-        .map(|v| match v {
-            "members" => "이 매뉴얼은 회원 전용입니다.",
-            "staff" => "이 매뉴얼은 스태프 전용입니다.",
-            _ => "이 매뉴얼은 유료 전용입니다(준비중).",
+    let forbidden_msg: String = chapter
+        .as_ref()
+        .map(|c| match c.visibility.as_str() {
+            "members" => "이 챕터는 회원 전용입니다.",
+            "staff" => "이 챕터는 스태프 전용입니다.",
+            _ => "이 챕터는 유료 전용입니다(준비중).",
         })
         .unwrap_or_default()
         .to_string();
-
-    let chapter = if forbidden {
-        None
-    } else {
-        sqlx::query_as::<_, ManualChapter>(
-            r#"SELECT mc.* FROM manual_chapters mc
-            JOIN manual_series ms ON mc.series_id = ms.id
-            WHERE ms.slug = $1 AND mc.slug = $2"#,
-        )
-        .bind(series_slug)
-        .bind(chapter_slug)
-        .fetch_optional(db)
-        .await
-        .ok()
-        .flatten()
-    };
+    let chapter = if forbidden { None } else { chapter };
 
     let current_user = crate::auth::session::current_user(db, cx).await;
     let completed: bool = if let (Some(u), Some(ch)) = (&current_user, &chapter) {

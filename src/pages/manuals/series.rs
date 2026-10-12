@@ -12,17 +12,13 @@ use crate::models::ManualSeries;
 #[page("/manuals")]
 pub async fn manuals_index(cx: &Cx) -> Result<impl View + '_> {
     let db: &Db = topcoat::context::app_context(cx);
-    let access = crate::auth::access::load_access(db, cx).await;
-    let tiers =
-        crate::auth::access::visible_tiers(access.as_ref(), "manuals.view_staff", "premium.access");
-
-    let series = sqlx::query_as::<_, ManualSeries>(
-        "SELECT * FROM manual_series WHERE visibility = ANY($1) ORDER BY created_at DESC",
-    )
-    .bind(&tiers)
-    .fetch_all(db)
-    .await
-    .unwrap_or_default();
+    // All series are listed (titles public); per-series/chapter content is
+    // gated at the detail pages. Non-public series get a lock badge.
+    let series =
+        sqlx::query_as::<_, ManualSeries>("SELECT * FROM manual_series ORDER BY created_at DESC")
+            .fetch_all(db)
+            .await
+            .unwrap_or_default();
 
     Ok(view! {
         <div class="container" style="padding-top:60px; padding-bottom:80px;">
@@ -54,7 +50,7 @@ pub async fn manuals_index(cx: &Cx) -> Result<impl View + '_> {
                                     })
                                 </span>
                                 if item.visibility != "public" {
-                                    <span class="badge" style="background:#eff6ff; color:#2563EB; border:1px solid #bfdbfe;">(crate::auth::access::visibility_label(&item.visibility))</span>
+                                    <span class="badge" style="background:#eff6ff; color:#2563EB; border:1px solid #bfdbfe;">(format!("🔒 {}", crate::auth::access::visibility_label(&item.visibility)))</span>
                                 }
                             </div>
                             <h3 style="font-size:16px; font-weight:700; margin-bottom:6px; letter-spacing:-0.01em;">(item.title.clone())</h3>

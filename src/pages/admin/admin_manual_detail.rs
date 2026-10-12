@@ -90,6 +90,7 @@ pub async fn admin_manual_detail(cx: &Cx) -> Result<impl View + '_> {
                                             <div style="display:flex; align-items:center; gap:10px;">
                                                 <span style="font-size:11px; color:var(--dim); font-family:monospace;">(format!("{:02}", ch.chapter_index))</span>
                                                 <span style="font-size:14px; font-weight:600; color:var(--text3);">(ch.title.clone())</span>
+                                                <span class="badge" style="background:rgba(96,165,250,0.1); color:var(--blue);">(crate::auth::access::visibility_label(&ch.visibility))</span>
                                             </div>
                                             <p style="font-size:12px; color:var(--dim); margin-top:3px; font-family:monospace;">(ch.slug.clone())</p>
                                         </div>

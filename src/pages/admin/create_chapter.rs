@@ -21,6 +21,7 @@ pub struct NewChapter {
     pub slug: String,
     pub title: String,
     pub content_md: String,
+    pub visibility: String,
 }
 
 #[route(POST "/admin/manuals/{series_slug}/chapters/create")]
@@ -51,6 +52,12 @@ pub async fn create_chapter(
             .flatten()
     {
         let content_html = render_markdown(&input.content_md);
+        // Chapter tier defaults to the series tier when unset/invalid.
+        let visibility = if crate::auth::access::valid_visibility(&input.visibility) {
+            input.visibility.clone()
+        } else {
+            s.visibility.clone()
+        };
         let max_index: (i32,) = sqlx::query_as(
             "SELECT COALESCE(MAX(chapter_index), -1) FROM manual_chapters WHERE series_id = $1",
         )
@@ -60,8 +67,8 @@ pub async fn create_chapter(
         .unwrap_or((-1,));
 
         sqlx::query(
-            "INSERT INTO manual_chapters (series_id, slug, title, content_md, content_html, chapter_index)
-             VALUES ($1, $2, $3, $4, $5, $6)"
+            "INSERT INTO manual_chapters (series_id, slug, title, content_md, content_html, chapter_index, visibility)
+             VALUES ($1, $2, $3, $4, $5, $6, $7)"
         )
         .bind(&s.id)
         .bind(&input.slug)
@@ -69,6 +76,7 @@ pub async fn create_chapter(
         .bind(&input.content_md)
         .bind(&content_html)
         .bind(max_index.0 + 1)
+        .bind(&visibility)
         .execute(db)
         .await.ok();
     }
@@ -151,6 +159,15 @@ pub async fn new_chapter(cx: &Cx) -> Result<impl View + '_> {
                             <div style="margin-bottom:20px;">
                                 <label style="display:block; font-size:13px; font-weight:600; color:var(--muted); margin-bottom:8px;">"챕터 제목"</label>
                                 <input type="text" name="title" required="true" placeholder="1장: Introduction" class="input">
+                            </div>
+                            <div style="margin-bottom:20px;">
+                                <label style="display:block; font-size:13px; font-weight:600; color:var(--muted); margin-bottom:8px;">"공개 범위 (시리즈 기본값 선택됨)"</label>
+                                <select name="visibility" class="input">
+                                    <option value="public" selected=(s.visibility == "public")>"전체공개 (비회원 포함)"</option>
+                                    <option value="members" selected=(s.visibility == "members")>"회원전용 (로그인 필요)"</option>
+                                    <option value="staff" selected=(s.visibility == "staff")>"스태프전용"</option>
+                                    <option value="premium" selected=(s.visibility == "premium")>"유료전용(준비중)"</option>
+                                </select>
                             </div>
                             <div>
                                 <label style="display:block; font-size:13px; font-weight:600; color:var(--muted); margin-bottom:8px;">"내용 (Markdown)"</label>
@@ -303,8 +320,8 @@ pub async fn pdf_import_chapter(
     let content_html = render_markdown(&text);
     for n in 2..10 {
         let inserted: Option<i32> = sqlx::query_scalar(
-            "INSERT INTO manual_chapters (series_id, slug, title, content_md, content_html, chapter_index)
-             VALUES ($1, $2, $3, $4, $5, $6)
+            "INSERT INTO manual_chapters (series_id, slug, title, content_md, content_html, chapter_index, visibility)
+             VALUES ($1, $2, $3, $4, $5, $6, $7)
              ON CONFLICT (series_id, slug) DO NOTHING RETURNING 1",
         )
         .bind(&s.id)
@@ -313,6 +330,7 @@ pub async fn pdf_import_chapter(
         .bind(&text)
         .bind(&content_html)
         .bind(max_index.0 + 1)
+        .bind(&s.visibility)
         .fetch_optional(db)
         .await
         .ok()

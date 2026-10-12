@@ -21,6 +21,7 @@ pub struct EditChapter {
     pub slug: String,
     pub title: String,
     pub content_md: String,
+    pub visibility: String,
 }
 
 #[route(POST "/admin/manuals/chapters/update")]
@@ -43,14 +44,19 @@ pub async fn update_chapter(
 
     let content_html = render_markdown(&input.content_md);
 
+    if !crate::auth::access::valid_visibility(&input.visibility) {
+        return Ok(topcoat::router::error::see_other("/admin/manuals"));
+    }
+
     sqlx::query(
-        "UPDATE manual_chapters SET slug = $1, title = $2, content_md = $3, content_html = $4, updated_at = NOW()::text
-         WHERE id = $5"
+        "UPDATE manual_chapters SET slug = $1, title = $2, content_md = $3, content_html = $4, visibility = $5, updated_at = NOW()::text
+         WHERE id = $6"
     )
     .bind(&input.slug)
     .bind(&input.title)
     .bind(&input.content_md)
     .bind(&content_html)
+    .bind(&input.visibility)
     .bind(&input.id)
     .execute(db)
     .await.ok();
@@ -164,6 +170,15 @@ pub async fn edit_chapter(cx: &Cx) -> Result<impl View + '_> {
                             <div style="margin-bottom:20px;">
                                 <label style="display:block; font-size:13px; font-weight:600; color:var(--muted); margin-bottom:8px;">"챕터 제목"</label>
                                 <input type="text" name="title" required="true" class="input" value=(c.title.clone())>
+                            </div>
+                            <div style="margin-bottom:20px;">
+                                <label style="display:block; font-size:13px; font-weight:600; color:var(--muted); margin-bottom:8px;">"공개 범위 (챕터별)"</label>
+                                <select name="visibility" class="input">
+                                    <option value="public" selected=(c.visibility == "public")>"전체공개 (비회원 포함)"</option>
+                                    <option value="members" selected=(c.visibility == "members")>"회원전용 (로그인 필요)"</option>
+                                    <option value="staff" selected=(c.visibility == "staff")>"스태프전용"</option>
+                                    <option value="premium" selected=(c.visibility == "premium")>"유료전용(준비중)"</option>
+                                </select>
                             </div>
                             <div>
                                 <label style="display:block; font-size:13px; font-weight:600; color:var(--muted); margin-bottom:8px;">"내용 (Markdown)"</label>

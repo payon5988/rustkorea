@@ -107,6 +107,8 @@ pub fn visibility_gate(
 }
 
 /// Tiers visible to `access`, for `visibility = ANY($n)` list queries.
+/// (Kept for tier-filtered listings; manuals index now lists all titles.)
+#[allow(dead_code)]
 pub fn visible_tiers(access: Option<&Access>, staff_perm: &str, premium_perm: &str) -> Vec<String> {
     let mut tiers = vec!["public".to_string()];
     if access.is_some() {

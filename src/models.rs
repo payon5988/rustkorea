@@ -49,6 +49,7 @@ pub struct ManualChapter {
     pub content_md: String,
     pub content_html: String,
     pub chapter_index: i32,
+    pub visibility: String,
     pub created_at: String,
     pub updated_at: String,
 }

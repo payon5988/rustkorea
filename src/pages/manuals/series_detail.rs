@@ -24,35 +24,8 @@ pub async fn series_detail(cx: &Cx) -> Result<impl View + '_> {
         .ok()
         .flatten();
 
-    let gate = series
-        .as_ref()
-        .map(|s| {
-            crate::auth::access::visibility_gate(
-                access.as_ref(),
-                &s.visibility,
-                "manuals.view_staff",
-                "premium.access",
-            )
-        })
-        .unwrap_or(crate::auth::access::Gate::Allow);
-    if gate == crate::auth::access::Gate::LoginRequired {
-        return Err(topcoat::router::error::redirect(format!(
-            "/auth/login?redirect=/manuals/{slug}"
-        ))
-        .into());
-    }
-    let forbidden = gate == crate::auth::access::Gate::Forbidden;
-    let forbidden_msg: String = series
-        .as_ref()
-        .map(|s| match s.visibility.as_str() {
-            "members" => "이 매뉴얼은 회원 전용입니다.",
-            "staff" => "이 매뉴얼은 스태프 전용입니다.",
-            _ => "이 매뉴얼은 유료 전용입니다(준비중).",
-        })
-        .unwrap_or_default()
-        .to_string();
-    let series = if forbidden { None } else { series };
-
+    // Series page itself is always visible (titles public). Each chapter is
+    // gated by its own visibility tier; locked chapters show a lock row.
     let chapters = if let Some(ref s) = series {
         sqlx::query_as::<_, crate::models::ManualChapter>(
             "SELECT * FROM manual_chapters WHERE series_id = $1 ORDER BY chapter_index",
@@ -64,6 +37,17 @@ pub async fn series_detail(cx: &Cx) -> Result<impl View + '_> {
     } else {
         vec![]
     };
+    let chapter_gates: Vec<crate::auth::access::Gate> = chapters
+        .iter()
+        .map(|c| {
+            crate::auth::access::visibility_gate(
+                access.as_ref(),
+                &c.visibility,
+                "manuals.view_staff",
+                "premium.access",
+            )
+        })
+        .collect();
 
     let current_user = crate::auth::session::current_user(db, cx).await;
     let done_count: usize = if let (Some(u), true) = (current_user.as_ref(), !chapters.is_empty()) {
@@ -107,6 +91,9 @@ pub async fn series_detail(cx: &Cx) -> Result<impl View + '_> {
                                 _ => "초급",
                             })
                         </span>
+                        if s.visibility != "public" {
+                            <span class="badge" style="background:#eff6ff; color:#2563EB; border:1px solid #bfdbfe;">(format!("🔒 {}", crate::auth::access::visibility_label(&s.visibility)))</span>
+                        }
                     </div>
                     <h1 style="font-size:2rem; font-weight:800; letter-spacing:-0.03em; margin-bottom:8px;">(s.title.clone())</h1>
                     <p class="section-sub" style="margin-bottom:16px;">(s.description.clone())</p>
@@ -134,23 +121,32 @@ pub async fn series_detail(cx: &Cx) -> Result<impl View + '_> {
                 } else {
                     <div style="display:flex; flex-direction:column; gap:8px;">
                         for (i, chapter) in chapters.iter().enumerate() {
-                            <a href=(format!("/manuals/{}/{}", s.slug, chapter.slug)) class="card" style="display:flex; align-items:center; gap:16px; padding:16px 20px;">
-                                <span style="width:32px; height:32px; border-radius:8px; background:#f9fafb; border:1px solid #f3f4f6; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:600; color:#6b7280; flex-shrink:0;">(i + 1)</span>
-                                <span style="font-size:14px; font-weight:600; flex:1;">(chapter.title.clone())</span>
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
-                            </a>
+                            if chapter_gates[i] == crate::auth::access::Gate::Allow {
+                                <a href=(format!("/manuals/{}/{}", s.slug, chapter.slug)) class="card" style="display:flex; align-items:center; gap:16px; padding:16px 20px;">
+                                    <span style="width:32px; height:32px; border-radius:8px; background:#f9fafb; border:1px solid #f3f4f6; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:600; color:#6b7280; flex-shrink:0;">(i + 1)</span>
+                                    <span style="font-size:14px; font-weight:600; flex:1;">(chapter.title.clone())</span>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+                                </a>
+                            } else if chapter_gates[i] == crate::auth::access::Gate::LoginRequired {
+                                <a href=(format!("/auth/login?redirect=/manuals/{}/{}", s.slug, chapter.slug)) class="card" style="display:flex; align-items:center; gap:16px; padding:16px 20px; background:#f8fafb;">
+                                    <span style="width:32px; height:32px; border-radius:8px; background:#eef2ff; border:1px solid #bfdbfe; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:600; color:#2563EB; flex-shrink:0;">"🔒"</span>
+                                    <span style="font-size:14px; font-weight:600; flex:1;">(chapter.title.clone())</span>
+                                    <span style="font-size:11px; color:#2563EB; font-weight:600;">"로그인 필요"</span>
+                                </a>
+                            } else {
+                                <div class="card" style="display:flex; align-items:center; gap:16px; padding:16px 20px; background:#f8fafb; opacity:0.75;">
+                                    <span style="width:32px; height:32px; border-radius:8px; background:#fef2f2; border:1px solid #fecaca; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:600; color:#ef4444; flex-shrink:0;">"🔒"</span>
+                                    <span style="font-size:14px; font-weight:600; flex:1;">(chapter.title.clone())</span>
+                                    <span style="font-size:11px; color:#6b7280; font-weight:600;">(crate::auth::access::visibility_label(&chapter.visibility))</span>
+                                </div>
+                            }
                         }
                     </div>
                 }
             } else {
                 <div style="text-align:center; padding:100px 0;">
-                    if forbidden {
-                        <h1 style="font-size:1.25rem; font-weight:700; margin-bottom:8px;">"접근 권한이 없습니다"</h1>
-                        <p style="color:#6b7280; margin-bottom:24px;">(forbidden_msg.clone())</p>
-                    } else {
-                        <h1 style="font-size:1.25rem; font-weight:700; margin-bottom:8px;">"시리즈를 찾을 수 없습니다"</h1>
-                        <p style="color:#6b7280; margin-bottom:24px;">"요청하신 매뉴얼이 존재하지 않습니다."</p>
-                    }
+                    <h1 style="font-size:1.25rem; font-weight:700; margin-bottom:8px;">"시리즈를 찾을 수 없습니다"</h1>
+                    <p style="color:#6b7280; margin-bottom:24px;">"요청하신 매뉴얼이 존재하지 않습니다."</p>
                     <a href="/manuals" class="btn-primary" style="display:inline-flex;">"매뉴얼 목록으로"</a>
                 </div>
             }

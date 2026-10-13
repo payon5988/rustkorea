@@ -7,6 +7,61 @@ pub const SESSION_LIFETIME_SECS: i64 = 30 * 24 * 3600;
 const LOGIN_WINDOW_SECS: i64 = 300;
 const LOGIN_MAX_ATTEMPTS: i64 = 10;
 
+/// CSRF token alphabet (0-9a-zA-Z) and length.
+pub const CSRF_TOKEN_LEN: usize = 32;
+pub(crate) const CSRF_ALPHABET: u8 = 62;
+pub(crate) const CSRF_DIGIT_END: u8 = 10;
+pub(crate) const CSRF_LOWER_END: u8 = 36;
+
+/// Pending-2FA session and anonymous CSRF-seed TTL.
+pub const PENDING_TTL_MINUTES: i64 = 10;
+
+/// Login-attempt GC window (also the rate-limit window).
+pub const ATTEMPT_GC_WINDOW_SECS: i64 = 3600;
+
+/// Password policy (length bounds).
+pub const MIN_PASSWORD_LEN: usize = 8;
+pub const MAX_PASSWORD_LEN: usize = 128;
+
+/// Anonymous double-submit CSRF seed cookie.
+pub const CSRF_SEED_COOKIE: &str = "csrf_seed";
+
+/// OAuth `state` cookie name.
+pub const OAUTH_STATE_COOKIE: &str = "oauth_state";
+
+/// Canonical auth routes (single source; no inline path literals).
+pub const LOGIN_ROUTE: &str = "/auth/login";
+pub const REGISTER_ROUTE: &str = "/auth/register";
+
+/// `?error=` codes surfaced on the login page.
+pub mod login_error {
+    pub const GENERIC: &str = "1";
+    pub const PENDING_APPROVAL: &str = "5";
+    pub const SUSPENDED: &str = "6";
+    pub const SESSION: &str = "session";
+    pub const OAUTH_NOT_CONFIGURED: &str = "oauth_not_configured";
+    pub const OAUTH_STATE: &str = "oauth_state";
+    pub const OAUTH_NETWORK: &str = "oauth_network";
+    pub const OAUTH_TOKEN: &str = "oauth_token";
+    pub const OAUTH_ACCESS_DENIED: &str = "oauth_access_denied";
+    pub const OAUTH_USER_INFO: &str = "oauth_user_info";
+}
+
+/// Login URL carrying an error code.
+pub fn login_error_url(code: &str) -> String {
+    format!("{LOGIN_ROUTE}?error={code}")
+}
+
+/// Register URL carrying an error code.
+pub fn register_error_url(code: &str) -> String {
+    format!("{REGISTER_ROUTE}?error={code}")
+}
+
+/// Login URL returning to `return_to` afterwards.
+pub fn login_link(return_to: &str) -> String {
+    format!("{LOGIN_ROUTE}?redirect={return_to}")
+}
+
 fn hex_encode(bytes: &[u8]) -> String {
     const HEX: &[u8; 16] = b"0123456789abcdef";
     let mut s = String::with_capacity(bytes.len() * 2);
@@ -20,13 +75,15 @@ fn hex_encode(bytes: &[u8]) -> String {
 fn generate_csrf_token() -> String {
     use rand::Rng;
     let mut rng = rand::thread_rng();
-    (0..32)
+    (0..CSRF_TOKEN_LEN)
         .map(|_| {
-            let idx = rng.gen_range(0..62);
-            match idx {
-                0..10 => (b'0' + idx) as char,
-                10..36 => (b'a' + idx - 10) as char,
-                _ => (b'A' + idx - 36) as char,
+            let idx = rng.gen_range(0..CSRF_ALPHABET);
+            if idx < CSRF_DIGIT_END {
+                (b'0' + idx) as char
+            } else if idx < CSRF_LOWER_END {
+                (b'a' + idx - CSRF_DIGIT_END) as char
+            } else {
+                (b'A' + idx - CSRF_LOWER_END) as char
             }
         })
         .collect()
@@ -80,7 +137,7 @@ pub async fn current_user(db: &Db, cx: &Cx) -> Option<User> {
     .ok()
     .flatten();
     let user = user?;
-    if user.status != "active" {
+    if user.status != crate::auth::access::user_status::ACTIVE {
         return None;
     }
     Some(user)
@@ -95,7 +152,7 @@ pub async fn create_pending_session(db: &Db, cx: &Cx, user_id: &str) -> Result<(
     })?;
     let token_hash = hex_encode(&session.token_hash[..]);
     let csrf_token = generate_csrf_token();
-    let expires_at = chrono::Utc::now() + chrono::Duration::minutes(10);
+    let expires_at = chrono::Utc::now() + chrono::Duration::minutes(PENDING_TTL_MINUTES);
     sqlx::query(
         "INSERT INTO sessions (token_hash, user_id, csrf_token, expires_at, pending_2fa)
          VALUES ($1, $2, $3, $4, 1)
@@ -224,8 +281,9 @@ pub async fn record_login_attempt(db: &Db, cx: &Cx, identifier: &str) {
         .await
         .ok();
     sqlx::query(
-        "DELETE FROM login_attempts WHERE attempted_at < NOW() - make_interval(secs => 3600)",
+        "DELETE FROM login_attempts WHERE attempted_at < NOW() - make_interval(secs => $1)",
     )
+    .bind(ATTEMPT_GC_WINDOW_SECS)
     .execute(db)
     .await
     .ok();
@@ -280,7 +338,7 @@ pub fn escape_like(input: &str) -> String {
 
 /// Minimum password policy: 8+ chars (admin bootstrap requires 10+).
 pub fn password_ok(password: &str) -> bool {
-    password.len() >= 8 && password.len() <= 128
+    password.len() >= MIN_PASSWORD_LEN && password.len() <= MAX_PASSWORD_LEN
 }
 
 /// Minimal form carrying only a CSRF token (for button-style POSTs).
@@ -329,21 +387,25 @@ pub async fn verify_csrf_logged(db: &Db, cx: &Cx, submitted: &str, scope: &str) 
 pub fn issue_csrf_seed(cx: &Cx) -> String {
     use rand::Rng;
     let mut rng = rand::thread_rng();
-    let seed: String = (0..32)
+    let seed: String = (0..CSRF_TOKEN_LEN)
         .map(|_| {
-            let idx = rng.gen_range(0..62);
-            match idx {
-                0..10 => (b'0' + idx) as char,
-                10..36 => (b'a' + idx - 10) as char,
-                _ => (b'A' + idx - 36) as char,
+            let idx = rng.gen_range(0..CSRF_ALPHABET);
+            if idx < CSRF_DIGIT_END {
+                (b'0' + idx) as char
+            } else if idx < CSRF_LOWER_END {
+                (b'a' + idx - CSRF_DIGIT_END) as char
+            } else {
+                (b'A' + idx - CSRF_LOWER_END) as char
             }
         })
         .collect();
-    let mut cookie = topcoat::cookie::Cookie::new("csrf_seed", seed.clone());
+    let mut cookie = topcoat::cookie::Cookie::new(CSRF_SEED_COOKIE, seed.clone());
     cookie.set_path("/");
     cookie.set_http_only(true);
     cookie.set_same_site(topcoat::cookie::SameSite::Lax);
-    cookie.set_max_age(topcoat::cookie::time::Duration::minutes(10));
+    cookie.set_max_age(topcoat::cookie::time::Duration::minutes(
+        PENDING_TTL_MINUTES,
+    ));
     if std::env::var("OAUTH_SECURE_COOKIES").as_deref() == Ok("1") {
         cookie.set_secure(true);
     }
@@ -357,7 +419,7 @@ pub fn verify_csrf_seed(cx: &Cx, submitted: &str) -> bool {
         return false;
     }
     let expected = topcoat::cookie::cookies(cx)
-        .get("csrf_seed")
+        .get(CSRF_SEED_COOKIE)
         .map(|c| c.value().to_string())
         .unwrap_or_default();
     !expected.is_empty() && expected == submitted

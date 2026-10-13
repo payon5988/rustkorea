@@ -11,8 +11,6 @@ use crate::pages::community::helpers::{
     category_color, category_label, get_current_user, login_redirect,
 };
 
-const PER_PAGE: i64 = 20;
-
 #[allow(dead_code)]
 #[derive(sqlx::FromRow)]
 struct BookmarkPost {
@@ -49,7 +47,8 @@ pub async fn bookmarks_page(cx: &Cx) -> Result<impl View + '_> {
             .fetch_one(db)
             .await
             .unwrap_or(0);
-    let (total_pages, page_num, offset) = crate::util::paginate(total, page_num, PER_PAGE);
+    let (total_pages, page_num, offset) =
+        crate::util::paginate(total, page_num, crate::util::DEFAULT_PER_PAGE);
 
     let bookmarks: Vec<BookmarkPost> = sqlx::query_as::<_, BookmarkPost>(
         "SELECT p.id, p.title, p.category, p.view_count, p.author_id, p.created_at,
@@ -62,7 +61,7 @@ pub async fn bookmarks_page(cx: &Cx) -> Result<impl View + '_> {
          LIMIT $2 OFFSET $3",
     )
     .bind(&user.id)
-    .bind(PER_PAGE)
+    .bind(crate::util::DEFAULT_PER_PAGE)
     .bind(offset)
     .fetch_all(db)
     .await

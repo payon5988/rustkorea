@@ -27,7 +27,7 @@ struct AuditRow {
 pub async fn admin_audit_page(cx: &Cx) -> Result<impl View + '_> {
     let __denied = {
         let __adb: &crate::db::Db = topcoat::context::app_context(cx);
-        crate::auth::access::require_perm(__adb, cx, "users.manage")
+        crate::auth::access::require_perm(__adb, cx, crate::auth::access::perms::USERS_MANAGE)
             .await
             .is_none()
     };

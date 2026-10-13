@@ -13,8 +13,6 @@ use crate::components::admin_sidebar::AdminSidebar;
 use crate::db::Db;
 use crate::util::query_param;
 
-const PER_PAGE: i64 = 20;
-
 #[derive(sqlx::FromRow)]
 struct CommentRow {
     id: String,
@@ -48,7 +46,7 @@ fn page_url(post_filter: &Option<String>, target: i64) -> String {
 pub async fn admin_comments_page(cx: &Cx) -> Result<impl View + '_> {
     let __denied = {
         let __adb: &crate::db::Db = topcoat::context::app_context(cx);
-        crate::auth::access::require_perm(__adb, cx, "posts.moderate")
+        crate::auth::access::require_perm(__adb, cx, crate::auth::access::perms::POSTS_MODERATE)
             .await
             .is_none()
     };
@@ -77,7 +75,8 @@ pub async fn admin_comments_page(cx: &Cx) -> Result<impl View + '_> {
             .unwrap_or(0)
     };
 
-    let (total_pages, page_num, offset) = crate::util::paginate(total, requested_page, PER_PAGE);
+    let (total_pages, page_num, offset) =
+        crate::util::paginate(total, requested_page, crate::util::DEFAULT_PER_PAGE);
 
     let comments: Vec<CommentRow> = if let Some(post_id) = &post_filter {
         sqlx::query_as::<_, CommentRow>(
@@ -91,7 +90,7 @@ pub async fn admin_comments_page(cx: &Cx) -> Result<impl View + '_> {
              ORDER BY c.created_at DESC LIMIT $2 OFFSET $3",
         )
         .bind(post_id)
-        .bind(PER_PAGE)
+        .bind(crate::util::DEFAULT_PER_PAGE)
         .bind(offset)
         .fetch_all(db)
         .await
@@ -106,7 +105,7 @@ pub async fn admin_comments_page(cx: &Cx) -> Result<impl View + '_> {
              LEFT JOIN posts p ON p.id = c.post_id
              ORDER BY c.created_at DESC LIMIT $1 OFFSET $2",
         )
-        .bind(PER_PAGE)
+        .bind(crate::util::DEFAULT_PER_PAGE)
         .bind(offset)
         .fetch_all(db)
         .await
@@ -234,7 +233,7 @@ pub async fn admin_delete_comment(
 ) -> Result<topcoat::router::error::SeeOther> {
     let __denied = {
         let __adb: &crate::db::Db = topcoat::context::app_context(cx);
-        crate::auth::access::require_perm(__adb, cx, "posts.moderate")
+        crate::auth::access::require_perm(__adb, cx, crate::auth::access::perms::POSTS_MODERATE)
             .await
             .is_none()
     };

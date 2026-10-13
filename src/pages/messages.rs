@@ -1,4 +1,9 @@
 use crate::db::Db;
+
+/// Message list caps and read-state flags.
+pub const MESSAGES_LIMIT: i64 = 50;
+pub const MSG_UNREAD: i32 = 0;
+pub const MSG_READ: i32 = 1;
 use crate::pages::community::helpers::{get_current_user, login_redirect};
 use std::future::Future;
 use topcoat::{
@@ -53,9 +58,10 @@ pub async fn messages_page(cx: &Cx) -> Result<impl View + '_> {
         "SELECT m.id, m.from_user_id, m.to_user_id, m.subject, m.content, m.is_read, m.created_at,
                 COALESCE(u.username, '') AS other_username
          FROM messages m LEFT JOIN users u ON u.id = m.from_user_id
-         WHERE m.to_user_id = $1 ORDER BY m.created_at DESC LIMIT 50",
+         WHERE m.to_user_id = $1 ORDER BY m.created_at DESC LIMIT $2",
     )
     .bind(&user.id)
+    .bind(MESSAGES_LIMIT)
     .fetch_all(db)
     .await
     .unwrap_or_default();
@@ -64,14 +70,15 @@ pub async fn messages_page(cx: &Cx) -> Result<impl View + '_> {
         "SELECT m.id, m.from_user_id, m.to_user_id, m.subject, m.content, m.is_read, m.created_at,
                 COALESCE(u.username, '') AS other_username
          FROM messages m LEFT JOIN users u ON u.id = m.to_user_id
-         WHERE m.from_user_id = $1 ORDER BY m.created_at DESC LIMIT 50",
+         WHERE m.from_user_id = $1 ORDER BY m.created_at DESC LIMIT $2",
     )
     .bind(&user.id)
+    .bind(MESSAGES_LIMIT)
     .fetch_all(db)
     .await
     .unwrap_or_default();
 
-    let unread = inbox.iter().filter(|m| m.is_read == 0).count();
+    let unread = inbox.iter().filter(|m| m.is_read == MSG_UNREAD).count();
 
     let inbox_style: &'static str = if tab == "inbox" {
         "padding:10px 18px; font-size:14px; font-weight:700; color:#2563EB; border-bottom:2px solid #2563EB; display:inline-flex;"
@@ -110,13 +117,13 @@ pub async fn messages_page(cx: &Cx) -> Result<impl View + '_> {
                 } else {
                     <div style="display:flex; flex-direction:column; gap:2px; background:#e5e7eb; border-radius:12px; overflow:hidden;">
                         for m in &inbox {
-                            let bg = if m.is_read == 0 { "#f0f7ff" } else { "#fff" };
+                            let bg = if m.is_read == MSG_UNREAD { "#f0f7ff" } else { "#fff" };
                             <a href=(format!("/messages/{}", m.id)) style=(format!("display:flex; flex-direction:column; padding:14px 20px; background:{bg}; gap:4px;"))>
                                 <div style="display:flex; align-items:center; gap:8px;">
                                     <span style="font-size:13px; font-weight:600;">(m.other_username.clone())</span>
                                     <span style="font-size:14px; flex:1;">(m.subject.clone())</span>
                                     <span style="font-size:12px; color:#9ca3af;">(m.created_at.split(' ').next().unwrap_or(""))</span>
-                                    if m.is_read == 0 {
+                                    if m.is_read == MSG_UNREAD {
                                         <span style="width:8px; height:8px; border-radius:50%; background:#2563EB; flex-shrink:0;"></span>
                                     }
                                 </div>
@@ -179,8 +186,9 @@ pub async fn message_detail(cx: &Cx) -> Result<impl View + '_> {
     ).bind(id).bind(&user.id).fetch_optional(db).await.ok().flatten();
 
     if let Some(ref m) = msg {
-        if m.is_read == 0 && m.to_user_id == user.id {
-            sqlx::query("UPDATE messages SET is_read = 1 WHERE id = $1")
+        if m.is_read == MSG_UNREAD && m.to_user_id == user.id {
+            sqlx::query("UPDATE messages SET is_read = $1 WHERE id = $2")
+                .bind(MSG_READ)
                 .bind(id)
                 .execute(db)
                 .await

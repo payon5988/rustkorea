@@ -15,7 +15,7 @@ pub async fn delete_manual(
 ) -> Result<topcoat::router::error::SeeOther> {
     let __denied = {
         let __adb: &crate::db::Db = topcoat::context::app_context(cx);
-        crate::auth::access::require_perm(__adb, cx, "manuals.manage")
+        crate::auth::access::require_perm(__adb, cx, crate::auth::access::perms::MANUALS_MANAGE)
             .await
             .is_none()
     };

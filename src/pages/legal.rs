@@ -86,7 +86,9 @@ pub async fn privacy_policy(cx: &Cx) -> Result<impl View + '_> {
 
             <h2 style=(h2_style())>"6. 광고 서비스"</h2>
             <p style=(p_style())>
-                "사이트는 Google AdSense를 통해 광고를 게재할 수 있습니다. Google은 쿠키를 사용하여 이전 방문 기반으로 광고를 제공합니다. Google의 쿠키 사용에 대한 자세한 내용은 <a href='https://policies.google.com/technologies/ads' style='color:#2563EB;'>Google 광고 정책</a>을 참조하십시오."
+                "사이트는 Google AdSense를 통해 광고를 게재할 수 있습니다. Google은 쿠키를 사용하여 이전 방문 기반으로 광고를 제공합니다. Google의 쿠키 사용에 대한 자세한 내용은 "
+                <a href=(crate::util::external_links::GOOGLE_ADS_POLICIES) style="color:#2563EB;">"Google 광고 정책"</a>
+                "을 참조하십시오."
             </p>
             <p style=(p_style())>
                 "Google AdSense 광고가 활성화된 경우, 제3자 벤더인 Google이 쿠키와 웹 비콘을 사용하여 사이트 및 인터넷의 다른 사이트에 있는 사용자에게 광고를 게재합니다."

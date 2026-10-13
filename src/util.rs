@@ -19,14 +19,32 @@ pub fn paginate(total: i64, page: i64, per_page: i64) -> (i64, i64, i64) {
 }
 
 /// Parse a comma-separated tag input into a JSON array string.
-/// Always valid JSON (proper escaping); at most 5 tags.
+/// Always valid JSON (proper escaping); at most [`MAX_TAGS`] tags.
+pub const MAX_TAGS: usize = 5;
+
+/// Default list page size (overridable per surface via settings).
+pub const DEFAULT_PER_PAGE: i64 = 20;
+
+/// External links (footer). Single source; no inline URLs in templates.
+pub mod external_links {
+    pub const RUST_OFFICIAL: &str = "https://www.rust-lang.org";
+    pub const RUST_GITHUB: &str = "https://github.com/rust-lang";
+    pub const TOPCOAT_DOCS: &str = "https://docs.rs/topcoat";
+    pub const GOOGLE_ADS_POLICIES: &str = "https://policies.google.com/technologies/ads";
+}
+
+/// YouTube watch URL builder (canonical www host everywhere).
+pub fn youtube_watch_url(video_id: &str) -> String {
+    format!("https://www.youtube.com/watch?v={video_id}")
+}
+
 pub fn tags_json(input: Option<String>) -> String {
     let tags: Vec<String> = input
         .unwrap_or_default()
         .split(',')
         .map(|s| s.trim().to_string())
         .filter(|s| !s.is_empty())
-        .take(5)
+        .take(MAX_TAGS)
         .collect();
     serde_json::to_string(&tags).unwrap_or_else(|_| "[]".into())
 }

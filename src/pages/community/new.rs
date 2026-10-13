@@ -55,9 +55,10 @@ pub async fn create_post(
     .fetch_optional(db)
     .await
     .unwrap_or(None);
-    let category = valid.unwrap_or_else(|| "general".to_string());
-    let category = if category == "announce" && !is_admin_user(&access) {
-        "general".to_string()
+    let category = valid.unwrap_or_else(|| super::helpers::category_slug::GENERAL.to_string());
+    let category = if category == super::helpers::category_slug::ANNOUNCE && !is_admin_user(&access)
+    {
+        super::helpers::category_slug::GENERAL.to_string()
     } else {
         category
     };
@@ -84,7 +85,12 @@ pub async fn create_post(
     .await
     .ok();
 
-    let post_points = crate::services::notifications::point_rule(db, "points_post", 10).await;
+    let post_points = crate::services::notifications::point_rule(
+        db,
+        "points_post",
+        crate::services::notifications::POINTS_POST_DEFAULT,
+    )
+    .await;
     crate::services::notifications::add_points(db, &user.id, post_points, "게시글 작성").await;
     crate::services::notifications::check_and_award_badges(db, &user.id).await;
 
@@ -110,12 +116,12 @@ pub async fn new_post_page(cx: &Cx) -> Result<impl View + '_> {
     let categories: Vec<Category> = all_categories
         .into_iter()
         .filter(|c| {
-            if c.slug == "announce" && !is_admin {
+            if c.slug == super::helpers::category_slug::ANNOUNCE && !is_admin {
                 return false;
             }
             let perm = c.write_permission.as_str();
             match perm {
-                "admin" => is_admin,
+                super::helpers::write_perm::ADMIN => is_admin,
                 "editor" => super::helpers::is_moderator(&access),
                 _ => true,
             }

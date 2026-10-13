@@ -3,6 +3,10 @@ use topcoat::{Result, context::Cx, router::route};
 
 use crate::services::TypedBody;
 
+/// Feed caps (single place).
+pub const FEED_LIMIT: i64 = 20;
+pub const FEED_DESC_MAX: usize = 500;
+
 fn xml_escape(s: &str) -> String {
     s.replace('&', "&amp;")
         .replace('<', "&lt;")
@@ -86,8 +90,9 @@ pub async fn feed_rss(cx: &Cx) -> Result<TypedBody> {
         "SELECT p.id, p.title, p.content_html, p.author_id, p.created_at,
                 COALESCE(u.username, p.author_id) AS username
          FROM posts p LEFT JOIN users u ON u.id = p.author_id
-         ORDER BY p.created_at DESC LIMIT 20",
+         ORDER BY p.created_at DESC LIMIT $1",
     )
+    .bind(FEED_LIMIT)
     .fetch_all(db)
     .await
     .unwrap_or_default();
@@ -97,7 +102,7 @@ pub async fn feed_rss(cx: &Cx) -> Result<TypedBody> {
         .map(|p| {
             let desc = xml_escape(&p.content_html)
                 .chars()
-                .take(500)
+                .take(FEED_DESC_MAX)
                 .collect::<String>();
             let title = xml_escape(&p.title);
             let author = xml_escape(&p.username);

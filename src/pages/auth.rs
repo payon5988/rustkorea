@@ -65,7 +65,12 @@ pub async fn login_submit(
 ) -> Result<topcoat::router::error::SeeOther> {
     let db: &Db = topcoat::context::app_context(cx);
     let target = safe_redirect_target(cx);
-    let fail_target = format!("/auth/login?error=1&redirect={}", encode_redirect(&target));
+    let fail_target = format!(
+        "{}?error={}&redirect={}",
+        crate::auth::session::LOGIN_ROUTE,
+        crate::auth::session::login_error::GENERIC,
+        encode_redirect(&target)
+    );
 
     if !sessions::same_origin_ok(cx) {
         return Ok(topcoat::router::error::see_other(&fail_target));
@@ -108,9 +113,9 @@ pub async fn login_submit(
                     }
                     decision => {
                         let code = if decision == LoginDecision::Pending {
-                            "5"
+                            crate::auth::session::login_error::PENDING_APPROVAL
                         } else {
-                            "6"
+                            crate::auth::session::login_error::SUSPENDED
                         };
                         return Ok(topcoat::router::error::see_other(format!(
                             "/auth/login?error={code}&redirect={}",
@@ -133,10 +138,14 @@ pub async fn register_submit(
     let db: &Db = topcoat::context::app_context(cx);
 
     if !sessions::same_origin_ok(cx) {
-        return Ok(topcoat::router::error::see_other("/auth/register?error=1"));
+        return Ok(topcoat::router::error::see_other(
+            crate::auth::session::register_error_url(crate::auth::session::login_error::GENERIC),
+        ));
     }
     if !sessions::verify_csrf_seed_logged(db, cx, &input.csrf_token, "auth.register").await {
-        return Ok(topcoat::router::error::see_other("/auth/register?error=1"));
+        return Ok(topcoat::router::error::see_other(
+            crate::auth::session::register_error_url(crate::auth::session::login_error::GENERIC),
+        ));
     }
     if !sessions::rate_limit_ok(db, cx, &input.email).await {
         return Ok(topcoat::router::error::see_other("/auth/register?error=4"));
@@ -144,7 +153,9 @@ pub async fn register_submit(
     sessions::record_login_attempt(db, cx, &input.email).await;
 
     if input.password != input.password_confirm {
-        return Ok(topcoat::router::error::see_other("/auth/register?error=1"));
+        return Ok(topcoat::router::error::see_other(
+            crate::auth::session::register_error_url(crate::auth::session::login_error::GENERIC),
+        ));
     }
 
     if !sessions::password_ok(&input.password) {
@@ -152,7 +163,9 @@ pub async fn register_submit(
     }
 
     if input.username.trim().is_empty() || input.username.len() > 32 {
-        return Ok(topcoat::router::error::see_other("/auth/register?error=1"));
+        return Ok(topcoat::router::error::see_other(
+            crate::auth::session::register_error_url(crate::auth::session::login_error::GENERIC),
+        ));
     }
 
     let existing: Option<User> = sqlx::query_as::<_, User>("SELECT * FROM users WHERE email = $1")
@@ -176,7 +189,9 @@ pub async fn register_submit(
         .map(|h| h.to_string())
         .unwrap_or_default();
     if password_hash.is_empty() {
-        return Ok(topcoat::router::error::see_other("/auth/register?error=1"));
+        return Ok(topcoat::router::error::see_other(
+            crate::auth::session::register_error_url(crate::auth::session::login_error::GENERIC),
+        ));
     }
 
     let status = crate::auth::access::initial_status(db).await;
@@ -291,10 +306,10 @@ pub async fn login_page(cx: &Cx) -> Result<impl View + '_> {
 
                     <form action=(login_action) method="POST" style="display:flex; flex-direction:column; gap:20px;">
                         <input type="hidden" name="csrf_token" value=(csrf_token.clone())>
-                        if login_error == "5" {
+                        if login_error == crate::auth::session::login_error::PENDING_APPROVAL {
                             <div style="background:rgba(251,191,36,0.1); border:1px solid rgba(251,191,36,0.3); border-radius:6px; padding:10px 12px; font-size:13px; color:#b45309;">"가입 승인 대기 중입니다. 관리자 승인 후 로그인할 수 있습니다."</div>
                         }
-                        if login_error == "6" {
+                        if login_error == crate::auth::session::login_error::SUSPENDED {
                             <div style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:6px; padding:10px 12px; font-size:13px; color:#b91c1c;">"정지된 계정입니다. 관리자에게 문의하세요."</div>
                         }
                         <div>

@@ -41,6 +41,12 @@ pub async fn create_manual(
         ));
     }
 
+    if !crate::models::difficulty::valid(&input.difficulty) {
+        return Ok(topcoat::router::error::see_other(
+            "/admin/manuals/new?error=difficulty",
+        ));
+    }
+
     sqlx::query(
         "INSERT INTO manual_series (slug, title, description, difficulty, estimated_minutes, visibility)
          VALUES ($1, $2, $3, $4, $5, $6)"
@@ -75,7 +81,7 @@ pub async fn create_manual(
 pub async fn new_manual(cx: &Cx) -> Result<impl View + '_> {
     let __denied = {
         let __adb: &crate::db::Db = topcoat::context::app_context(cx);
-        crate::auth::access::require_perm(__adb, cx, "manuals.manage")
+        crate::auth::access::require_perm(__adb, cx, crate::auth::access::perms::MANUALS_MANAGE)
             .await
             .is_none()
     };

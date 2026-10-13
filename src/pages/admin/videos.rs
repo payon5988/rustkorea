@@ -15,7 +15,7 @@ use crate::models::YoutubeVideo;
 pub async fn admin_videos(cx: &Cx) -> Result<impl View + '_> {
     let __denied = {
         let __adb: &crate::db::Db = topcoat::context::app_context(cx);
-        crate::auth::access::require_perm(__adb, cx, "youtube.manage")
+        crate::auth::access::require_perm(__adb, cx, crate::auth::access::perms::YOUTUBE_MANAGE)
             .await
             .is_none()
     };

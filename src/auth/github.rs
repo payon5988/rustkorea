@@ -25,25 +25,28 @@ fn extract_query_param(cx: &Cx, key: &str) -> String {
 fn generate_state() -> String {
     use rand::Rng;
     let mut rng = rand::thread_rng();
-    (0..32)
+    (0..crate::auth::session::CSRF_TOKEN_LEN)
         .map(|_| {
-            let idx = rng.gen_range(0..62);
-            match idx {
-                0..10 => (b'0' + idx) as char,
-                10..36 => (b'a' + idx - 10) as char,
-                36..62 => (b'A' + idx - 36) as char,
-                _ => 'a',
+            let idx = rng.gen_range(0..crate::auth::session::CSRF_ALPHABET);
+            if idx < crate::auth::session::CSRF_DIGIT_END {
+                (b'0' + idx) as char
+            } else if idx < crate::auth::session::CSRF_LOWER_END {
+                (b'a' + idx - crate::auth::session::CSRF_DIGIT_END) as char
+            } else {
+                (b'A' + idx - crate::auth::session::CSRF_LOWER_END) as char
             }
         })
         .collect()
 }
 
 fn hardened_state_cookie(state: String) -> Cookie<'static> {
-    let mut c = Cookie::new("oauth_state", state);
+    let mut c = Cookie::new(crate::auth::session::OAUTH_STATE_COOKIE, state);
     c.set_path("/");
     c.set_http_only(true);
     c.set_same_site(topcoat::cookie::SameSite::Lax);
-    c.set_max_age(topcoat::cookie::time::Duration::minutes(10));
+    c.set_max_age(topcoat::cookie::time::Duration::minutes(
+        crate::auth::session::PENDING_TTL_MINUTES,
+    ));
     if std::env::var("OAUTH_SECURE_COOKIES").as_deref() == Ok("1") {
         c.set_secure(true);
     }
@@ -53,13 +56,19 @@ fn hardened_state_cookie(state: String) -> Cookie<'static> {
 #[route(GET "/auth/github")]
 pub async fn github_login(cx: &Cx) -> Result<topcoat::router::error::SeeOther> {
     let client_id = crate::config::env_or("GITHUB_CLIENT_ID", "");
-    let redirect_uri = crate::config::env_or(
-        "GITHUB_REDIRECT_URI",
-        "http://localhost:3000/auth/github/callback",
-    );
+    let redirect_uri = {
+        let v = crate::config::env_or("GITHUB_REDIRECT_URI", "");
+        if v.is_empty() {
+            crate::config::site_url() + "/auth/github/callback"
+        } else {
+            v
+        }
+    };
     if client_id.is_empty() || crate::config::env_or("GITHUB_CLIENT_SECRET", "").is_empty() {
         return Ok(topcoat::router::error::see_other(
-            "/auth/login?error=oauth_not_configured",
+            crate::auth::session::login_error_url(
+                crate::auth::session::login_error::OAUTH_NOT_CONFIGURED,
+            ),
         ));
     }
     let state = generate_state();
@@ -78,18 +87,18 @@ pub async fn github_callback(cx: &Cx) -> Result<topcoat::router::error::SeeOther
     let state = extract_query_param(cx, "state");
 
     let expected_state = cookies(cx)
-        .get("oauth_state")
+        .get(crate::auth::session::OAUTH_STATE_COOKIE)
         .map(|c| c.value().to_string())
         .unwrap_or_default();
     {
-        let mut c = Cookie::new("oauth_state", "");
+        let mut c = Cookie::new(crate::auth::session::OAUTH_STATE_COOKIE, "");
         c.set_path("/");
         cookies(cx).remove(c);
     }
 
     if code.is_empty() || state.is_empty() || state != expected_state {
         return Ok(topcoat::router::error::see_other(
-            "/auth/login?error=oauth_state",
+            crate::auth::session::login_error_url(crate::auth::session::login_error::OAUTH_STATE),
         ));
     }
 
@@ -98,13 +107,17 @@ pub async fn github_callback(cx: &Cx) -> Result<topcoat::router::error::SeeOther
 
     if client_id.is_empty() || client_secret.is_empty() {
         return Ok(topcoat::router::error::see_other(
-            "/auth/login?error=oauth_not_configured",
+            crate::auth::session::login_error_url(
+                crate::auth::session::login_error::OAUTH_NOT_CONFIGURED,
+            ),
         ));
     }
 
     let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(10))
-        .user_agent("rustkorea-hub")
+        .timeout(std::time::Duration::from_secs(
+            crate::config::http_timeout_secs(),
+        ))
+        .user_agent(crate::config::http_user_agent())
         .build()
         .unwrap_or_else(|_| reqwest::Client::new());
     let resp = match client
@@ -121,7 +134,9 @@ pub async fn github_callback(cx: &Cx) -> Result<topcoat::router::error::SeeOther
         Ok(r) => r,
         Err(_) => {
             return Ok(topcoat::router::error::see_other(
-                "/auth/login?error=oauth_network",
+                crate::auth::session::login_error_url(
+                    crate::auth::session::login_error::OAUTH_NETWORK,
+                ),
             ));
         }
     };
@@ -130,7 +145,9 @@ pub async fn github_callback(cx: &Cx) -> Result<topcoat::router::error::SeeOther
         Ok(v) => v,
         Err(_) => {
             return Ok(topcoat::router::error::see_other(
-                "/auth/login?error=oauth_token",
+                crate::auth::session::login_error_url(
+                    crate::auth::session::login_error::OAUTH_TOKEN,
+                ),
             ));
         }
     };
@@ -139,7 +156,9 @@ pub async fn github_callback(cx: &Cx) -> Result<topcoat::router::error::SeeOther
         Some(t) if !t.is_empty() => t,
         _ => {
             return Ok(topcoat::router::error::see_other(
-                "/auth/login?error=oauth_access_denied",
+                crate::auth::session::login_error_url(
+                    crate::auth::session::login_error::OAUTH_ACCESS_DENIED,
+                ),
             ));
         }
     };
@@ -147,7 +166,7 @@ pub async fn github_callback(cx: &Cx) -> Result<topcoat::router::error::SeeOther
     let user_resp: serde_json::Value = match client
         .get(GITHUB_USER_URL)
         .header("Authorization", format!("Bearer {access_token}"))
-        .header("User-Agent", "rustkorea-hub")
+        .header("User-Agent", crate::config::http_user_agent())
         .send()
         .await
     {
@@ -155,13 +174,17 @@ pub async fn github_callback(cx: &Cx) -> Result<topcoat::router::error::SeeOther
             Ok(v) => v,
             Err(_) => {
                 return Ok(topcoat::router::error::see_other(
-                    "/auth/login?error=oauth_user_info",
+                    crate::auth::session::login_error_url(
+                        crate::auth::session::login_error::OAUTH_USER_INFO,
+                    ),
                 ));
             }
         },
         Err(_) => {
             return Ok(topcoat::router::error::see_other(
-                "/auth/login?error=oauth_network",
+                crate::auth::session::login_error_url(
+                    crate::auth::session::login_error::OAUTH_NETWORK,
+                ),
             ));
         }
     };
@@ -169,7 +192,9 @@ pub async fn github_callback(cx: &Cx) -> Result<topcoat::router::error::SeeOther
     let github_id = user_resp["id"].as_i64().unwrap_or(0);
     if github_id == 0 {
         return Ok(topcoat::router::error::see_other(
-            "/auth/login?error=oauth_user_info",
+            crate::auth::session::login_error_url(
+                crate::auth::session::login_error::OAUTH_USER_INFO,
+            ),
         ));
     }
     let username = user_resp["login"].as_str().unwrap_or("unknown").to_string();
@@ -184,7 +209,7 @@ pub async fn github_callback(cx: &Cx) -> Result<topcoat::router::error::SeeOther
     sqlx::query(
         r#"
         INSERT INTO users (github_id, username, avatar_url, role_id, status, created_at, updated_at)
-        VALUES ($1, $2, $3, 'member', $4, NOW()::text, NOW()::text)
+        VALUES ($1, $2, $3, $4, $5, NOW()::text, NOW()::text)
         ON CONFLICT (github_id) DO UPDATE SET
             username = EXCLUDED.username,
             avatar_url = EXCLUDED.avatar_url,
@@ -194,6 +219,7 @@ pub async fn github_callback(cx: &Cx) -> Result<topcoat::router::error::SeeOther
     .bind(github_id)
     .bind(&username)
     .bind(&avatar_url)
+    .bind(crate::auth::access::DEFAULT_ROLE)
     .bind(&status)
     .execute(db)
     .await
@@ -214,15 +240,25 @@ pub async fn github_callback(cx: &Cx) -> Result<topcoat::router::error::SeeOther
                 sessions::prune_expired_sessions(db).await;
                 if sessions::create_session(db, cx, &u.id).await.is_err() {
                     return Ok(topcoat::router::error::see_other(
-                        "/auth/login?error=session",
+                        crate::auth::session::login_error_url(
+                            crate::auth::session::login_error::SESSION,
+                        ),
                     ));
                 }
             }
             LoginDecision::Pending => {
-                return Ok(topcoat::router::error::see_other("/auth/login?error=5"));
+                return Ok(topcoat::router::error::see_other(
+                    crate::auth::session::login_error_url(
+                        crate::auth::session::login_error::PENDING_APPROVAL,
+                    ),
+                ));
             }
             LoginDecision::Suspended => {
-                return Ok(topcoat::router::error::see_other("/auth/login?error=6"));
+                return Ok(topcoat::router::error::see_other(
+                    crate::auth::session::login_error_url(
+                        crate::auth::session::login_error::SUSPENDED,
+                    ),
+                ));
             }
         }
     }

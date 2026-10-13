@@ -16,7 +16,7 @@ pub async fn VideoCard(cx: &topcoat::context::Cx, video: YoutubeVideo) -> Result
         .next()
         .unwrap_or("")
         .to_string();
-    let url = format!("https://www.youtube.com/watch?v={}", video.video_id);
+    let url = crate::util::youtube_watch_url(&video.video_id);
     let has_thumb = !thumb_url.is_empty();
 
     Ok(view! {

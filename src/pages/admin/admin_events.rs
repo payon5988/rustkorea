@@ -42,7 +42,7 @@ pub struct EventUpdateForm {
 pub async fn admin_events_page(cx: &Cx) -> Result<impl View + '_> {
     let __denied = {
         let __adb: &crate::db::Db = topcoat::context::app_context(cx);
-        crate::auth::access::require_perm(__adb, cx, "events.manage")
+        crate::auth::access::require_perm(__adb, cx, crate::auth::access::perms::EVENTS_MANAGE)
             .await
             .is_none()
     };
@@ -175,7 +175,7 @@ pub async fn create_event(
 ) -> Result<topcoat::router::error::SeeOther> {
     let __denied = {
         let __adb: &crate::db::Db = topcoat::context::app_context(cx);
-        crate::auth::access::require_perm(__adb, cx, "events.manage")
+        crate::auth::access::require_perm(__adb, cx, crate::auth::access::perms::EVENTS_MANAGE)
             .await
             .is_none()
     };
@@ -224,7 +224,7 @@ pub async fn delete_event(
 pub async fn admin_event_edit_page(cx: &Cx) -> Result<impl View + '_> {
     let __denied = {
         let __adb: &crate::db::Db = topcoat::context::app_context(cx);
-        crate::auth::access::require_perm(__adb, cx, "events.manage")
+        crate::auth::access::require_perm(__adb, cx, crate::auth::access::perms::EVENTS_MANAGE)
             .await
             .is_none()
     };
@@ -330,7 +330,7 @@ pub async fn update_event(
 ) -> Result<topcoat::router::error::SeeOther> {
     let __denied = {
         let __adb: &crate::db::Db = topcoat::context::app_context(cx);
-        crate::auth::access::require_perm(__adb, cx, "events.manage")
+        crate::auth::access::require_perm(__adb, cx, crate::auth::access::perms::EVENTS_MANAGE)
             .await
             .is_none()
     };

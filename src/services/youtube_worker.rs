@@ -4,10 +4,12 @@ use crate::db::Db;
 use crate::services::site_settings::get_setting;
 use crate::services::youtube::fetch_channel_videos;
 
-const POLL_INTERVAL: Duration = Duration::from_secs(900); // 15 minutes
+fn poll_interval() -> Duration {
+    Duration::from_secs(crate::config::youtube_poll_secs())
+}
 
 pub async fn start_youtube_worker(db: Db) {
-    let mut ticker = interval(POLL_INTERVAL);
+    let mut ticker = interval(poll_interval());
 
     loop {
         ticker.tick().await;

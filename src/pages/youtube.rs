@@ -9,6 +9,9 @@ use topcoat::{
     view::{View, view},
 };
 
+/// YouTube listing page size.
+pub const YOUTUBE_PER_PAGE: i64 = 12;
+
 #[page("/youtube")]
 pub async fn youtube_index(cx: &Cx) -> Result<impl View + '_> {
     let db: &Db = topcoat::context::app_context(cx);
@@ -22,8 +25,8 @@ pub async fn youtube_index(cx: &Cx) -> Result<impl View + '_> {
     let gate = crate::auth::access::visibility_gate(
         access.as_ref(),
         &tier,
-        "videos.view_staff",
-        "premium.access",
+        crate::auth::access::perms::VIDEOS_VIEW_STAFF,
+        crate::auth::access::perms::PREMIUM_ACCESS,
     );
     if gate == crate::auth::access::Gate::LoginRequired {
         return Err(topcoat::router::error::redirect("/auth/login?redirect=/youtube").into());
@@ -45,7 +48,7 @@ pub async fn youtube_index(cx: &Cx) -> Result<impl View + '_> {
         .unwrap_or(1)
         .max(1);
 
-    let per_page: i64 = 12;
+    let per_page: i64 = YOUTUBE_PER_PAGE;
     let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM youtube_videos")
         .fetch_one(db)
         .await

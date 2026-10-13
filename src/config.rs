@@ -58,6 +58,21 @@ pub fn mail_domain() -> String {
     env_or("MAIL_DOMAIN", "rustkorea.kr")
 }
 
+/// YouTube sync interval (seconds).
+pub fn youtube_poll_secs() -> u64 {
+    env_or("YOUTUBE_POLL_SECS", "900").parse().unwrap_or(900)
+}
+
+/// Outbound HTTP timeout (seconds) for OAuth / feed fetches.
+pub fn http_timeout_secs() -> u64 {
+    env_or("HTTP_TIMEOUT_SECS", "10").parse().unwrap_or(10)
+}
+
+/// Shared User-Agent for outbound HTTP (includes crate version).
+pub fn http_user_agent() -> String {
+    format!("rustkorea-hub/{}", app_version())
+}
+
 /// Public contact address shown in legal pages and used as a fallback
 /// identifier where an email is required.
 pub fn contact_email() -> String {

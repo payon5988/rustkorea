@@ -34,25 +34,43 @@ fn rank_badge(i: usize) -> &'static str {
     }
 }
 
+/// Ranking board size.
+pub const RANK_LIMIT: i64 = 20;
+/// Internal guest account excluded from boards.
+pub const GUEST_USERNAME: &str = "guest";
+
 #[page("/ranking")]
 pub async fn ranking_page(cx: &Cx) -> Result<impl View + '_> {
     let db: &Db = topcoat::context::app_context(cx);
 
     let by_points: Vec<RankedUser> = sqlx::query_as::<_, RankedUser>(
-        "SELECT username, display_name, avatar_url, points FROM users WHERE status = 'active' ORDER BY points DESC LIMIT 20"
-    ).fetch_all(db).await.unwrap_or_default();
+        "SELECT username, display_name, avatar_url, points FROM users WHERE status = $1 ORDER BY points DESC LIMIT $2"
+    ).bind(crate::auth::access::user_status::ACTIVE).bind(RANK_LIMIT)
+    .fetch_all(db).await.unwrap_or_default();
 
     let by_posts: Vec<RankedUserCount> = sqlx::query_as::<_, RankedUserCount>(
         "SELECT u.username, u.display_name, u.avatar_url,
                 (SELECT COUNT(*) FROM posts p WHERE p.author_id = u.id) AS cnt
-         FROM users u WHERE u.username != 'guest' AND u.status = 'active' ORDER BY cnt DESC LIMIT 20"
-    ).fetch_all(db).await.unwrap_or_default();
+         FROM users u WHERE u.username != $1 AND u.status = $2 ORDER BY cnt DESC LIMIT $3",
+    )
+    .bind(GUEST_USERNAME)
+    .bind(crate::auth::access::user_status::ACTIVE)
+    .bind(RANK_LIMIT)
+    .fetch_all(db)
+    .await
+    .unwrap_or_default();
 
     let by_comments: Vec<RankedUserCount> = sqlx::query_as::<_, RankedUserCount>(
         "SELECT u.username, u.display_name, u.avatar_url,
                 (SELECT COUNT(*) FROM comments c WHERE c.author_id = u.id) AS cnt
-         FROM users u WHERE u.username != 'guest' AND u.status = 'active' ORDER BY cnt DESC LIMIT 20"
-    ).fetch_all(db).await.unwrap_or_default();
+         FROM users u WHERE u.username != $1 AND u.status = $2 ORDER BY cnt DESC LIMIT $3",
+    )
+    .bind(GUEST_USERNAME)
+    .bind(crate::auth::access::user_status::ACTIVE)
+    .bind(RANK_LIMIT)
+    .fetch_all(db)
+    .await
+    .unwrap_or_default();
 
     Ok(view! {
         <div class="container" style="padding-top:60px; padding-bottom:80px;">

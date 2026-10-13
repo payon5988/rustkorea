@@ -42,6 +42,10 @@ pub async fn update_manual(
         return Ok(topcoat::router::error::see_other("/admin/manuals"));
     }
 
+    if !crate::models::difficulty::valid(&input.difficulty) {
+        return Ok(topcoat::router::error::see_other("/admin/manuals"));
+    }
+
     sqlx::query(
         "UPDATE manual_series SET slug = $1, title = $2, description = $3, difficulty = $4, estimated_minutes = $5, visibility = $6, updated_at = NOW()::text
          WHERE id = $7"
@@ -77,7 +81,7 @@ pub async fn update_manual(
 pub async fn edit_manual(cx: &Cx) -> Result<impl View + '_> {
     let __denied = {
         let __adb: &crate::db::Db = topcoat::context::app_context(cx);
-        crate::auth::access::require_perm(__adb, cx, "manuals.manage")
+        crate::auth::access::require_perm(__adb, cx, crate::auth::access::perms::MANUALS_MANAGE)
             .await
             .is_none()
     };
@@ -102,9 +106,9 @@ pub async fn edit_manual(cx: &Cx) -> Result<impl View + '_> {
 
     match series {
         Some(s) => {
-            let diff_beginner = s.difficulty == "beginner";
-            let diff_intermediate = s.difficulty == "intermediate";
-            let diff_advanced = s.difficulty == "advanced";
+            let diff_beginner = s.difficulty == crate::models::difficulty::BEGINNER;
+            let diff_intermediate = s.difficulty == crate::models::difficulty::INTERMEDIATE;
+            let diff_advanced = s.difficulty == crate::models::difficulty::ADVANCED;
             let vis_public = s.visibility == "public";
             let vis_members = s.visibility == "members";
             let vis_staff = s.visibility == "staff";

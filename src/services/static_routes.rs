@@ -36,27 +36,46 @@ impl IntoResponse for BinBody {
     }
 }
 
+/// PWA manifest identity (single source; the JSON template below inlines these).
+pub const MANIFEST_SHORT_NAME: &str = "RustKorea";
+pub const MANIFEST_BACKGROUND: &str = "#0f1117";
+pub const MANIFEST_THEME: &str = "#DE5B30";
+
+/// Offline shell + cache policy for the service worker.
+pub const SW_SHELL: [&str; 5] = ["/", "/community", "/manuals", "/search", "/offline"];
+pub const SW_BYPASS_PREFIXES: [&str; 3] = ["/admin", "/auth", "/.well-known"];
+pub const SW_MAX_ENTRIES: usize = 100;
+
+/// robots.txt policy.
+pub const ROBOTS_DISALLOW: [&str; 2] = ["/admin", "/auth"];
+
+/// AdSense ads.txt DIRECT tag (Google-assigned).
+pub const ADSENSE_DIRECT_TAG: &str = "f08c47fec0942fa0";
+
 fn manifest_json_body(name: &str, desc: &str) -> String {
     format!(
-        concat!(
-            r##"{{"name":"{}","short_name":"RustKorea","id":"/","start_url":"/","scope":"/","display":"standalone","orientation":"portrait","background_color":"#0f1117","theme_color":"#DE5B30","description":"{}","categories":["education","developer tools"],"shortcuts":[{{"name":"매뉴얼","url":"/manuals"}},{{"name":"커뮤니티","url":"/community"}}],"icons":[{{"src":"/icon-192.png","sizes":"192x192","type":"image/png","purpose":"any"}},{{"src":"/icon-512.png","sizes":"512x512","type":"image/png","purpose":"any"}},{{"src":"/maskable-512.png","sizes":"512x512","type":"image/png","purpose":"maskable"}}]}}"##
-        ),
-        name, desc,
+        "{{\"name\":\"{name}\",\"short_name\":\"{short}\",\"id\":\"/\",\"start_url\":\"/\",\"scope\":\"/\",\"display\":\"standalone\",\"orientation\":\"portrait\",\"background_color\":\"{bg}\",\"theme_color\":\"{theme}\",\"description\":\"{desc}\",\"categories\":[\"education\",\"developer tools\"],\"shortcuts\":[{{\"name\":\"매뉴얼\",\"url\":\"/manuals\"}},{{\"name\":\"커뮤니티\",\"url\":\"/community\"}}],\"icons\":[{{\"src\":\"/icon-192.png\",\"sizes\":\"192x192\",\"type\":\"image/png\",\"purpose\":\"any\"}},{{\"src\":\"/icon-512.png\",\"sizes\":\"512x512\",\"type\":\"image/png\",\"purpose\":\"any\"}},{{\"src\":\"/maskable-512.png\",\"sizes\":\"512x512\",\"type\":\"image/png\",\"purpose\":\"maskable\"}}]}}",
+        short = MANIFEST_SHORT_NAME,
+        bg = MANIFEST_BACKGROUND,
+        theme = MANIFEST_THEME,
     )
 }
 
 fn service_worker_body() -> String {
+    let shell = SW_SHELL
+        .iter()
+        .map(|p| format!("'{p}'"))
+        .collect::<Vec<_>>()
+        .join(",");
+    let bypass = SW_BYPASS_PREFIXES
+        .iter()
+        .map(|p| format!("p.startsWith('{p}')"))
+        .collect::<Vec<_>>()
+        .join("||");
     format!(
-        concat!(
-            "const CACHE_NAME='rustkorea-{ver}';",
-            "const SHELL=['/','/community','/manuals','/search','/offline'];",
-            "self.addEventListener('install',e=>{{e.waitUntil(caches.open(CACHE_NAME).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting()))}});",
-            "self.addEventListener('activate',e=>{{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(n=>n!==CACHE_NAME).map(n=>caches.delete(n)))).then(()=>self.clients.claim()))}});",
-            "self.addEventListener('fetch',e=>{{if(e.request.method!=='GET')return;const u=new URL(e.request.url);if(u.origin!==location.origin)return;const p=u.pathname;if(p.startsWith('/admin')||p.startsWith('/auth')||p.startsWith('/.well-known'))return;const nav=e.request.mode==='navigate';",
-            "e.respondWith(fetch(e.request).then(r=>{{const c=r.clone();caches.open(CACHE_NAME).then(cache=>{{cache.put(e.request,c);cache.keys().then(ks=>{{if(ks.length>100)cache.delete(ks[0])}})}});return r}})",
-            ".catch(()=>caches.match(e.request).then(m=>m||(nav?caches.match('/offline'):undefined))))}});",
-        ),
+        "const CACHE_NAME='rustkorea-{ver}';const SHELL=[{shell}];self.addEventListener('install',e=>{{e.waitUntil(caches.open(CACHE_NAME).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting()))}});self.addEventListener('activate',e=>{{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(n=>n!==CACHE_NAME).map(n=>caches.delete(n)))).then(()=>self.clients.claim()))}});self.addEventListener('fetch',e=>{{if(e.request.method!=='GET')return;const u=new URL(e.request.url);if(u.origin!==location.origin)return;const p=u.pathname;if({bypass})return;const nav=e.request.mode==='navigate';e.respondWith(fetch(e.request).then(r=>{{const c=r.clone();caches.open(CACHE_NAME).then(cache=>{{cache.put(e.request,c);cache.keys().then(ks=>{{if(ks.length>{max})cache.delete(ks[0])}})}});return r}}).catch(()=>caches.match(e.request).then(m=>m||(nav?caches.match('/offline'):undefined))))}});",
         ver = crate::config::app_version(),
+        max = SW_MAX_ENTRIES,
     )
 }
 
@@ -130,8 +149,12 @@ pub async fn service_worker(_cx: &Cx) -> Result<TypedBody> {
 }
 
 fn robots_txt_body() -> String {
+    let disallow = ROBOTS_DISALLOW
+        .iter()
+        .map(|p| format!("Disallow: {p}\n"))
+        .collect::<String>();
     format!(
-        "User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /auth\n\nSitemap: {}/sitemap.xml\n",
+        "User-agent: *\nAllow: /\n{disallow}\nSitemap: {}/sitemap.xml\n",
         crate::config::site_url(),
     )
 }
@@ -149,7 +172,7 @@ async fn ads_txt_body(db: &crate::db::Db) -> String {
     if client_id.is_empty() {
         return String::new();
     }
-    format!("google.com, {client_id}, DIRECT, f08c47fec0942fa0\n")
+    format!("google.com, {client_id}, DIRECT, {ADSENSE_DIRECT_TAG}\n")
 }
 
 #[route(GET "/ads.txt")]

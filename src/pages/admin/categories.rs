@@ -29,7 +29,7 @@ pub async fn create_category(
 ) -> Result<topcoat::router::error::SeeOther> {
     let __denied = {
         let __adb: &crate::db::Db = topcoat::context::app_context(cx);
-        crate::auth::access::require_perm(__adb, cx, "community.manage")
+        crate::auth::access::require_perm(__adb, cx, crate::auth::access::perms::COMMUNITY_MANAGE)
             .await
             .is_none()
     };
@@ -55,7 +55,7 @@ pub async fn create_category(
         .unwrap_or(0);
     let write_perm = input
         .write_permission
-        .unwrap_or_else(|| "everyone".to_string());
+        .unwrap_or_else(|| crate::pages::community::helpers::write_perm::EVERYONE.to_string());
 
     sqlx::query(
         "INSERT INTO categories (id, slug, name, color, description, position, visible, write_permission, created_at) VALUES ($1, $2, $3, $4, $5, $6, 1, $7, NOW()::text)"
@@ -83,7 +83,7 @@ pub async fn update_category(
 ) -> Result<topcoat::router::error::SeeOther> {
     let __denied = {
         let __adb: &crate::db::Db = topcoat::context::app_context(cx);
-        crate::auth::access::require_perm(__adb, cx, "community.manage")
+        crate::auth::access::require_perm(__adb, cx, crate::auth::access::perms::COMMUNITY_MANAGE)
             .await
             .is_none()
     };
@@ -104,7 +104,7 @@ pub async fn update_category(
     }
     let write_perm = input
         .write_permission
-        .unwrap_or_else(|| "everyone".to_string());
+        .unwrap_or_else(|| crate::pages::community::helpers::write_perm::EVERYONE.to_string());
     sqlx::query("UPDATE categories SET name = $1, color = $2, description = $3, write_permission = $4 WHERE id = $5")
         .bind(&input.name).bind(&input.color).bind(&input.description).bind(&write_perm).bind(&input.id)
         .execute(db).await.ok();
@@ -118,7 +118,7 @@ pub async fn delete_category(
 ) -> Result<topcoat::router::error::SeeOther> {
     let __denied = {
         let __adb: &crate::db::Db = topcoat::context::app_context(cx);
-        crate::auth::access::require_perm(__adb, cx, "community.manage")
+        crate::auth::access::require_perm(__adb, cx, crate::auth::access::perms::COMMUNITY_MANAGE)
             .await
             .is_none()
     };
@@ -160,7 +160,7 @@ pub async fn toggle_category(
 ) -> Result<topcoat::router::error::SeeOther> {
     let __denied = {
         let __adb: &crate::db::Db = topcoat::context::app_context(cx);
-        crate::auth::access::require_perm(__adb, cx, "community.manage")
+        crate::auth::access::require_perm(__adb, cx, crate::auth::access::perms::COMMUNITY_MANAGE)
             .await
             .is_none()
     };
@@ -204,7 +204,7 @@ pub async fn move_category_up(
 ) -> Result<topcoat::router::error::SeeOther> {
     let __denied = {
         let __adb: &crate::db::Db = topcoat::context::app_context(cx);
-        crate::auth::access::require_perm(__adb, cx, "community.manage")
+        crate::auth::access::require_perm(__adb, cx, crate::auth::access::perms::COMMUNITY_MANAGE)
             .await
             .is_none()
     };
@@ -270,7 +270,7 @@ pub async fn move_category_down(
 ) -> Result<topcoat::router::error::SeeOther> {
     let __denied = {
         let __adb: &crate::db::Db = topcoat::context::app_context(cx);
-        crate::auth::access::require_perm(__adb, cx, "community.manage")
+        crate::auth::access::require_perm(__adb, cx, crate::auth::access::perms::COMMUNITY_MANAGE)
             .await
             .is_none()
     };
@@ -333,7 +333,7 @@ pub async fn move_category_down(
 pub async fn admin_categories(cx: &Cx) -> Result<impl View + '_> {
     let __denied = {
         let __adb: &crate::db::Db = topcoat::context::app_context(cx);
-        crate::auth::access::require_perm(__adb, cx, "community.manage")
+        crate::auth::access::require_perm(__adb, cx, crate::auth::access::perms::COMMUNITY_MANAGE)
             .await
             .is_none()
     };
@@ -405,10 +405,10 @@ pub async fn admin_categories(cx: &Cx) -> Result<impl View + '_> {
                                         <td style="padding:14px 20px; color:var(--muted); font-family:monospace; font-size:12px;">(cat.slug.clone())</td>
                                         <td style="padding:14px 20px;">
                                             <span style=(format!("font-size:11px; font-weight:600; padding:3px 8px; border-radius:9999px; color:{}; background:{}1a;",
-                                                match cat.write_permission.as_str() { "admin" => "#DC2626", "editor" => "#F59E0B", _ => "#10B981" },
-                                                match cat.write_permission.as_str() { "admin" => "#DC2626", "editor" => "#F59E0B", _ => "#10B981" }
+                                                match cat.write_permission.as_str() { crate::pages::community::helpers::write_perm::ADMIN => "#DC2626", crate::pages::community::helpers::write_perm::EDITOR => "#F59E0B", _ => "#10B981" },
+                                                match cat.write_permission.as_str() { crate::pages::community::helpers::write_perm::ADMIN => "#DC2626", crate::pages::community::helpers::write_perm::EDITOR => "#F59E0B", _ => "#10B981" }
                                             ))>
-                                                (match cat.write_permission.as_str() { "admin" => "관리자만", "editor" => "운영진", _ => "전체" })
+                                                (match cat.write_permission.as_str() { crate::pages::community::helpers::write_perm::ADMIN => "관리자만", crate::pages::community::helpers::write_perm::EDITOR => "운영진", _ => "전체" })
                                             </span>
                                         </td>
                                         <td style="padding:14px 20px; color:var(--muted);">(cnt)</td>

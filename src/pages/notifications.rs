@@ -8,6 +8,11 @@ use topcoat::{
 };
 
 use crate::db::Db;
+
+/// Notification list cap and read-state flags.
+pub const NOTIF_LIMIT: i64 = 50;
+pub const NOTIF_UNREAD: i32 = 0;
+pub const NOTIF_READ: i32 = 1;
 use crate::pages::community::helpers::{get_current_user, login_redirect};
 
 topcoat::router::path_param!(id);
@@ -63,14 +68,18 @@ pub async fn notifications_page(cx: &Cx) -> Result<impl View + '_> {
         "SELECT n.id, n.noti_type, n.from_user_id, n.post_id, n.message, n.is_read, n.created_at,
                 COALESCE(u.username, '') AS from_username
          FROM notifications n LEFT JOIN users u ON u.id = n.from_user_id
-         WHERE n.user_id = $1 ORDER BY n.created_at DESC LIMIT 50",
+         WHERE n.user_id = $1 ORDER BY n.created_at DESC LIMIT $2",
     )
     .bind(&user.id)
+    .bind(NOTIF_LIMIT)
     .fetch_all(db)
     .await
     .unwrap_or_default();
 
-    let unread_count = notifications.iter().filter(|n| n.is_read == 0).count();
+    let unread_count = notifications
+        .iter()
+        .filter(|n| n.is_read == NOTIF_UNREAD)
+        .count();
 
     Ok(view! {
         <div class="container" style="padding-top:40px; padding-bottom:80px; max-width:640px;">
@@ -100,8 +109,8 @@ pub async fn notifications_page(cx: &Cx) -> Result<impl View + '_> {
             } else {
                 <div style="display:flex; flex-direction:column; gap:2px; background:#e5e7eb; border-radius:12px; overflow:hidden;">
                     for n in &notifications {
-                        let bg = if n.is_read == 0 { "#f0f7ff" } else { "#fff" };
-                        let weight = if n.is_read == 0 { "600" } else { "400" };
+                        let bg = if n.is_read == NOTIF_UNREAD { "#f0f7ff" } else { "#fff" };
+                        let weight = if n.is_read == NOTIF_UNREAD { "600" } else { "400" };
                         let link = n.post_id.as_deref().map(|pid| format!("/community/{pid}")).unwrap_or_else(|| "/notifications".to_string());
                         let icon_path = noti_icon(&n.noti_type);
                         let icon_color = noti_color(&n.noti_type);
@@ -113,7 +122,7 @@ pub async fn notifications_page(cx: &Cx) -> Result<impl View + '_> {
                                 <p style=(format!("font-size:14px; color:#16181d; font-weight:{weight}; line-height:1.5;"))>(n.message.clone())</p>
                                 <span style="font-size:12px; color:#9ca3af;">(n.created_at.split(' ').next().unwrap_or("").to_string())</span>
                             </div>
-                            if n.is_read == 0 {
+                            if n.is_read == NOTIF_UNREAD {
                                 <div style="flex-shrink:0; width:8px; height:8px; border-radius:50%; background:#2563EB; margin-top:6px;"></div>
                             }
                         </a>
@@ -142,7 +151,8 @@ pub async fn mark_notification_read(
         {
             return Ok(topcoat::router::error::see_other("/"));
         }
-        sqlx::query("UPDATE notifications SET is_read = 1 WHERE id = $1 AND user_id = $2")
+        sqlx::query("UPDATE notifications SET is_read = $1 WHERE id = $2 AND user_id = $3")
+            .bind(NOTIF_READ)
             .bind(id)
             .bind(&user.id)
             .execute(db)
@@ -169,8 +179,10 @@ pub async fn mark_all_read(
         {
             return Ok(topcoat::router::error::see_other("/"));
         }
-        sqlx::query("UPDATE notifications SET is_read = 1 WHERE user_id = $1 AND is_read = 0")
+        sqlx::query("UPDATE notifications SET is_read = $1 WHERE user_id = $2 AND is_read = $3")
+            .bind(NOTIF_READ)
             .bind(&user.id)
+            .bind(NOTIF_UNREAD)
             .execute(db)
             .await
             .ok();

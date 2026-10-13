@@ -15,7 +15,7 @@ use crate::models::ManualSeries;
 pub async fn select_series_for_chapter(cx: &Cx) -> Result<impl View + '_> {
     let __denied = {
         let __adb: &crate::db::Db = topcoat::context::app_context(cx);
-        crate::auth::access::require_perm(__adb, cx, "manuals.manage")
+        crate::auth::access::require_perm(__adb, cx, crate::auth::access::perms::MANUALS_MANAGE)
             .await
             .is_none()
     };
@@ -65,8 +65,8 @@ pub async fn select_series_for_chapter(cx: &Cx) -> Result<impl View + '_> {
                                 <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
                                     <h3 style="font-size:14px; font-weight:700; color:var(--text3);">(s.title.clone())</h3>
                                     <span class="badge" style=((match s.difficulty.as_str() {
-                                            "advanced" => "background:rgba(248,113,113,0.1); color:var(--red);",
-                                            "intermediate" => "background:rgba(251,191,36,0.1); color:var(--amber);",
+                                            crate::models::difficulty::ADVANCED => "background:rgba(248,113,113,0.1); color:var(--red);",
+                                            crate::models::difficulty::INTERMEDIATE => "background:rgba(251,191,36,0.1); color:var(--amber);",
                                             _ => "background:rgba(52,211,153,0.1); color:var(--green);",
                                         }).to_string())>(s.difficulty.clone())</span>
                                 </div>

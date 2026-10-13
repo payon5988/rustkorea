@@ -99,7 +99,7 @@ pub async fn update_chapter(
 pub async fn edit_chapter(cx: &Cx) -> Result<impl View + '_> {
     let __denied = {
         let __adb: &crate::db::Db = topcoat::context::app_context(cx);
-        crate::auth::access::require_perm(__adb, cx, "manuals.manage")
+        crate::auth::access::require_perm(__adb, cx, crate::auth::access::perms::MANUALS_MANAGE)
             .await
             .is_none()
     };
@@ -232,7 +232,7 @@ pub async fn move_chapter(
     }
     let __denied = {
         let __adb: &crate::db::Db = topcoat::context::app_context(cx);
-        crate::auth::access::require_perm(__adb, cx, "manuals.manage")
+        crate::auth::access::require_perm(__adb, cx, crate::auth::access::perms::MANUALS_MANAGE)
             .await
             .is_none()
     };

@@ -24,6 +24,14 @@ pub async fn create_notification(
 
 /// Point award rule from site_settings (`points_post` etc.), falling back to
 /// `default` when unset/unparseable/negative. No hardcoded awards at call sites.
+pub const POINTS_POST_DEFAULT: i64 = 10;
+pub const POINTS_COMMENT_DEFAULT: i64 = 2;
+pub const POINTS_LIKE_DEFAULT: i64 = 1;
+
+/// Newcomer badge rule: awarded on first activity even at 0 points when
+/// the user has written at least this many posts.
+pub const NEWCOMER_MIN_POSTS: i64 = 1;
+
 pub async fn point_rule(db: &Db, key: &str, default: i64) -> i64 {
     let raw: Option<String> = sqlx::query_scalar("SELECT value FROM site_settings WHERE key = $1")
         .bind(key)
@@ -69,7 +77,7 @@ pub async fn check_and_award_badges(db: &Db, user_id: &str) {
         .unwrap_or_default();
 
     for (badge_id, required) in &badges {
-        if points >= *required || (*required == 0 && post_count > 0) {
+        if points >= *required || (*required == 0 && post_count >= NEWCOMER_MIN_POSTS) {
             sqlx::query("INSERT INTO user_badges (user_id, badge_id) VALUES ($1, $2) ON CONFLICT DO NOTHING")
                 .bind(user_id).bind(badge_id).execute(db).await.ok();
         }

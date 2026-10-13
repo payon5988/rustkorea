@@ -17,7 +17,7 @@ use crate::services::markdown::render_markdown;
 pub async fn admin_posts(cx: &Cx) -> Result<impl View + '_> {
     let __denied = {
         let __adb: &crate::db::Db = topcoat::context::app_context(cx);
-        crate::auth::access::require_perm(__adb, cx, "posts.moderate")
+        crate::auth::access::require_perm(__adb, cx, crate::auth::access::perms::POSTS_MODERATE)
             .await
             .is_none()
     };
@@ -132,7 +132,7 @@ pub async fn delete_post(
 pub async fn admin_edit_post_page(cx: &Cx) -> Result<impl View + '_> {
     let __denied = {
         let __adb: &crate::db::Db = topcoat::context::app_context(cx);
-        crate::auth::access::require_perm(__adb, cx, "posts.moderate")
+        crate::auth::access::require_perm(__adb, cx, crate::auth::access::perms::POSTS_MODERATE)
             .await
             .is_none()
     };
@@ -251,7 +251,7 @@ pub async fn admin_update_post(
 ) -> Result<topcoat::router::error::SeeOther> {
     let __denied = {
         let __adb: &crate::db::Db = topcoat::context::app_context(cx);
-        crate::auth::access::require_perm(__adb, cx, "posts.moderate")
+        crate::auth::access::require_perm(__adb, cx, crate::auth::access::perms::POSTS_MODERATE)
             .await
             .is_none()
     };
@@ -363,7 +363,7 @@ pub async fn admin_create_post(
 pub async fn admin_new_post_page(cx: &Cx) -> Result<impl View + '_> {
     let __denied = {
         let __adb: &crate::db::Db = topcoat::context::app_context(cx);
-        crate::auth::access::require_perm(__adb, cx, "posts.moderate")
+        crate::auth::access::require_perm(__adb, cx, crate::auth::access::perms::POSTS_MODERATE)
             .await
             .is_none()
     };

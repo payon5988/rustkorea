@@ -13,6 +13,31 @@ pub const CATEGORIES: [(&str, &str); 5] = [
     ("announce", "공지사항"),
 ];
 
+/// Category slugs (single source; DB rows reference these).
+pub mod category_slug {
+    pub const GENERAL: &str = "general";
+    pub const QNA: &str = "qna";
+    pub const SHOWCASE: &str = "showcase";
+    pub const JOBS: &str = "jobs";
+    pub const ANNOUNCE: &str = "announce";
+}
+
+/// Category write permissions.
+pub mod write_perm {
+    pub const EVERYONE: &str = "everyone";
+    pub const ADMIN: &str = "admin";
+    pub const EDITOR: &str = "editor";
+}
+
+/// Category badge colors.
+pub mod category_colors {
+    pub const QNA: &str = "#2563EB";
+    pub const SHOWCASE: &str = "#7C3AED";
+    pub const JOBS: &str = "#059669";
+    pub const ANNOUNCE: &str = "#DC2626";
+    pub const DEFAULT: &str = "#6b7280";
+}
+
 pub async fn get_current_user(cx: &Cx) -> Option<User> {
     let db: &Db = topcoat::context::app_context(cx);
     crate::auth::session::current_user(db, cx).await
@@ -25,7 +50,7 @@ pub fn is_admin_user(access: &Option<Access>) -> bool {
 pub fn is_moderator(access: &Option<Access>) -> bool {
     access
         .as_ref()
-        .map(|a| a.can("posts.moderate"))
+        .map(|a| a.can(crate::auth::access::perms::POSTS_MODERATE))
         .unwrap_or(false)
 }
 
@@ -61,11 +86,11 @@ pub async fn can_write_to_category(db: &Db, access: &Option<Access>, category: &
             .await
             .ok()
             .flatten()
-            .unwrap_or_else(|| "everyone".to_string());
+            .unwrap_or_else(|| write_perm::EVERYONE.to_string());
 
     match permission.as_str() {
-        "admin" => is_admin_user(access),
-        "editor" => is_moderator(access),
+        write_perm::ADMIN => is_admin_user(access),
+        write_perm::EDITOR => is_moderator(access),
         _ => true,
     }
 }
@@ -80,11 +105,11 @@ pub fn category_label(category: &str) -> &'static str {
 
 pub fn category_color(category: &str) -> &'static str {
     match category {
-        "qna" => "#2563EB",
-        "showcase" => "#7C3AED",
-        "jobs" => "#059669",
-        "announce" => "#DC2626",
-        _ => "#6b7280",
+        category_slug::QNA => category_colors::QNA,
+        category_slug::SHOWCASE => category_colors::SHOWCASE,
+        category_slug::JOBS => category_colors::JOBS,
+        category_slug::ANNOUNCE => category_colors::ANNOUNCE,
+        _ => category_colors::DEFAULT,
     }
 }
 
@@ -109,5 +134,5 @@ pub async fn redirect_to(_cx: &Cx, target: &str) -> topcoat::Error {
 }
 
 pub async fn login_redirect(cx: &Cx, return_to: &str) -> topcoat::Error {
-    redirect_to(cx, &format!("/auth/login?redirect={return_to}")).await
+    redirect_to(cx, &crate::auth::session::login_link(return_to)).await
 }

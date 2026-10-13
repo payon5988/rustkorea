@@ -123,12 +123,30 @@ pub fn visible_tiers(access: Option<&Access>, staff_perm: &str, premium_perm: &s
     tiers
 }
 
+/// Well-known role keys (single source; DB rows reference these).
+pub mod role_keys {
+    pub const ADMIN: &str = "admin";
+    pub const EDITOR: &str = "editor";
+    pub const MEMBER: &str = "member";
+}
+
+/// Default role for OAuth-provisioned accounts.
+pub const DEFAULT_ROLE: &str = role_keys::MEMBER;
+
+/// User account statuses.
+pub mod user_status {
+    pub const ACTIVE: &str = "active";
+    pub const PENDING: &str = "pending";
+    #[allow(dead_code)]
+    pub const SUSPENDED: &str = "suspended";
+}
+
 /// Display label for well-known roles (custom roles show their key).
 pub fn role_label(name: &str) -> &str {
     match name {
-        "admin" => "관리자",
-        "editor" => "에디터",
-        "member" => "일반",
+        role_keys::ADMIN => "관리자",
+        role_keys::EDITOR => "에디터",
+        role_keys::MEMBER => "일반",
         other => other,
     }
 }
@@ -154,20 +172,35 @@ pub fn visibility_label(tier: &str) -> &str {
         .unwrap_or("전체공개")
 }
 
+/// Permission keys (single source; call sites use `perms::*`, never literals).
+pub mod perms {
+    pub const MANUALS_VIEW_STAFF: &str = "manuals.view_staff";
+    pub const MANUALS_MANAGE: &str = "manuals.manage";
+    pub const VIDEOS_VIEW_STAFF: &str = "videos.view_staff";
+    pub const YOUTUBE_MANAGE: &str = "youtube.manage";
+    pub const POSTS_MODERATE: &str = "posts.moderate";
+    pub const COMMUNITY_MANAGE: &str = "community.manage";
+    pub const USERS_MANAGE: &str = "users.manage";
+    pub const ROLES_MANAGE: &str = "roles.manage";
+    pub const EVENTS_MANAGE: &str = "events.manage";
+    pub const SETTINGS_MANAGE: &str = "settings.manage";
+    pub const PREMIUM_ACCESS: &str = "premium.access";
+}
+
 /// Permissions granting access to the admin console (any one suffices;
 /// superusers always pass). `premium.access` is deliberately excluded:
 /// it gates content, not administration.
 pub const ADMIN_PERMS: [&str; 10] = [
-    "manuals.view_staff",
-    "manuals.manage",
-    "videos.view_staff",
-    "youtube.manage",
-    "posts.moderate",
-    "community.manage",
-    "users.manage",
-    "roles.manage",
-    "events.manage",
-    "settings.manage",
+    perms::MANUALS_VIEW_STAFF,
+    perms::MANUALS_MANAGE,
+    perms::VIDEOS_VIEW_STAFF,
+    crate::auth::access::perms::YOUTUBE_MANAGE,
+    crate::auth::access::perms::POSTS_MODERATE,
+    crate::auth::access::perms::COMMUNITY_MANAGE,
+    crate::auth::access::perms::USERS_MANAGE,
+    crate::auth::access::perms::ROLES_MANAGE,
+    crate::auth::access::perms::EVENTS_MANAGE,
+    crate::auth::access::perms::SETTINGS_MANAGE,
 ];
 
 /// Whether this identity may enter the admin console at all.
@@ -237,8 +270,8 @@ pub enum LoginDecision {
 
 pub fn login_decision(user: &User) -> LoginDecision {
     match user.status.as_str() {
-        "active" => LoginDecision::Allow,
-        "pending" => LoginDecision::Pending,
+        user_status::ACTIVE => LoginDecision::Allow,
+        user_status::PENDING => LoginDecision::Pending,
         _ => LoginDecision::Suspended,
     }
 }
@@ -248,9 +281,9 @@ pub async fn initial_status(db: &Db) -> String {
     let required =
         crate::services::site_settings::get_setting(db, "require_approval").await == "true";
     if required {
-        "pending".to_string()
+        user_status::PENDING.to_string()
     } else {
-        "active".to_string()
+        user_status::ACTIVE.to_string()
     }
 }
 
@@ -293,39 +326,79 @@ mod tests {
         use Gate::*;
         let anon: Option<&Access> = None;
         let member = access_with(&[]);
-        let staff = access_with(&["manuals.view_staff"]);
+        let staff = access_with(&[crate::auth::access::perms::MANUALS_VIEW_STAFF]);
         let m = Some(&member);
         let s = Some(&staff);
         assert_eq!(
-            visibility_gate(anon, "public", "manuals.view_staff", "premium.access"),
+            visibility_gate(
+                anon,
+                "public",
+                crate::auth::access::perms::MANUALS_VIEW_STAFF,
+                crate::auth::access::perms::PREMIUM_ACCESS
+            ),
             Allow
         );
         assert_eq!(
-            visibility_gate(anon, "members", "manuals.view_staff", "premium.access"),
+            visibility_gate(
+                anon,
+                "members",
+                crate::auth::access::perms::MANUALS_VIEW_STAFF,
+                crate::auth::access::perms::PREMIUM_ACCESS
+            ),
             LoginRequired
         );
         assert_eq!(
-            visibility_gate(m, "members", "manuals.view_staff", "premium.access"),
+            visibility_gate(
+                m,
+                "members",
+                crate::auth::access::perms::MANUALS_VIEW_STAFF,
+                crate::auth::access::perms::PREMIUM_ACCESS
+            ),
             Allow
         );
         assert_eq!(
-            visibility_gate(anon, "staff", "manuals.view_staff", "premium.access"),
+            visibility_gate(
+                anon,
+                "staff",
+                crate::auth::access::perms::MANUALS_VIEW_STAFF,
+                crate::auth::access::perms::PREMIUM_ACCESS
+            ),
             LoginRequired
         );
         assert_eq!(
-            visibility_gate(m, "staff", "manuals.view_staff", "premium.access"),
+            visibility_gate(
+                m,
+                "staff",
+                crate::auth::access::perms::MANUALS_VIEW_STAFF,
+                crate::auth::access::perms::PREMIUM_ACCESS
+            ),
             Forbidden
         );
         assert_eq!(
-            visibility_gate(s, "staff", "manuals.view_staff", "premium.access"),
+            visibility_gate(
+                s,
+                "staff",
+                crate::auth::access::perms::MANUALS_VIEW_STAFF,
+                crate::auth::access::perms::PREMIUM_ACCESS
+            ),
             Allow
         );
         assert_eq!(
-            visibility_gate(m, "premium", "manuals.view_staff", "premium.access"),
+            visibility_gate(
+                m,
+                "premium",
+                crate::auth::access::perms::MANUALS_VIEW_STAFF,
+                crate::auth::access::perms::PREMIUM_ACCESS
+            ),
             Forbidden
         );
         assert_eq!(
-            visibility_gate(anon, "weird-tier", "manuals.view_staff", "premium.access"),
+            visibility_gate(
+                anon,
+                "weird-tier",
+                crate::auth::access::perms::MANUALS_VIEW_STAFF,
+                crate::auth::access::perms::PREMIUM_ACCESS
+            ),
             Allow
         );
     }
@@ -334,17 +407,29 @@ mod tests {
     fn tier_lists() {
         let anon: Option<&Access> = None;
         let member = access_with(&[]);
-        let staff = access_with(&["manuals.view_staff"]);
+        let staff = access_with(&[crate::auth::access::perms::MANUALS_VIEW_STAFF]);
         assert_eq!(
-            visible_tiers(anon, "manuals.view_staff", "premium.access"),
+            visible_tiers(
+                anon,
+                crate::auth::access::perms::MANUALS_VIEW_STAFF,
+                crate::auth::access::perms::PREMIUM_ACCESS
+            ),
             vec!["public"]
         );
         assert_eq!(
-            visible_tiers(Some(&member), "manuals.view_staff", "premium.access"),
+            visible_tiers(
+                Some(&member),
+                crate::auth::access::perms::MANUALS_VIEW_STAFF,
+                crate::auth::access::perms::PREMIUM_ACCESS
+            ),
             vec!["public".to_string(), "members".to_string()]
         );
         assert_eq!(
-            visible_tiers(Some(&staff), "manuals.view_staff", "premium.access"),
+            visible_tiers(
+                Some(&staff),
+                crate::auth::access::perms::MANUALS_VIEW_STAFF,
+                crate::auth::access::perms::PREMIUM_ACCESS
+            ),
             vec![
                 "public".to_string(),
                 "members".to_string(),
@@ -359,7 +444,12 @@ mod tests {
         a.is_superuser = true;
         assert!(a.can("anything.at.all"));
         assert_eq!(
-            visibility_gate(Some(&a), "premium", "manuals.view_staff", "premium.access"),
+            visibility_gate(
+                Some(&a),
+                "premium",
+                crate::auth::access::perms::MANUALS_VIEW_STAFF,
+                crate::auth::access::perms::PREMIUM_ACCESS
+            ),
             Gate::Allow
         );
     }

@@ -39,6 +39,25 @@ pub struct ManualSeries {
     pub updated_at: String,
 }
 
+/// Manual difficulty keys + Korean labels (single source).
+pub mod difficulty {
+    pub const ADVANCED: &str = "advanced";
+    pub const INTERMEDIATE: &str = "intermediate";
+    pub const BEGINNER: &str = "beginner";
+
+    pub fn label(d: &str) -> &'static str {
+        match d {
+            ADVANCED => "고급",
+            INTERMEDIATE => "중급",
+            _ => "초급",
+        }
+    }
+
+    pub fn valid(d: &str) -> bool {
+        matches!(d, ADVANCED | INTERMEDIATE | BEGINNER)
+    }
+}
+
 #[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct ManualChapter {

@@ -9,20 +9,27 @@ use crate::components::video_card::VideoCard;
 use crate::db::Db;
 use crate::models::{ManualSeries, PostListItem, YoutubeVideo};
 
+/// Home section caps.
+pub const HOME_MANUALS: i64 = 3;
+pub const HOME_VIDEOS: i64 = 4;
+pub const HOME_POSTS: i64 = 5;
+
 #[page("/")]
 pub async fn home(cx: &Cx) -> Result<impl View + '_> {
     let db: &Db = topcoat::context::app_context(cx);
 
     let manuals = sqlx::query_as::<_, ManualSeries>(
-        "SELECT * FROM manual_series ORDER BY created_at DESC LIMIT 3",
+        "SELECT * FROM manual_series ORDER BY created_at DESC LIMIT $1",
     )
+    .bind(HOME_MANUALS)
     .fetch_all(db)
     .await
     .unwrap_or_default();
 
     let videos = sqlx::query_as::<_, YoutubeVideo>(
-        "SELECT * FROM youtube_videos ORDER BY published_at DESC LIMIT 4",
+        "SELECT * FROM youtube_videos ORDER BY published_at DESC LIMIT $1",
     )
+    .bind(HOME_VIDEOS)
     .fetch_all(db)
     .await
     .unwrap_or_default();
@@ -30,8 +37,9 @@ pub async fn home(cx: &Cx) -> Result<impl View + '_> {
     let posts = sqlx::query_as::<_, PostListItem>(
         "SELECT p.*, COALESCE(u.username, p.author_id) AS username FROM posts p
          LEFT JOIN users u ON u.id = p.author_id
-         ORDER BY p.created_at DESC LIMIT 5",
+         ORDER BY p.created_at DESC LIMIT $1",
     )
+    .bind(HOME_POSTS)
     .fetch_all(db)
     .await
     .unwrap_or_default();
@@ -112,15 +120,11 @@ pub async fn home(cx: &Cx) -> Result<impl View + '_> {
                                 <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
                                     <span style="font-size:24px;">(item.thumbnail_url.clone().unwrap_or_else(|| "📚".into()))</span>
                                     <span class="badge" style=((match item.difficulty.as_str() {
-                                            "advanced" => "background:#fef2f2; color:#dc2626;",
-                                            "intermediate" => "background:#fffbeb; color:#d97706;",
+                                            crate::models::difficulty::ADVANCED => "background:#fef2f2; color:#dc2626;",
+                                            crate::models::difficulty::INTERMEDIATE => "background:#fffbeb; color:#d97706;",
                                             _ => "background:#f0fdf4; color:#16a34a;",
                                         }).to_string())>
-                                        (match item.difficulty.as_str() {
-                                            "advanced" => "고급",
-                                            "intermediate" => "중급",
-                                            _ => "초급",
-                                        })
+                                        (crate::models::difficulty::label(item.difficulty.as_str()))
                                     </span>
                                 </div>
                                 <h3 style="font-size:15px; font-weight:700; margin-bottom:6px; letter-spacing:-0.01em; color:#16181d;">(item.title.clone())</h3>

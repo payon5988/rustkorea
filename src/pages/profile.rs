@@ -50,6 +50,10 @@ struct BookmarkedPost {
     author_id: String,
 }
 
+/// Profile list caps (single place).
+pub const PROFILE_LIMIT: i64 = 50;
+pub const PROFILE_SNIPPET_LEN: usize = 120;
+
 fn tab_style(t: &str, current: &str) -> String {
     if t == current {
         "padding:10px 16px; font-size:14px; font-weight:700; color:#2563EB; border-bottom:2px solid #2563EB;".into()
@@ -87,8 +91,8 @@ pub async fn user_profile(cx: &Cx) -> Result<impl View + '_> {
     let posts: Vec<UserPost> = if let Some(u) = &user {
         if tab == "posts" || tab == "likes" {
             sqlx::query_as::<_, UserPost>(
-                "SELECT id, title, category, view_count, created_at FROM posts WHERE author_id = $1 ORDER BY created_at DESC LIMIT 50"
-            ).bind(&u.id).fetch_all(db).await.unwrap_or_default()
+                 "SELECT id, title, category, view_count, created_at FROM posts WHERE author_id = $1 ORDER BY created_at DESC LIMIT $2"
+            ).bind(&u.id).bind(PROFILE_LIMIT).fetch_all(db).await.unwrap_or_default()
         } else {
             vec![]
         }
@@ -101,8 +105,8 @@ pub async fn user_profile(cx: &Cx) -> Result<impl View + '_> {
             sqlx::query_as::<_, UserComment>(
             "SELECT c.id, c.post_id, c.content, c.created_at, COALESCE(p.title, '') AS post_title
              FROM comments c LEFT JOIN posts p ON p.id = c.post_id
-             WHERE c.author_id = $1 ORDER BY c.created_at DESC LIMIT 50"
-        ).bind(&u.id).fetch_all(db).await.unwrap_or_default()
+             WHERE c.author_id = $1 ORDER BY c.created_at DESC LIMIT $2"
+        ).bind(&u.id).bind(PROFILE_LIMIT).fetch_all(db).await.unwrap_or_default()
         } else {
             vec![]
         }
@@ -114,9 +118,10 @@ pub async fn user_profile(cx: &Cx) -> Result<impl View + '_> {
         sqlx::query_as::<_, BookmarkedPost>(
             "SELECT p.id, p.title, p.category, p.view_count, p.created_at, p.author_id
              FROM bookmarks b JOIN posts p ON p.id = b.post_id
-             WHERE b.user_id = $1 ORDER BY b.created_at DESC LIMIT 50",
+             WHERE b.user_id = $1 ORDER BY b.created_at DESC LIMIT $2",
         )
         .bind(user.as_ref().unwrap().id.clone())
+        .bind(PROFILE_LIMIT)
         .fetch_all(db)
         .await
         .unwrap_or_default()
@@ -172,21 +177,22 @@ pub async fn user_profile(cx: &Cx) -> Result<impl View + '_> {
         vec![]
     };
 
+    use crate::pages::community::helpers::category_slug;
     let category_color = |cat: &str| -> &'static str {
         match cat {
-            "qna" => "#7c3aed",
-            "showcase" => "#059669",
-            "jobs" => "#d97706",
-            "announce" => "#dc2626",
+            category_slug::QNA => "#7c3aed",
+            category_slug::SHOWCASE => "#059669",
+            category_slug::JOBS => "#d97706",
+            category_slug::ANNOUNCE => "#dc2626",
             _ => "#2563EB",
         }
     };
     let category_label = |cat: &str| -> &'static str {
         match cat {
-            "qna" => "질문",
-            "showcase" => "쇼케이스",
-            "jobs" => "구인",
-            "announce" => "공지",
+            category_slug::QNA => "질문",
+            category_slug::SHOWCASE => "쇼케이스",
+            category_slug::JOBS => "구인",
+            category_slug::ANNOUNCE => "공지",
             _ => "일반",
         }
     };
@@ -252,7 +258,7 @@ pub async fn user_profile(cx: &Cx) -> Result<impl View + '_> {
                             for c in &comments {
                                 <a href=(format!("/community/{}", c.post_id)) class="card" style="padding:16px 20px;">
                                     <div style="font-size:12px; color:#2563EB; margin-bottom:4px;">(c.post_title.clone())</div>
-                                    <p style="font-size:13px; color:#374151; line-height:1.5;">(c.content.chars().take(120).collect::<String>())</p>
+                                    <p style="font-size:13px; color:#374151; line-height:1.5;">(c.content.chars().take(PROFILE_SNIPPET_LEN).collect::<String>())</p>
                                     <div style="font-size:12px; color:#9ca3af; margin-top:4px;">(c.created_at.split(' ').next().unwrap_or(""))</div>
                                 </a>
                             }

@@ -49,35 +49,35 @@ pub async fn AdminSidebar(cx: &Cx, active: String) -> Result<impl View + '_> {
     let access = crate::auth::access::load_access(db, cx).await;
     let can_manuals = access
         .as_ref()
-        .map(|a| a.can("manuals.manage"))
+        .map(|a| a.can(crate::auth::access::perms::MANUALS_MANAGE))
         .unwrap_or(false);
     let can_posts = access
         .as_ref()
-        .map(|a| a.can("posts.moderate"))
+        .map(|a| a.can(crate::auth::access::perms::POSTS_MODERATE))
         .unwrap_or(false);
     let can_community = access
         .as_ref()
-        .map(|a| a.can("community.manage"))
+        .map(|a| a.can(crate::auth::access::perms::COMMUNITY_MANAGE))
         .unwrap_or(false);
     let can_videos = access
         .as_ref()
-        .map(|a| a.can("youtube.manage"))
+        .map(|a| a.can(crate::auth::access::perms::YOUTUBE_MANAGE))
         .unwrap_or(false);
     let can_events = access
         .as_ref()
-        .map(|a| a.can("events.manage"))
+        .map(|a| a.can(crate::auth::access::perms::EVENTS_MANAGE))
         .unwrap_or(false);
     let can_users = access
         .as_ref()
-        .map(|a| a.can("users.manage"))
+        .map(|a| a.can(crate::auth::access::perms::USERS_MANAGE))
         .unwrap_or(false);
     let can_roles = access
         .as_ref()
-        .map(|a| a.can("roles.manage"))
+        .map(|a| a.can(crate::auth::access::perms::ROLES_MANAGE))
         .unwrap_or(false);
     let can_settings = access
         .as_ref()
-        .map(|a| a.can("settings.manage"))
+        .map(|a| a.can(crate::auth::access::perms::SETTINGS_MANAGE))
         .unwrap_or(false);
 
     Ok(view! {

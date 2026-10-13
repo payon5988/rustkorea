@@ -39,15 +39,11 @@ pub async fn manuals_index(cx: &Cx) -> Result<impl View + '_> {
                             <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px;">
                                 <span style="font-size:28px;">(item.thumbnail_url.clone().unwrap_or_else(|| "📚".into()))</span>
                                 <span class="badge" style=((match item.difficulty.as_str() {
-                                        "advanced" => "background:#fef2f2; color:#ef4444; border:1px solid #fecaca",
-                                        "intermediate" => "background:#fffbeb; color:#d97706; border:1px solid #fde68a",
+                                        crate::models::difficulty::ADVANCED => "background:#fef2f2; color:#ef4444; border:1px solid #fecaca",
+                                        crate::models::difficulty::INTERMEDIATE => "background:#fffbeb; color:#d97706; border:1px solid #fde68a",
                                         _ => "background:#ecfdf5; color:#10b981; border:1px solid #a7f3d0",
                                     }).to_string())>
-                                    (match item.difficulty.as_str() {
-                                        "advanced" => "고급",
-                                        "intermediate" => "중급",
-                                        _ => "초급",
-                                    })
+                                    (crate::models::difficulty::label(item.difficulty.as_str()))
                                 </span>
                                 if item.visibility != "public" {
                                     <span class="badge" style="background:#eff6ff; color:#2563EB; border:1px solid #bfdbfe;">(format!("🔒 {}", crate::auth::access::visibility_label(&item.visibility)))</span>

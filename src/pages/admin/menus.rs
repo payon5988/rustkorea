@@ -45,7 +45,7 @@ pub struct ToggleNavItemForm {
 pub async fn admin_menus_page(cx: &Cx) -> Result<impl View + '_> {
     let __denied = {
         let __adb: &crate::db::Db = topcoat::context::app_context(cx);
-        crate::auth::access::require_perm(__adb, cx, "settings.manage")
+        crate::auth::access::require_perm(__adb, cx, crate::auth::access::perms::SETTINGS_MANAGE)
             .await
             .is_none()
     };
@@ -279,7 +279,7 @@ pub async fn admin_menu_add(
 ) -> Result<topcoat::router::error::SeeOther> {
     let __denied = {
         let __adb: &crate::db::Db = topcoat::context::app_context(cx);
-        crate::auth::access::require_perm(__adb, cx, "settings.manage")
+        crate::auth::access::require_perm(__adb, cx, crate::auth::access::perms::SETTINGS_MANAGE)
             .await
             .is_none()
     };
@@ -348,7 +348,7 @@ pub async fn admin_menu_delete(
 ) -> Result<topcoat::router::error::SeeOther> {
     let __denied = {
         let __adb: &crate::db::Db = topcoat::context::app_context(cx);
-        crate::auth::access::require_perm(__adb, cx, "settings.manage")
+        crate::auth::access::require_perm(__adb, cx, crate::auth::access::perms::SETTINGS_MANAGE)
             .await
             .is_none()
     };
@@ -379,7 +379,7 @@ pub async fn admin_menu_toggle(
 ) -> Result<topcoat::router::error::SeeOther> {
     let __denied = {
         let __adb: &crate::db::Db = topcoat::context::app_context(cx);
-        crate::auth::access::require_perm(__adb, cx, "settings.manage")
+        crate::auth::access::require_perm(__adb, cx, crate::auth::access::perms::SETTINGS_MANAGE)
             .await
             .is_none()
     };
@@ -410,7 +410,7 @@ pub async fn admin_menu_permission(
 ) -> Result<topcoat::router::error::SeeOther> {
     let __denied = {
         let __adb: &crate::db::Db = topcoat::context::app_context(cx);
-        crate::auth::access::require_perm(__adb, cx, "settings.manage")
+        crate::auth::access::require_perm(__adb, cx, crate::auth::access::perms::SETTINGS_MANAGE)
             .await
             .is_none()
     };

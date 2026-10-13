@@ -2,6 +2,10 @@ use topcoat::{Result, context::Cx, router::route};
 
 use crate::services::TypedBody;
 
+/// Sitemap caps (single place).
+pub const SITEMAP_POST_LIMIT: i64 = 500;
+pub const SITEMAP_CHAPTER_LIMIT: i64 = 2000;
+
 fn to_iso_date(dt_str: &str) -> String {
     dt_str.split_whitespace().next().unwrap_or("").to_string()
 }
@@ -42,7 +46,8 @@ pub async fn sitemap_xml(cx: &Cx) -> Result<TypedBody> {
     ];
 
     let posts: Vec<(String, String)> =
-        sqlx::query_as("SELECT id, created_at FROM posts ORDER BY created_at DESC LIMIT 500")
+        sqlx::query_as("SELECT id, created_at FROM posts ORDER BY created_at DESC LIMIT $1")
+            .bind(SITEMAP_POST_LIMIT)
             .fetch_all(db)
             .await
             .unwrap_or_default();
@@ -73,8 +78,9 @@ pub async fn sitemap_xml(cx: &Cx) -> Result<TypedBody> {
     let chapters: Vec<(String, String, String)> = sqlx::query_as(
         "SELECT ms.slug, mc.slug, mc.updated_at FROM manual_chapters mc
          JOIN manual_series ms ON ms.id = mc.series_id
-         WHERE mc.visibility = 'public' ORDER BY mc.updated_at DESC LIMIT 2000",
+         WHERE mc.visibility = 'public' ORDER BY mc.updated_at DESC LIMIT $1",
     )
+    .bind(SITEMAP_CHAPTER_LIMIT)
     .fetch_all(db)
     .await
     .unwrap_or_default();

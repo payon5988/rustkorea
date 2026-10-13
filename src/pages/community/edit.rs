@@ -59,12 +59,12 @@ pub async fn edit_post_page(cx: &Cx) -> Result<impl View + '_> {
     let categories: Vec<Category> = all_categories
         .into_iter()
         .filter(|c| {
-            if c.slug == "announce" && !is_admin {
+            if c.slug == super::helpers::category_slug::ANNOUNCE && !is_admin {
                 return false;
             }
             let perm = c.write_permission.as_str();
             match perm {
-                "admin" => is_admin,
+                super::helpers::write_perm::ADMIN => is_admin,
                 "editor" => is_moderator(&access),
                 _ => true,
             }
@@ -170,9 +170,9 @@ pub async fn update_post(
     .await
     .ok()
     .flatten();
-    let category = valid.unwrap_or_else(|| "general".to_string());
-    let category = if category == "announce" && !is_admin {
-        "general".to_string()
+    let category = valid.unwrap_or_else(|| super::helpers::category_slug::GENERAL.to_string());
+    let category = if category == super::helpers::category_slug::ANNOUNCE && !is_admin {
+        super::helpers::category_slug::GENERAL.to_string()
     } else {
         category
     };

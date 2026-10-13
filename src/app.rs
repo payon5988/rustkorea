@@ -9,13 +9,20 @@ use topcoat::{
 
 use crate::components::{cookie_banner::CookieBanner, footer::Footer, header::Header};
 
+/// Paths rendered without the public chrome (own layouts instead).
+pub const BARE_PREFIXES: [&str; 2] = ["/admin", "/auth"];
+
+/// Robots directives for the layout head.
+pub const ROBOTS_INDEX: &str = "index, follow";
+pub const ROBOTS_NOINDEX: &str = "noindex, nofollow";
+
 #[layout("/")]
 pub async fn root_layout(
     cx: &topcoat::context::Cx,
     slot: topcoat::router::Slot<'_>,
 ) -> Result<impl View + '_> {
     let path = uri(cx).path();
-    let bare = path.starts_with("/admin") || path.starts_with("/auth");
+    let bare = BARE_PREFIXES.iter().any(|p| path.starts_with(p));
 
     let db: &crate::db::Db = topcoat::context::app_context(cx);
     let site_title = crate::services::site_settings::get_setting(db, "site_title").await;
@@ -42,11 +49,7 @@ pub async fn root_layout(
     let theme_color = "#2563EB";
     let apple_meta_name = "apple-mobile-web-app-capable";
     let canonical = format!("{}{}", crate::config::site_url(), path);
-    let robots_content = if bare {
-        "noindex, nofollow"
-    } else {
-        "index, follow"
-    };
+    let robots_content = if bare { ROBOTS_NOINDEX } else { ROBOTS_INDEX };
 
     Ok(view! {
         <!DOCTYPE html>

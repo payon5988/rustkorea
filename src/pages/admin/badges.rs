@@ -28,7 +28,7 @@ fn slugify_id(raw: &str) -> String {
 
 async fn require_settings(cx: &Cx) -> bool {
     let adb: &crate::db::Db = topcoat::context::app_context(cx);
-    crate::auth::access::require_perm(adb, cx, "settings.manage")
+    crate::auth::access::require_perm(adb, cx, crate::auth::access::perms::SETTINGS_MANAGE)
         .await
         .is_none()
 }

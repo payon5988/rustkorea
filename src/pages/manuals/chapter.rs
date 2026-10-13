@@ -43,8 +43,8 @@ pub async fn chapter_detail(cx: &Cx) -> Result<impl View + '_> {
             crate::auth::access::visibility_gate(
                 access.as_ref(),
                 &c.visibility,
-                "manuals.view_staff",
-                "premium.access",
+                crate::auth::access::perms::MANUALS_VIEW_STAFF,
+                crate::auth::access::perms::PREMIUM_ACCESS,
             )
         })
         .unwrap_or(crate::auth::access::Gate::Allow);

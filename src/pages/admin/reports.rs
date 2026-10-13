@@ -30,7 +30,7 @@ struct ReportWithUser {
 pub async fn admin_reports(cx: &Cx) -> Result<impl View + '_> {
     let __denied = {
         let __adb: &crate::db::Db = topcoat::context::app_context(cx);
-        crate::auth::access::require_perm(__adb, cx, "community.manage")
+        crate::auth::access::require_perm(__adb, cx, crate::auth::access::perms::COMMUNITY_MANAGE)
             .await
             .is_none()
     };

@@ -77,8 +77,9 @@ pub fn render_markdown(md: &str) -> String {
 }
 
 /// YouTube video IDs: exactly 11 chars of `[A-Za-z0-9_-]`.
+pub const YOUTUBE_ID_LEN: usize = 11;
 fn valid_video_id(id: &str) -> bool {
-    id.len() == 11
+    id.len() == YOUTUBE_ID_LEN
         && id
             .chars()
             .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
@@ -106,13 +107,16 @@ fn extract_youtube_embeds(md: &str) -> (String, Vec<String>) {
     (out, embeds)
 }
 
+/// Privacy-enhanced YouTube embed base.
+pub const YOUTUBE_EMBED_BASE: &str = "https://www.youtube-nocookie.com/embed";
+
 fn restore_youtube_embeds(line: &str, embeds: &[String]) -> String {
     let mut out = line.to_string();
     for (i, id) in embeds.iter().enumerate() {
         let token = format!("YOUTUBEEMBED{i}END");
         if out.contains(&token) {
             let iframe = format!(
-                "<div class=\"youtube-embed\"><iframe src=\"https://www.youtube-nocookie.com/embed/{id}\" \
+                "<div class=\"youtube-embed\"><iframe src=\"{YOUTUBE_EMBED_BASE}/{id}\" \
                  title=\"YouTube video\" loading=\"lazy\" \
                  allow=\"accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture\" \
                  allowfullscreen></iframe></div>"
@@ -171,6 +175,9 @@ html.dark .markdown-body hr { border-top-color: #2a2d3a; }
 "#;
 
 /// highlight.js assets (cdnjs, pinned + SRI). Used by content pages.
+/// `HL_VERSION` is asserted against the URLs by `urls_pin_hl_version`.
+#[allow(dead_code)]
+pub const HL_VERSION: &str = "11.9.0";
 pub const HL_CSS_URL: &str =
     "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css";
 pub const HL_CSS_SRI: &str =
@@ -183,6 +190,21 @@ pub const HL_RUST_URL: &str =
     "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/rust.min.js";
 pub const HL_RUST_SRI: &str =
     "sha384-h29HWMYGysZp5v7HMfLgfj7PMRyj5l0/KqKdXWYxGfcfh4GxKPNGM/Ria90QFqoZ";
+
+#[cfg(test)]
+mod hl_version_tests {
+    use super::{HL_CSS_URL, HL_JS_URL, HL_RUST_URL, HL_VERSION};
+
+    #[test]
+    fn urls_pin_hl_version() {
+        for url in [HL_CSS_URL, HL_JS_URL, HL_RUST_URL] {
+            assert!(
+                url.contains(HL_VERSION),
+                "highlight.js URL drifted from HL_VERSION: {url}"
+            );
+        }
+    }
+}
 
 /// Shared EasyMDE initializer (single source; replaces 6 copies).
 /// Defines `initEasyMDE(id)` and returns the editor instance.

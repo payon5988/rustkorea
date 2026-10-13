@@ -14,9 +14,18 @@ pub async fn ManualCard(cx: &topcoat::context::Cx, series: ManualSeries) -> Resu
     let description = series.description.clone();
 
     let (level_text, level_class) = match series.difficulty.as_str() {
-        "advanced" => ("고급", "text-[#F87171] bg-[#F87171]/10 border-[#F87171]/20"),
-        "intermediate" => ("중급", "text-[#FBBF24] bg-[#FBBF24]/10 border-[#FBBF24]/20"),
-        _ => ("초급", "text-[#34D399] bg-[#34D399]/10 border-[#34D399]/20"),
+        crate::models::difficulty::ADVANCED => (
+            crate::models::difficulty::label(crate::models::difficulty::ADVANCED),
+            "text-[#F87171] bg-[#F87171]/10 border-[#F87171]/20",
+        ),
+        crate::models::difficulty::INTERMEDIATE => (
+            crate::models::difficulty::label(crate::models::difficulty::INTERMEDIATE),
+            "text-[#FBBF24] bg-[#FBBF24]/10 border-[#FBBF24]/20",
+        ),
+        _ => (
+            crate::models::difficulty::label(""),
+            "text-[#34D399] bg-[#34D399]/10 border-[#34D399]/20",
+        ),
     };
 
     let display_emoji = if emoji.is_empty() {

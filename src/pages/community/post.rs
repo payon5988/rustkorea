@@ -16,6 +16,12 @@ use super::helpers::{
 
 topcoat::router::path_param!(id);
 
+/// post_views dedup window (repeat visits after this count again).
+pub const VIEW_DEDUP_WINDOW_SECS: i64 = 86400;
+
+/// Comment delete-preview length.
+pub const COMMENT_PREVIEW_LEN: usize = 50;
+
 #[derive(sqlx::FromRow)]
 struct PostWithAuthor {
     id: String,
@@ -90,10 +96,6 @@ fn action_button_style(active_color: Option<&str>) -> String {
     }
 }
 
-fn login_link(return_to: &str) -> String {
-    format!("/auth/login?redirect={return_to}")
-}
-
 #[page("/community/{id}")]
 pub async fn post_detail(cx: &Cx) -> Result<impl View + '_> {
     let id = path_param::<Id>(cx);
@@ -125,7 +127,8 @@ pub async fn post_detail(cx: &Cx) -> Result<impl View + '_> {
     .map(|r| r.rows_affected())
     .unwrap_or(0);
     // Expire old dedup rows so repeat visits after 24h count again.
-    sqlx::query("DELETE FROM post_views WHERE viewed_at < NOW() - make_interval(secs => 86400)")
+    sqlx::query("DELETE FROM post_views WHERE viewed_at < NOW() - make_interval(secs => $1)")
+        .bind(VIEW_DEDUP_WINDOW_SECS)
         .execute(db)
         .await
         .ok();
@@ -301,7 +304,7 @@ pub async fn post_detail(cx: &Cx) -> Result<impl View + '_> {
                     } else {
                         <div class="card" style="padding:24px; text-align:center; margin-bottom:24px;">
                             <p style="font-size:13px; color:#6b7280; margin-bottom:12px;">"댓글을 작성하려면 로그인이 필요합니다."</p>
-                            <a href=(login_link(&format!("/community/{}", p.id))) class="btn-primary" style="display:inline-flex; padding:8px 18px; font-size:13px;">"로그인"</a>
+                            <a href=(crate::auth::session::login_link(&format!("/community/{}", p.id))) class="btn-primary" style="display:inline-flex; padding:8px 18px; font-size:13px;">"로그인"</a>
                         </div>
                     }
 
@@ -352,9 +355,9 @@ pub async fn add_comment(
     let db: &Db = topcoat::context::app_context(cx);
 
     let Some(user) = get_current_user(cx).await else {
-        return Ok(topcoat::router::error::see_other(login_link(&format!(
-            "/community/{id}"
-        ))));
+        return Ok(topcoat::router::error::see_other(
+            crate::auth::session::login_link(&format!("/community/{id}")),
+        ));
     };
     if !crate::auth::session::verify_csrf_logged(db, cx, &input.csrf_token, "community.comment.add")
         .await
@@ -410,12 +413,20 @@ pub async fn add_comment(
             &format!(
                 "{}님이 댓글을 남겼습니다: {}",
                 user.username,
-                content.chars().take(50).collect::<String>()
+                content
+                    .chars()
+                    .take(COMMENT_PREVIEW_LEN)
+                    .collect::<String>()
             ),
         )
         .await;
     }
-    let comment_points = crate::services::notifications::point_rule(db, "points_comment", 2).await;
+    let comment_points = crate::services::notifications::point_rule(
+        db,
+        "points_comment",
+        crate::services::notifications::POINTS_COMMENT_DEFAULT,
+    )
+    .await;
     crate::services::notifications::add_points(db, &user.id, comment_points, "댓글 작성").await;
 
     Ok(topcoat::router::error::see_other(format!(
@@ -496,9 +507,9 @@ pub async fn toggle_like(
     let db: &Db = topcoat::context::app_context(cx);
 
     let Some(user) = get_current_user(cx).await else {
-        return Ok(topcoat::router::error::see_other(login_link(&format!(
-            "/community/{id}"
-        ))));
+        return Ok(topcoat::router::error::see_other(
+            crate::auth::session::login_link(&format!("/community/{id}")),
+        ));
     };
     if !crate::auth::session::verify_csrf_logged(db, cx, &input.csrf_token, "community.like").await
     {
@@ -556,7 +567,12 @@ pub async fn toggle_like(
                 .await;
             }
         }
-        let like_points = crate::services::notifications::point_rule(db, "points_like", 1).await;
+        let like_points = crate::services::notifications::point_rule(
+            db,
+            "points_like",
+            crate::services::notifications::POINTS_LIKE_DEFAULT,
+        )
+        .await;
         crate::services::notifications::add_points(db, &user.id, like_points, "좋아요").await;
     }
 
@@ -574,9 +590,9 @@ pub async fn toggle_bookmark(
     let db: &Db = topcoat::context::app_context(cx);
 
     let Some(user) = get_current_user(cx).await else {
-        return Ok(topcoat::router::error::see_other(login_link(&format!(
-            "/community/{id}"
-        ))));
+        return Ok(topcoat::router::error::see_other(
+            crate::auth::session::login_link(&format!("/community/{id}")),
+        ));
     };
     if !crate::auth::session::verify_csrf_logged(db, cx, &input.csrf_token, "community.bookmark")
         .await

@@ -8,6 +8,15 @@ use topcoat::{
 
 use crate::db::Db;
 
+/// Search caps (single place; SQL LIMITs are built from these).
+pub const SEARCH_QUERY_MAX: usize = 64;
+pub const SEARCH_SNIPPET_LEN: usize = 120;
+pub const SEARCH_LIMIT_MANUALS: i64 = 5;
+pub const SEARCH_LIMIT_CHAPTERS: i64 = 5;
+pub const SEARCH_LIMIT_VIDEOS: i64 = 5;
+pub const SEARCH_LIMIT_POSTS: i64 = 10;
+pub const SEARCH_LIMIT_USERS: i64 = 3;
+
 #[allow(dead_code)]
 #[derive(Debug)]
 struct SearchResult {
@@ -24,7 +33,7 @@ struct SearchResult {
 #[shard]
 pub async fn search_results(cx: &Cx, query: String) -> Result<impl View> {
     let db: Db = topcoat::context::app_context::<Db>(cx).clone();
-    let truncated: String = query.chars().take(64).collect();
+    let truncated: String = query.chars().take(SEARCH_QUERY_MAX).collect();
     let pattern = format!("%{}%", crate::auth::session::escape_like(&truncated));
 
     let mut results: Vec<SearchResult> = vec![];
@@ -32,8 +41,8 @@ pub async fn search_results(cx: &Cx, query: String) -> Result<impl View> {
     if !query.is_empty() {
         // Manuals
         let manuals: Vec<(String, String, String, String)> = sqlx::query_as(
-            "SELECT slug, title, description, difficulty FROM manual_series WHERE title LIKE $1 ESCAPE '\\' OR description LIKE $1 ESCAPE '\\' LIMIT 5"
-        ).bind(&pattern).fetch_all(&db).await.unwrap_or_default();
+            "SELECT slug, title, description, difficulty FROM manual_series WHERE title LIKE $1 ESCAPE '\\' OR description LIKE $1 ESCAPE '\\' LIMIT $2"
+        ).bind(&pattern).bind(SEARCH_LIMIT_MANUALS).fetch_all(&db).await.unwrap_or_default();
         for (slug, title, desc, diff) in manuals {
             results.push(SearchResult {
                 id: slug.clone(),
@@ -51,9 +60,10 @@ pub async fn search_results(cx: &Cx, query: String) -> Result<impl View> {
         let chapters: Vec<(String, String, String, String)> = sqlx::query_as(
             "SELECT ms.slug, mc.title, mc.content_md, ms.title AS series_title
              FROM manual_chapters mc JOIN manual_series ms ON ms.id = mc.series_id
-             WHERE mc.title LIKE $1 ESCAPE '\\' OR mc.content_md LIKE $1 ESCAPE '\\' LIMIT 5",
+             WHERE mc.title LIKE $1 ESCAPE '\\' OR mc.content_md LIKE $1 ESCAPE '\\' LIMIT $2",
         )
         .bind(&pattern)
+        .bind(SEARCH_LIMIT_CHAPTERS)
         .fetch_all(&db)
         .await
         .unwrap_or_default();
@@ -72,15 +82,15 @@ pub async fn search_results(cx: &Cx, query: String) -> Result<impl View> {
 
         // Videos
         let videos: Vec<(String, String, String, String)> = sqlx::query_as(
-            "SELECT video_id, title, description, published_at FROM youtube_videos WHERE title LIKE $1 ESCAPE '\\' OR description LIKE $1 ESCAPE '\\' LIMIT 5"
-        ).bind(&pattern).fetch_all(&db).await.unwrap_or_default();
+            "SELECT video_id, title, description, published_at FROM youtube_videos WHERE title LIKE $1 ESCAPE '\\' OR description LIKE $1 ESCAPE '\\' LIMIT $2"
+        ).bind(&pattern).bind(SEARCH_LIMIT_VIDEOS).fetch_all(&db).await.unwrap_or_default();
         for (vid, title, desc, pub_at) in videos {
             results.push(SearchResult {
                 id: vid.clone(),
                 title,
                 description: desc,
                 result_type: "영상".into(),
-                url: format!("https://youtube.com/watch?v={vid}"),
+                url: crate::util::youtube_watch_url(&vid),
                 badge: pub_at.split('T').next().unwrap_or("").to_string(),
                 badge_color: "#DC2626".into(),
                 badge_bg: "#DC26261a".into(),
@@ -90,10 +100,13 @@ pub async fn search_results(cx: &Cx, query: String) -> Result<impl View> {
         // Posts
         let posts: Vec<(String, String, String, String, String)> = sqlx::query_as(
             "SELECT p.id, p.title, p.category, p.tags, p.content_md
-             FROM posts p WHERE p.title LIKE $1 ESCAPE '\\' OR p.content_md LIKE $1 ESCAPE '\\' OR p.tags LIKE $1 ESCAPE '\\' LIMIT 10"
-        ).bind(&pattern).fetch_all(&db).await.unwrap_or_default();
+             FROM posts p WHERE p.title LIKE $1 ESCAPE '\\' OR p.content_md LIKE $1 ESCAPE '\\' OR p.tags LIKE $1 ESCAPE '\\' LIMIT $2"
+        ).bind(&pattern).bind(SEARCH_LIMIT_POSTS).fetch_all(&db).await.unwrap_or_default();
         for (id, title, category, _tags, content_md) in posts {
-            let snippet = content_md.chars().take(120).collect::<String>();
+            let snippet = content_md
+                .chars()
+                .take(SEARCH_SNIPPET_LEN)
+                .collect::<String>();
             results.push(SearchResult {
                 id: id.clone(),
                 title,
@@ -108,8 +121,8 @@ pub async fn search_results(cx: &Cx, query: String) -> Result<impl View> {
 
         // Users
         let users: Vec<(String, String, String)> = sqlx::query_as(
-            "SELECT id, username, COALESCE(display_name, '') AS display_name FROM users WHERE username LIKE $1 ESCAPE '\\' OR display_name LIKE $1 ESCAPE '\\' LIMIT 3"
-        ).bind(&pattern).fetch_all(&db).await.unwrap_or_default();
+            "SELECT id, username, COALESCE(display_name, '') AS display_name FROM users WHERE username LIKE $1 ESCAPE '\\' OR display_name LIKE $1 ESCAPE '\\' LIMIT $2"
+        ).bind(&pattern).bind(SEARCH_LIMIT_USERS).fetch_all(&db).await.unwrap_or_default();
         for (id, username, display_name) in users {
             let label = if display_name.is_empty() {
                 username.clone()

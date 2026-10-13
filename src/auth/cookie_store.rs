@@ -10,19 +10,23 @@ pub fn secure_cookies() -> bool {
     std::env::var("SECURE_COOKIES").as_deref() != Ok("0")
 }
 
+/// Session cookie names (Secure vs plain-HTTP modes).
+pub const SESSION_COOKIE_SECURE: &str = "__Host-session";
+pub const SESSION_COOKIE_PLAIN: &str = "session";
+
 fn cookie_name() -> &'static str {
     if secure_cookies() {
-        "__Host-session"
+        SESSION_COOKIE_SECURE
     } else {
-        "session"
+        SESSION_COOKIE_PLAIN
     }
 }
 
 fn fallback_name() -> &'static str {
     if secure_cookies() {
-        "session"
+        SESSION_COOKIE_PLAIN
     } else {
-        "__Host-session"
+        SESSION_COOKIE_SECURE
     }
 }
 
@@ -68,8 +72,8 @@ impl TokenStore for EnvCookieStore {
     fn delete<'a>(&'a self, cx: &'a Cx) -> TokenStoreFuture<'a, ()> {
         Box::pin(async move {
             let jar = topcoat::cookie::cookies(cx);
-            jar.remove(Cookie::new("__Host-session", ""));
-            jar.remove(Cookie::new("session", ""));
+            jar.remove(Cookie::new(SESSION_COOKIE_SECURE, ""));
+            jar.remove(Cookie::new(SESSION_COOKIE_PLAIN, ""));
             Ok(())
         })
     }

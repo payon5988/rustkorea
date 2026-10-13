@@ -1,5 +1,13 @@
 use totp_rs::{Algorithm, Secret, TOTP};
 
+/// TOTP parameters (RFC 6238 defaults; changing these invalidates
+/// all enrolled authenticators, so they live here — not inline).
+pub const TOTP_ALGORITHM: Algorithm = Algorithm::SHA1;
+pub const TOTP_DIGITS: usize = 6;
+pub const TOTP_SKEW: u8 = 1;
+pub const TOTP_STEP_SECS: u64 = 30;
+pub const TOTP_ISSUER: &str = "RustKorea";
+
 /// provision a fresh secret (base32) for display + storage.
 pub fn new_secret() -> String {
     Secret::generate_secret().to_encoded().to_string()
@@ -9,12 +17,12 @@ fn totp(secret_b32: &str, account: &str) -> Option<TOTP> {
     let secret = Secret::Encoded(secret_b32.to_uppercase());
     let bytes = secret.to_bytes().ok()?;
     TOTP::new(
-        Algorithm::SHA1,
-        6,
-        1,
-        30,
+        TOTP_ALGORITHM,
+        TOTP_DIGITS,
+        TOTP_SKEW,
+        TOTP_STEP_SECS,
         bytes,
-        Some("RustKorea".to_string()),
+        Some(TOTP_ISSUER.to_string()),
         account.to_string(),
     )
     .ok()
@@ -43,14 +51,14 @@ pub fn provision_uri(secret_b32: &str, account: &str) -> Option<String> {
         }
     }
     Some(format!(
-        "otpauth://totp/RustKorea:{label}?secret={secret}&issuer=RustKorea&algorithm=SHA1&digits=6&period=30"
+        "otpauth://totp/{TOTP_ISSUER}:{label}?secret={secret}&issuer={TOTP_ISSUER}&algorithm=SHA1&digits={TOTP_DIGITS}&period={TOTP_STEP_SECS}"
     ))
 }
 
 /// Verify a 6-digit code with ±1 step skew.
 pub fn verify(secret_b32: &str, account: &str, code: &str) -> bool {
     let code: String = code.chars().filter(|c| c.is_ascii_digit()).collect();
-    if code.len() != 6 {
+    if code.len() != TOTP_DIGITS {
         return false;
     }
     totp(secret_b32, account)

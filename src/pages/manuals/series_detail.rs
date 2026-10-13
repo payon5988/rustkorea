@@ -43,8 +43,8 @@ pub async fn series_detail(cx: &Cx) -> Result<impl View + '_> {
             crate::auth::access::visibility_gate(
                 access.as_ref(),
                 &c.visibility,
-                "manuals.view_staff",
-                "premium.access",
+                crate::auth::access::perms::MANUALS_VIEW_STAFF,
+                crate::auth::access::perms::PREMIUM_ACCESS,
             )
         })
         .collect();
@@ -81,15 +81,11 @@ pub async fn series_detail(cx: &Cx) -> Result<impl View + '_> {
                     <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
                         <span style="font-size:28px;">(s.thumbnail_url.clone().unwrap_or_else(|| "📚".into()))</span>
                         <span class="badge" style=((match s.difficulty.as_str() {
-                                "advanced" => "background:#fef2f2; color:#ef4444; border:1px solid #fecaca",
-                                "intermediate" => "background:#fffbeb; color:#d97706; border:1px solid #fde68a",
+                                crate::models::difficulty::ADVANCED => "background:#fef2f2; color:#ef4444; border:1px solid #fecaca",
+                                crate::models::difficulty::INTERMEDIATE => "background:#fffbeb; color:#d97706; border:1px solid #fde68a",
                                 _ => "background:#ecfdf5; color:#10b981; border:1px solid #a7f3d0",
                             }).to_string())>
-                            (match s.difficulty.as_str() {
-                                "advanced" => "고급",
-                                "intermediate" => "중급",
-                                _ => "초급",
-                            })
+                            (crate::models::difficulty::label(s.difficulty.as_str()))
                         </span>
                         if s.visibility != "public" {
                             <span class="badge" style="background:#eff6ff; color:#2563EB; border:1px solid #bfdbfe;">(format!("🔒 {}", crate::auth::access::visibility_label(&s.visibility)))</span>

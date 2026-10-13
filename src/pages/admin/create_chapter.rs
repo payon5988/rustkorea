@@ -108,7 +108,7 @@ pub async fn new_chapter(cx: &Cx) -> Result<impl View + '_> {
 
     let __denied = {
         let __adb: &crate::db::Db = topcoat::context::app_context(cx);
-        crate::auth::access::require_perm(__adb, cx, "manuals.manage")
+        crate::auth::access::require_perm(__adb, cx, crate::auth::access::perms::MANUALS_MANAGE)
             .await
             .is_none()
     };
@@ -252,7 +252,7 @@ pub async fn pdf_import_chapter(
     let access = crate::auth::access::load_access(db, cx).await;
     let allowed = access
         .as_ref()
-        .map(|a| a.can("manuals.manage"))
+        .map(|a| a.can(crate::auth::access::perms::MANUALS_MANAGE))
         .unwrap_or(false);
     if !allowed {
         return Ok(topcoat::router::error::see_other("/admin/login"));

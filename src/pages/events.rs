@@ -33,6 +33,11 @@ struct EventRegistrationUser {
     username: String,
 }
 
+/// Event list caps; `0` max_participants means unlimited.
+pub const EVENTS_LIMIT: i64 = 50;
+pub const EVENT_DESC_LEN: usize = 120;
+pub const UNLIMITED_PARTICIPANTS: i32 = 0;
+
 #[page("/events")]
 pub async fn events_page(cx: &Cx) -> Result<impl View + '_> {
     let db: &Db = topcoat::context::app_context(cx);
@@ -44,8 +49,9 @@ pub async fn events_page(cx: &Cx) -> Result<impl View + '_> {
                 (SELECT COUNT(*) FROM event_registrations er WHERE er.event_id = e.id) AS participant_count
          FROM events e LEFT JOIN users u ON u.id = e.creator_id
          WHERE e.event_date >= CURRENT_DATE
-         ORDER BY e.event_date ASC LIMIT 50"
+         ORDER BY e.event_date ASC LIMIT $1"
     )
+    .bind(EVENTS_LIMIT)
     .fetch_all(db).await.unwrap_or_default();
 
     Ok(view! {
@@ -73,10 +79,10 @@ pub async fn events_page(cx: &Cx) -> Result<impl View + '_> {
                                 }
                             </div>
                             <h3 style="font-size:16px; font-weight:700; margin-bottom:8px;">(ev.title.clone())</h3>
-                            <p style="font-size:13px; color:#6b7280; line-height:1.5; margin-bottom:16px; flex:1;">(ev.description.chars().take(120).collect::<String>())</p>
+                            <p style="font-size:13px; color:#6b7280; line-height:1.5; margin-bottom:16px; flex:1;">(ev.description.chars().take(EVENT_DESC_LEN).collect::<String>())</p>
                             <div style="display:flex; align-items:center; justify-content:space-between; font-size:12px; color:#9ca3af; border-top:1px solid #f3f4f6; padding-top:12px;">
                                 <span>(format!("{} | {}", ev.location.clone(), ev.creator_name.clone()))</span>
-                                <span>(format!("{}/{}", ev.participant_count, if ev.max_participants > 0 { ev.max_participants.to_string() } else { "∞".into() }))</span>
+                                <span>(format!("{}/{}", ev.participant_count, if ev.max_participants > UNLIMITED_PARTICIPANTS { ev.max_participants.to_string() } else { "∞".into() }))</span>
                             </div>
                         </a>
                     }
@@ -141,7 +147,7 @@ pub async fn event_detail(cx: &Cx) -> Result<impl View + '_> {
                             <button type="submit" style="background:#DC2626; color:#fff; padding:10px 20px; border-radius:8px; font-weight:600; font-size:14px; border:none; cursor:pointer;">"참가 취소"</button>
                         </form>
                     } else {
-                        let is_full = ev.max_participants > 0 && ev.participant_count >= ev.max_participants as i64;
+                        let is_full = ev.max_participants > UNLIMITED_PARTICIPANTS && ev.participant_count >= ev.max_participants as i64;
                         if is_full {
                             <div style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.2); border-radius:8px; padding:12px; margin-bottom:24px; font-size:14px; color:#fca5a5;">"정원이 마감되었습니다."</div>
                         } else {
@@ -198,7 +204,7 @@ pub async fn register_event(
             .fetch_one(db)
             .await
             .unwrap_or(0);
-    if max > 0 && current >= max as i64 {
+    if max > UNLIMITED_PARTICIPANTS && current >= max as i64 {
         return Ok(topcoat::router::error::see_other(format!("/events/{id}")));
     }
     sqlx::query("INSERT INTO event_registrations (event_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING")

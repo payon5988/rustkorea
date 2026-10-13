@@ -1,7 +1,15 @@
 use chrono::{DateTime, Utc};
 use std::sync::OnceLock;
 
-const RSS_FEED_URL: &str = "https://www.youtube.com/feeds/videos.xml";
+use crate::config;
+
+/// YouTube channel RSS endpoint; channel id is appended per request.
+pub const RSS_FEED_BASE: &str = "https://www.youtube.com/feeds/videos.xml";
+
+/// Trusted thumbnail CDN prefixes (RSS-supplied URLs are untrusted input).
+pub const ALLOWED_THUMB_HOSTS: [&str; 2] = ["https://i.ytimg.com/", "https://img.youtube.com/"];
+
+const RSS_FEED_URL: &str = RSS_FEED_BASE;
 
 #[derive(Debug, Clone)]
 pub struct VideoMetadata {
@@ -19,8 +27,8 @@ fn http_client() -> reqwest::Client {
     CLIENT
         .get_or_init(|| {
             reqwest::Client::builder()
-                .timeout(std::time::Duration::from_secs(10))
-                .user_agent("rustkorea-hub/0.5")
+                .timeout(std::time::Duration::from_secs(config::http_timeout_secs()))
+                .user_agent(config::http_user_agent())
                 .build()
                 .expect("reqwest client")
         })
@@ -64,9 +72,7 @@ fn parse_rss_feed(xml: &str, channel_id: &str) -> Vec<VideoMetadata> {
             .map(|dt| dt.with_timezone(&Utc).to_rfc3339())
             .unwrap_or_else(|_| Utc::now().to_rfc3339());
         // Thumbnails from RSS are untrusted input: only allow YouTube CDN hosts.
-        let thumbnail_url = if thumbnail.starts_with("https://i.ytimg.com/")
-            || thumbnail.starts_with("https://img.youtube.com/")
-        {
+        let thumbnail_url = if ALLOWED_THUMB_HOSTS.iter().any(|h| thumbnail.starts_with(h)) {
             thumbnail.clone()
         } else {
             String::new()

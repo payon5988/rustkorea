@@ -19,6 +19,21 @@ impl SecurityHeaders {
     }
 }
 
+/// Header values in one place (no inline literals at the call site).
+pub const X_CONTENT_TYPE_OPTIONS: &str = "nosniff";
+pub const X_FRAME_OPTIONS: &str = "SAMEORIGIN";
+pub const REFERRER_POLICY: &str = "strict-origin-when-cross-origin";
+pub const PERMISSIONS_POLICY: &str = "camera=(), microphone=(), geolocation=()";
+pub const CONTENT_SECURITY_POLICY: &str = "default-src 'self'; \
+     script-src 'self' 'unsafe-inline' https://www.youtube.com https://s.ytimg.com https://cdnjs.cloudflare.com https://pagead2.googlesyndication.com https://www.googletagservices.com; \
+     style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; \
+     font-src 'self' https://fonts.gstatic.com; \
+     img-src 'self' data: https:; \
+     media-src 'self' https:; \
+     frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://googleads.g.doubleclick.net; \
+     connect-src 'self' https:; \
+     object-src 'none'; base-uri 'self'; form-action 'self'";
+
 impl Layer for SecurityHeaders {
     fn path(&self) -> Option<&Path> {
         None
@@ -35,25 +50,11 @@ impl Layer for SecurityHeaders {
                     headers.append(n, v);
                 }
             };
-            set("x-content-type-options", "nosniff");
-            set("x-frame-options", "SAMEORIGIN");
-            set("referrer-policy", "strict-origin-when-cross-origin");
-            set(
-                "permissions-policy",
-                "camera=(), microphone=(), geolocation=()",
-            );
-            set(
-                "content-security-policy",
-                "default-src 'self'; \
-                 script-src 'self' 'unsafe-inline' https://www.youtube.com https://s.ytimg.com https://cdnjs.cloudflare.com https://pagead2.googlesyndication.com https://www.googletagservices.com; \
-                 style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; \
-                 font-src 'self' https://fonts.gstatic.com; \
-                 img-src 'self' data: https:; \
-                 media-src 'self' https:; \
-                 frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://googleads.g.doubleclick.net; \
-                 connect-src 'self' https:; \
-                 object-src 'none'; base-uri 'self'; form-action 'self'",
-            );
+            set("x-content-type-options", X_CONTENT_TYPE_OPTIONS);
+            set("x-frame-options", X_FRAME_OPTIONS);
+            set("referrer-policy", REFERRER_POLICY);
+            set("permissions-policy", PERMISSIONS_POLICY);
+            set("content-security-policy", CONTENT_SECURITY_POLICY);
             let response = next.run(cx, body).await?;
             Ok(response)
         })

@@ -61,7 +61,7 @@ fn extract_param(cx: &Cx, key: &str) -> String {
 pub async fn admin_users_page(cx: &Cx) -> Result<impl View + '_> {
     let __denied = {
         let __adb: &crate::db::Db = topcoat::context::app_context(cx);
-        crate::auth::access::require_perm(__adb, cx, "users.manage")
+        crate::auth::access::require_perm(__adb, cx, crate::auth::access::perms::USERS_MANAGE)
             .await
             .is_none()
     };
@@ -254,7 +254,7 @@ pub async fn admin_delete_user(
         return Ok(topcoat::router::error::see_other("/admin/login"));
     }
     let me = match crate::auth::access::load_access(db, cx).await {
-        Some(a) if a.can("users.manage") => a,
+        Some(a) if a.can(crate::auth::access::perms::USERS_MANAGE) => a,
         _ => return Ok(topcoat::router::error::see_other("/admin/login")),
     };
 
@@ -331,7 +331,7 @@ pub async fn admin_delete_user(
 pub async fn admin_user_new_page(cx: &Cx) -> Result<impl View + '_> {
     let __denied = {
         let __adb: &crate::db::Db = topcoat::context::app_context(cx);
-        crate::auth::access::require_perm(__adb, cx, "users.manage")
+        crate::auth::access::require_perm(__adb, cx, crate::auth::access::perms::USERS_MANAGE)
             .await
             .is_none()
     };
@@ -406,7 +406,7 @@ pub async fn admin_create_user(
 ) -> Result<topcoat::router::error::SeeOther> {
     let __denied = {
         let __adb: &crate::db::Db = topcoat::context::app_context(cx);
-        crate::auth::access::require_perm(__adb, cx, "users.manage")
+        crate::auth::access::require_perm(__adb, cx, crate::auth::access::perms::USERS_MANAGE)
             .await
             .is_none()
     };
@@ -488,7 +488,7 @@ pub async fn admin_create_user(
 pub async fn admin_user_edit_page(cx: &Cx) -> Result<impl View + '_> {
     let __denied = {
         let __adb: &crate::db::Db = topcoat::context::app_context(cx);
-        crate::auth::access::require_perm(__adb, cx, "users.manage")
+        crate::auth::access::require_perm(__adb, cx, crate::auth::access::perms::USERS_MANAGE)
             .await
             .is_none()
     };
@@ -755,7 +755,7 @@ pub async fn admin_set_status(
 pub async fn admin_user_reset_password_page(cx: &Cx) -> Result<impl View + '_> {
     let __denied = {
         let __adb: &crate::db::Db = topcoat::context::app_context(cx);
-        crate::auth::access::require_perm(__adb, cx, "users.manage")
+        crate::auth::access::require_perm(__adb, cx, crate::auth::access::perms::USERS_MANAGE)
             .await
             .is_none()
     };
@@ -823,7 +823,7 @@ pub async fn admin_reset_password(
 ) -> Result<topcoat::router::error::SeeOther> {
     let __denied = {
         let __adb: &crate::db::Db = topcoat::context::app_context(cx);
-        crate::auth::access::require_perm(__adb, cx, "users.manage")
+        crate::auth::access::require_perm(__adb, cx, crate::auth::access::perms::USERS_MANAGE)
             .await
             .is_none()
     };

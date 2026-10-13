@@ -56,9 +56,9 @@ pub async fn Footer(cx: &Cx) -> Result<impl View + '_> {
                     <div>
                         <h4 style="font-size:12px; font-weight:600; color:#9ca3af; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:14px;">"링크"</h4>
                         <ul style="list-style:none; display:flex; flex-direction:column; gap:10px;">
-                            <li><a href="https://www.rust-lang.org" style="font-size:14px; color:#6b7280; transition:color 0.15s;" target="_blank" rel="noopener">"Rust 공식"</a></li>
-                            <li><a href="https://github.com/rust-lang" style="font-size:14px; color:#6b7280; transition:color 0.15s;" target="_blank" rel="noopener">"GitHub"</a></li>
-                            <li><a href="https://docs.rs/topcoat" style="font-size:14px; color:#6b7280; transition:color 0.15s;" target="_blank" rel="noopener">"Topcoat Docs"</a></li>
+                            <li><a href=(crate::util::external_links::RUST_OFFICIAL) style="font-size:14px; color:#6b7280; transition:color 0.15s;" target="_blank" rel="noopener">"Rust 공식"</a></li>
+                            <li><a href=(crate::util::external_links::RUST_GITHUB) style="font-size:14px; color:#6b7280; transition:color 0.15s;" target="_blank" rel="noopener">"GitHub"</a></li>
+                            <li><a href=(crate::util::external_links::TOPCOAT_DOCS) style="font-size:14px; color:#6b7280; transition:color 0.15s;" target="_blank" rel="noopener">"Topcoat Docs"</a></li>
                         </ul>
                     </div>
                     <div>

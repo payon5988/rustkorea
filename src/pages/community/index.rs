@@ -10,11 +10,13 @@ use crate::components::ad_unit::AdUnit;
 use crate::db::Db;
 use crate::models::PostListItem;
 
+/// Pagination window and preview caps.
+pub const PAGE_WINDOW: i64 = 2;
+pub const POST_PREVIEW_LEN: usize = 80;
+
 use super::helpers::{
     category_color, category_label, get_current_user, load_categories, query_param, valid_category,
 };
-
-const PER_PAGE: i64 = 20;
 
 enum PageItem {
     Page(i64),
@@ -23,7 +25,7 @@ enum PageItem {
 
 fn build_page_items(current: i64, total_pages: i64) -> Vec<PageItem> {
     let mut wanted: Vec<i64> = vec![1, total_pages];
-    for p in (current - 2)..=(current + 2) {
+    for p in (current - PAGE_WINDOW)..=(current + PAGE_WINDOW) {
         if p >= 1 && p <= total_pages {
             wanted.push(p);
         }
@@ -105,7 +107,8 @@ pub async fn community_index(cx: &Cx) -> Result<impl View + '_> {
             .unwrap_or(0)
     };
 
-    let (total_pages, page_num, offset) = crate::util::paginate(total, requested_page, PER_PAGE);
+    let (total_pages, page_num, offset) =
+        crate::util::paginate(total, requested_page, crate::util::DEFAULT_PER_PAGE);
 
     let posts = if let Some(cat) = &cat_filter {
         sqlx::query_as::<_, PostListItem>(
@@ -114,7 +117,7 @@ pub async fn community_index(cx: &Cx) -> Result<impl View + '_> {
              WHERE p.category = $1 ORDER BY p.created_at DESC LIMIT $2 OFFSET $3",
         )
         .bind(cat)
-        .bind(PER_PAGE)
+        .bind(crate::util::DEFAULT_PER_PAGE)
         .bind(offset)
         .fetch_all(db)
         .await
@@ -125,7 +128,7 @@ pub async fn community_index(cx: &Cx) -> Result<impl View + '_> {
              LEFT JOIN users u ON u.id = p.author_id
              ORDER BY p.created_at DESC LIMIT $1 OFFSET $2",
         )
-        .bind(PER_PAGE)
+        .bind(crate::util::DEFAULT_PER_PAGE)
         .bind(offset)
         .fetch_all(db)
         .await
@@ -191,7 +194,7 @@ pub async fn community_index(cx: &Cx) -> Result<impl View + '_> {
                     for post in posts {
                         let badge_color = category_color(&post.category);
                         let badge_label = category_label(&post.category);
-                        let preview: String = post.content_md.replace('\n', " ").chars().take(80).collect();
+                        let preview: String = post.content_md.replace('\n', " ").chars().take(POST_PREVIEW_LEN).collect();
                         <a href=(format!("/community/{}", post.id)) style="display:flex; align-items:center; padding:16px 20px; background:#fff;">
                             <span style=(badge_style(badge_color))>(badge_label)</span>
                             <div style="min-width:0; flex:1; margin-left:12px;">

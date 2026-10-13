@@ -15,7 +15,7 @@ use crate::models::ManualSeries;
 pub async fn admin_manuals(cx: &Cx) -> Result<impl View + '_> {
     let __denied = {
         let __adb: &crate::db::Db = topcoat::context::app_context(cx);
-        crate::auth::access::require_perm(__adb, cx, "manuals.manage")
+        crate::auth::access::require_perm(__adb, cx, crate::auth::access::perms::MANUALS_MANAGE)
             .await
             .is_none()
     };
@@ -94,8 +94,8 @@ pub async fn admin_manuals(cx: &Cx) -> Result<impl View + '_> {
                                         <td style="padding:14px 20px; color:var(--muted);">(chapters.len())</td>
                                         <td style="padding:14px 20px;">
                                             <span class="badge" style=((match s.difficulty.as_str() {
-                                                    "advanced" => "background:rgba(248,113,113,0.1); color:var(--red);",
-                                                    "intermediate" => "background:rgba(251,191,36,0.1); color:var(--amber);",
+                                                    crate::models::difficulty::ADVANCED => "background:rgba(248,113,113,0.1); color:var(--red);",
+                                                    crate::models::difficulty::INTERMEDIATE => "background:rgba(251,191,36,0.1); color:var(--amber);",
                                                     _ => "background:rgba(52,211,153,0.1); color:var(--green);",
                                                 }).to_string())>(s.difficulty.clone())</span>
                                         </td>

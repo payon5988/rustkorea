@@ -121,10 +121,24 @@ pub async fn chapter_detail(cx: &Cx) -> Result<impl View + '_> {
         None
     };
     // Korean reading pace: ~500 chars/min, minimum 1 minute.
-    let read_minutes: usize = chapter
+    // TOC auto-shows only for heading-rich chapters (>= 4); short split
+    // chapters keep full width with an on-demand toggle.
+    let (read_minutes, heading_count): (usize, usize) = chapter
         .as_ref()
-        .map(|ch| (ch.content_md.chars().count() / 500).max(1))
-        .unwrap_or(1);
+        .map(|ch| {
+            let minutes = (ch.content_md.chars().count() / 500).max(1);
+            let headings = ch
+                .content_md
+                .lines()
+                .filter(|l| {
+                    let t = l.trim_start();
+                    t.starts_with("# ") || t.starts_with("## ") || t.starts_with("### ")
+                })
+                .count();
+            (minutes, headings)
+        })
+        .unwrap_or((1, 0));
+    let toc_open = heading_count >= 4;
 
     let current_user = crate::auth::session::current_user(db, cx).await;
     let completed: bool = if let (Some(u), Some(ch)) = (&current_user, &chapter) {
@@ -161,7 +175,12 @@ pub async fn chapter_detail(cx: &Cx) -> Result<impl View + '_> {
                 </a>
 
                 <h1 style="font-size:1.75rem; font-weight:800; letter-spacing:-0.03em; margin-bottom:8px;">(ch.title.clone())</h1>
-                <p style="font-size:13px; color:#9ca3af; margin-bottom:32px;">(format!("약 {}분 읽기", read_minutes))</p>
+                <div style="display:flex; align-items:center; gap:12px; margin-bottom:32px;">
+                    <p style="font-size:13px; color:#9ca3af;">(format!("약 {}분 읽기", read_minutes))</p>
+                    if heading_count > 0 {
+                        <button type="button" onclick="toggleToc()" style="font-size:12px; font-weight:600; color:#2563EB; background:#eff6ff; border:1px solid #bfdbfe; border-radius:6px; padding:4px 12px; cursor:pointer;">"목차"</button>
+                    }
+                </div>
 
                 <div class="reader-layout">
                     <div class="reader-main">
@@ -171,7 +190,7 @@ pub async fn chapter_detail(cx: &Cx) -> Result<impl View + '_> {
                             </div>
                         </div>
                     </div>
-                    <aside id="toc-wrap">
+                    <aside id="toc-wrap" style=((if toc_open { "" } else { "display:none;" }).to_string())>
                         <h2>"목차"</h2>
                         <ul id="toc-list"></ul>
                     </aside>

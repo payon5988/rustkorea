@@ -84,7 +84,8 @@ pub async fn create_post(
     .await
     .ok();
 
-    crate::services::notifications::add_points(db, &user.id, 10, "게시글 작성").await;
+    let post_points = crate::services::notifications::point_rule(db, "points_post", 10).await;
+    crate::services::notifications::add_points(db, &user.id, post_points, "게시글 작성").await;
     crate::services::notifications::check_and_award_badges(db, &user.id).await;
 
     Ok(topcoat::router::error::see_other("/community"))

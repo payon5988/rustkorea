@@ -21,6 +21,9 @@ pub struct SettingsForm {
     pub youtube_channel_id: String,
     pub youtube_visibility: String,
     pub posts_per_page: String,
+    pub points_post: String,
+    pub points_comment: String,
+    pub points_like: String,
     pub site_keywords: String,
     pub logo_url: String,
     pub github_oauth_enabled: Option<String>,
@@ -76,6 +79,24 @@ pub async fn admin_settings_page(cx: &Cx) -> Result<impl View + '_> {
     let footer_text = get_setting(db, "footer_text").await;
     let youtube_channel_id = get_setting(db, "youtube_channel_id").await;
     let posts_per_page = get_setting(db, "posts_per_page").await;
+    let points_post = get_setting(db, "points_post").await;
+    let points_post = if points_post.is_empty() {
+        "10".to_string()
+    } else {
+        points_post
+    };
+    let points_comment = get_setting(db, "points_comment").await;
+    let points_comment = if points_comment.is_empty() {
+        "2".to_string()
+    } else {
+        points_comment
+    };
+    let points_like = get_setting(db, "points_like").await;
+    let points_like = if points_like.is_empty() {
+        "1".to_string()
+    } else {
+        points_like
+    };
     let site_keywords = get_setting(db, "site_keywords").await;
     let logo_url = get_setting(db, "logo_url").await;
     let github_oauth = get_setting(db, "github_oauth_enabled").await;
@@ -187,6 +208,26 @@ pub async fn admin_settings_page(cx: &Cx) -> Result<impl View + '_> {
                         <div>
                             <label for="posts_per_page" style=(FIELD_LABEL_STYLE)>"페이지당 게시글 수"</label>
                             <input type="number" id="posts_per_page" name="posts_per_page" min="1" value=(posts_per_page) placeholder="20" style=(input_style)>
+                        </div>
+                    </div>
+
+                    <div style="background:var(--card); border:1px solid var(--border); border-radius:10px; padding:24px; margin-bottom:20px;">
+                        <h2 style="font-size:15px; font-weight:700; color:var(--text); margin-bottom:4px;">"포인트"</h2>
+                        <p style="font-size:12px; color:var(--muted2); margin-bottom:20px;">"행동별 지급 포인트 (0 이상)"</p>
+
+                        <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:12px;">
+                            <div>
+                                <label for="points_post" style=(FIELD_LABEL_STYLE)>"게시글 작성"</label>
+                                <input type="number" id="points_post" name="points_post" min="0" value=(points_post) style=(input_style)>
+                            </div>
+                            <div>
+                                <label for="points_comment" style=(FIELD_LABEL_STYLE)>"댓글 작성"</label>
+                                <input type="number" id="points_comment" name="points_comment" min="0" value=(points_comment) style=(input_style)>
+                            </div>
+                            <div>
+                                <label for="points_like" style=(FIELD_LABEL_STYLE)>"좋아요"</label>
+                                <input type="number" id="points_like" name="points_like" min="0" value=(points_like) style=(input_style)>
+                            </div>
                         </div>
                     </div>
 
@@ -314,6 +355,31 @@ pub async fn admin_save_settings(
         }
     }
 
+    let points_post: i64 = match input.points_post.trim().parse() {
+        Ok(n) if n >= 0 => n,
+        _ => {
+            return Ok(topcoat::router::error::see_other(
+                "/admin/settings?error=invalid",
+            ));
+        }
+    };
+    let points_comment: i64 = match input.points_comment.trim().parse() {
+        Ok(n) if n >= 0 => n,
+        _ => {
+            return Ok(topcoat::router::error::see_other(
+                "/admin/settings?error=invalid",
+            ));
+        }
+    };
+    let points_like: i64 = match input.points_like.trim().parse() {
+        Ok(n) if n >= 0 => n,
+        _ => {
+            return Ok(topcoat::router::error::see_other(
+                "/admin/settings?error=invalid",
+            ));
+        }
+    };
+
     let db: &Db = topcoat::context::app_context(cx);
 
     if !crate::auth::session::verify_csrf_logged(db, cx, &input.csrf_token, "admin.settings").await
@@ -347,6 +413,9 @@ pub async fn admin_save_settings(
     )
     .await;
     save_setting(db, "posts_per_page", &posts_per_page).await;
+    save_setting(db, "points_post", &points_post.to_string()).await;
+    save_setting(db, "points_comment", &points_comment.to_string()).await;
+    save_setting(db, "points_like", &points_like.to_string()).await;
     save_setting(db, "site_keywords", input.site_keywords.trim()).await;
     save_setting(db, "logo_url", input.logo_url.trim()).await;
     save_setting(

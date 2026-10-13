@@ -415,7 +415,8 @@ pub async fn add_comment(
         )
         .await;
     }
-    crate::services::notifications::add_points(db, &user.id, 2, "댓글 작성").await;
+    let comment_points = crate::services::notifications::point_rule(db, "points_comment", 2).await;
+    crate::services::notifications::add_points(db, &user.id, comment_points, "댓글 작성").await;
 
     Ok(topcoat::router::error::see_other(format!(
         "/community/{id}"
@@ -555,7 +556,8 @@ pub async fn toggle_like(
                 .await;
             }
         }
-        crate::services::notifications::add_points(db, &user.id, 1, "좋아요").await;
+        let like_points = crate::services::notifications::point_rule(db, "points_like", 1).await;
+        crate::services::notifications::add_points(db, &user.id, like_points, "좋아요").await;
     }
 
     Ok(topcoat::router::error::see_other(format!(

@@ -21,6 +21,8 @@ pub struct NewChapter {
     pub slug: String,
     pub title: String,
     pub content_md: String,
+    #[serde(default)]
+    pub content_html_import: String,
     pub visibility: String,
 }
 
@@ -51,7 +53,19 @@ pub async fn create_chapter(
             .ok()
             .flatten()
     {
-        let content_html = render_markdown(&input.content_md);
+        // HTML 붙여넣기가 있으면 마크다운으로 변환 후 같은 파이프라인으로 저장.
+        let content_md = if input.content_html_import.trim().is_empty() {
+            input.content_md.clone()
+        } else {
+            crate::services::markdown::html_to_markdown(&input.content_html_import)
+        };
+        if content_md.trim().is_empty() {
+            return Ok(topcoat::router::error::see_other(format!(
+                "/admin/manuals/{}/chapters/new?error=empty",
+                s.slug
+            )));
+        }
+        let content_html = render_markdown(&content_md);
         // Chapter tier defaults to the series tier when unset/invalid.
         let visibility = if crate::auth::access::valid_visibility(&input.visibility) {
             input.visibility.clone()
@@ -73,7 +87,7 @@ pub async fn create_chapter(
         .bind(&s.id)
         .bind(&input.slug)
         .bind(&input.title)
-        .bind(&input.content_md)
+        .bind(&content_md)
         .bind(&content_html)
         .bind(max_index.0 + 1)
         .bind(&visibility)
@@ -170,13 +184,24 @@ pub async fn new_chapter(cx: &Cx) -> Result<impl View + '_> {
                                 </select>
                             </div>
                             <div>
-                                <label style="display:block; font-size:13px; font-weight:600; color:var(--muted); margin-bottom:8px;">"내용 (Markdown)"</label>
-                                <div style="margin-bottom:12px; display:flex; align-items:center; gap:10px;">
-                                <label for="md-file" style="font-size:12px; color:var(--muted); cursor:pointer; border:1px dashed var(--border); border-radius:6px; padding:8px 14px;">".md 파일 불러오기"</label>
-                                <input type="file" id="md-file" accept=".md,.markdown,.txt" style="display:none;">
-                                <span style="font-size:11px; color:var(--dim);">"또는 :::youtube[영상ID] 로 영상 삽입"</span>
+                                <div style="display:flex; gap:8px; margin-bottom:12px;">
+                                    <button type="button" id="tabbtn-md" onclick="showEditorTab('md')" style="font-size:12px; font-weight:600; padding:6px 14px; border-radius:6px; border:1px solid var(--brand); background:rgba(222,91,48,0.12); color:var(--text); cursor:pointer;">"마크다운"</button>
+                                    <button type="button" id="tabbtn-html" onclick="showEditorTab('html')" style="font-size:12px; font-weight:600; padding:6px 14px; border-radius:6px; border:1px solid var(--border); background:transparent; color:var(--muted); cursor:pointer;">"HTML 가져오기"</button>
                                 </div>
-                                <textarea id="editor" name="content_md" rows="20" required="true" class="input" style="font-family:'SF Mono','Fira Code',monospace; font-size:13px; line-height:1.7;"></textarea>
+                                <div id="tab-md">
+                                    <label style="display:block; font-size:13px; font-weight:600; color:var(--muted); margin-bottom:8px;">"내용 (Markdown)"</label>
+                                    <div style="margin-bottom:12px; display:flex; align-items:center; gap:10px;">
+                                    <label for="md-file" style="font-size:12px; color:var(--muted); cursor:pointer; border:1px dashed var(--border); border-radius:6px; padding:8px 14px;">".md 파일 불러오기"</label>
+                                    <input type="file" id="md-file" accept=".md,.markdown,.txt" style="display:none;">
+                                    <span style="font-size:11px; color:var(--dim);">"또는 :::youtube[영상ID] 로 영상 삽입"</span>
+                                    </div>
+                                    <textarea id="editor" name="content_md" rows="20" class="input" style="font-family:'SF Mono','Fira Code',monospace; font-size:13px; line-height:1.7;"></textarea>
+                                </div>
+                                <div id="tab-html" style="display:none;">
+                                    <label style="display:block; font-size:13px; font-weight:600; color:var(--muted); margin-bottom:8px;">"HTML 소스 붙여넣기 (Notion·Docs·블로그)"</label>
+                                    <p style="font-size:11px; color:var(--dim); margin-bottom:8px;">"표·이미지·제목구조가 마크다운으로 변환되어 저장됩니다. 스크립트는 제거됩니다."</p>
+                                    <textarea id="html-paste" name="content_html_import" rows="20" class="input" style="font-family:'SF Mono','Fira Code',monospace; font-size:13px; line-height:1.7;" placeholder="여기에 HTML 소스를 붙여넣으세요"></textarea>
+                                </div>
                             </div>
                         </div>
                         <button type="submit" style="background:#DE5B30; color:#fff; padding:12px 20px; border-radius:8px; font-weight:600; font-size:14px; display:inline-flex; align-items:center; width:100%; justify-content:center; border:none; cursor:pointer;">"챕터 저장"</button>
@@ -194,6 +219,7 @@ pub async fn new_chapter(cx: &Cx) -> Result<impl View + '_> {
                         </div>
                     </form>
                     <script>
+                        {(crate::services::markdown::EDITOR_TAB_JS)}
                         {(crate::services::markdown::EASYMDE_INIT_JS)}
                         {(crate::services::markdown::MD_UPLOAD_JS)}
                         "var easymde=null;try{easymde=initEasyMDE('editor');}catch(e){}bindMdUpload('md-file',easymde);"

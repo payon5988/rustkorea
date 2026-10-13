@@ -1,5 +1,55 @@
 use pulldown_cmark::{Options, Parser, html};
 
+/// Convert pasted rich HTML (Notion/Docs/blog export) into markdown, which
+/// then flows through the normal [`render_markdown`] pipeline (sanitized
+/// there). Scripts/styles/active content are stripped before conversion;
+/// tables, images and headings survive as GFM markdown.
+pub fn html_to_markdown(pasted: &str) -> String {
+    let clean = ammonia::Builder::default()
+        .add_tags(&[
+            "p",
+            "br",
+            "hr",
+            "h1",
+            "h2",
+            "h3",
+            "h4",
+            "h5",
+            "h6",
+            "ul",
+            "ol",
+            "li",
+            "pre",
+            "code",
+            "blockquote",
+            "table",
+            "thead",
+            "tbody",
+            "tr",
+            "th",
+            "td",
+            "a",
+            "img",
+            "strong",
+            "em",
+            "b",
+            "i",
+            "u",
+            "del",
+            "sup",
+            "sub",
+            "figure",
+            "figcaption",
+        ])
+        .add_tag_attributes("a", &["href", "title"])
+        .add_tag_attributes("img", &["src", "alt", "title", "width", "height"])
+        .url_schemes(std::collections::HashSet::from(["http", "https", "mailto"]))
+        .clean(pasted)
+        .to_string();
+    // Convert the sanitized fragment to markdown (whole-fragment converter).
+    htmd::convert(&format!("<div>{clean}</div>")).unwrap_or_default()
+}
+
 pub fn render_markdown(md: &str) -> String {
     let mut options = Options::empty();
     options.insert(Options::ENABLE_STRIKETHROUGH);
@@ -215,7 +265,11 @@ pub const EASYMDE_INIT_JS: &str = r#"function initEasyMDE(id){var el=document.ge
 /// Call as `initHighlight()` after render. No `<`, `>`, `&` characters.
 pub const HL_INIT_JS: &str = r#"function initHighlight(){var blocks=document.querySelectorAll('pre code');blocks.forEach(function(el){try{hljs.highlightElement(el);}catch(e){}var btn=document.createElement('button');btn.className='code-copy-btn';btn.textContent='복사';btn.setAttribute('type','button');(function(b,t){b.addEventListener('click',function(){function done(){b.textContent='완료';setTimeout(function(){b.textContent='복사';},1500);}if(navigator.clipboard){navigator.clipboard.writeText(t).then(done);}else{var ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');done();}catch(err){}document.body.removeChild(ta);}});})(btn,el.innerText);var pre=el.parentElement;if(pre){pre.style.position='relative';pre.appendChild(btn);}});}"#;
 
-/// Bind a `.md` file input to an EasyMDE instance.
+/// Table of contents builder for chapter pages: scans `.markdown-body`
+/// h1-h3, assigns ids, and fills `#toc-list`. DOM API only (no `<`, `>`, `&`).
+pub const TOC_JS: &str = r#"function buildToc(){var body=document.querySelector('.markdown-body');var nav=document.getElementById('toc-list');if(!body||!nav){return;}var hs=body.querySelectorAll('h1,h2,h3');if(!hs.length){var w=document.getElementById('toc-wrap');if(w){w.style.display='none';}return;}hs.forEach(function(h,i){var id='sec-'+i;h.setAttribute('id',id);var li=document.createElement('li');var a=document.createElement('a');a.setAttribute('href','#sec-'+i);a.textContent=h.textContent;var d=h.tagName==='H1'?0:(h.tagName==='H2'?1:2);li.style.paddingLeft=(d*12)+'px';li.appendChild(a);nav.appendChild(li);});}"#;
+/// Call as `showEditorTab('md'|'html')`. No `<`, `>`, `&` characters.
+pub const EDITOR_TAB_JS: &str = r#"function showEditorTab(n){var md=document.getElementById('tab-md');var ht=document.getElementById('tab-html');var bm=document.getElementById('tabbtn-md');var bh=document.getElementById('tabbtn-html');if(md){md.style.display=n==='md'?'block':'none';}if(ht){ht.style.display=n==='html'?'block':'none';}if(bm){bm.style.borderColor=n==='md'?'var(--brand)':'var(--border)';bm.style.color=n==='md'?'var(--text)':'var(--muted)';}if(bh){bh.style.borderColor=n==='html'?'var(--brand)':'var(--border)';bh.style.color=n==='html'?'var(--text)':'var(--muted)';}}"#;
 /// Call as `bindMdUpload('md-file', easymde)`. No `<`, `>`, `&` characters.
 /// Falls back to the raw textarea when EasyMDE failed to initialize, so a
 /// CDN hiccup never silently disables uploads.
@@ -236,6 +290,16 @@ pub fn safe_http_url(url: &str) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn html_import_keeps_structure_drops_scripts() {
+        let html = "<h1>제목</h1><p>본문 <b>굵게</b></p><table><tr><th>A</th><th>B</th></tr><tr><td>1</td><td>2</td></tr></table><script>alert(1)</script>";
+        let md = html_to_markdown(html);
+        let out = render_markdown(&md);
+        assert!(out.contains("<h1>제목</h1>"), "heading lost: {md}");
+        assert!(out.contains("<table"), "table lost: {md}");
+        assert!(!out.contains("alert"), "script leaked");
+    }
 
     #[test]
     fn test_basic_markdown() {

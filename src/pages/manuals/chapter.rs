@@ -66,6 +66,66 @@ pub async fn chapter_detail(cx: &Cx) -> Result<impl View + '_> {
         .to_string();
     let chapter = if forbidden { None } else { chapter };
 
+    /// Neighbor chapter (prev/next) with its gate precomputed.
+    struct Neighbor {
+        slug: String,
+        title: String,
+        gate: crate::auth::access::Gate,
+    }
+    let prev: Option<Neighbor> = if let Some(ch) = &chapter {
+        sqlx::query_as::<_, (String, String, String)>(
+            "SELECT slug, title, visibility FROM manual_chapters
+             WHERE series_id = $1 AND chapter_index < $2 ORDER BY chapter_index DESC LIMIT 1",
+        )
+        .bind(&ch.series_id)
+        .bind(ch.chapter_index)
+        .fetch_optional(db)
+        .await
+        .ok()
+        .flatten()
+        .map(|(slug, title, visibility)| Neighbor {
+            slug,
+            title,
+            gate: crate::auth::access::visibility_gate(
+                access.as_ref(),
+                &visibility,
+                "manuals.view_staff",
+                "premium.access",
+            ),
+        })
+    } else {
+        None
+    };
+    let next: Option<Neighbor> = if let Some(ch) = &chapter {
+        sqlx::query_as::<_, (String, String, String)>(
+            "SELECT slug, title, visibility FROM manual_chapters
+             WHERE series_id = $1 AND chapter_index > $2 ORDER BY chapter_index ASC LIMIT 1",
+        )
+        .bind(&ch.series_id)
+        .bind(ch.chapter_index)
+        .fetch_optional(db)
+        .await
+        .ok()
+        .flatten()
+        .map(|(slug, title, visibility)| Neighbor {
+            slug,
+            title,
+            gate: crate::auth::access::visibility_gate(
+                access.as_ref(),
+                &visibility,
+                "manuals.view_staff",
+                "premium.access",
+            ),
+        })
+    } else {
+        None
+    };
+    // Korean reading pace: ~500 chars/min, minimum 1 minute.
+    let read_minutes: usize = chapter
+        .as_ref()
+        .map(|ch| (ch.content_md.chars().count() / 500).max(1))
+        .unwrap_or(1);
+
     let current_user = crate::auth::session::current_user(db, cx).await;
     let completed: bool = if let (Some(u), Some(ch)) = (&current_user, &chapter) {
         sqlx::query_scalar::<_, i32>(
@@ -84,19 +144,40 @@ pub async fn chapter_detail(cx: &Cx) -> Result<impl View + '_> {
     };
 
     Ok(view! {
-        <div class="container" style="padding-top:40px; padding-bottom:80px; max-width:780px;">
+        <div class="container" style="padding-top:40px; padding-bottom:80px; max-width:960px;">
+            <style>
+                {r#".reader-layout { display: flex; gap: 32px; align-items: flex-start; }
+                .reader-main { flex: 1; min-width: 0; }
+                #toc-wrap { width: 220px; flex-shrink: 0; position: sticky; top: 80px; max-height: calc(100vh - 120px); overflow-y: auto; background: #fff; border: 1px solid #E4E4E7; border-radius: 12px; padding: 16px 18px; }
+                #toc-wrap h2 { font-size: 12px; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px; }
+                #toc-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+                #toc-list a { font-size: 13px; color: #4b5563; line-height: 1.5; display: block; }
+                #toc-list a:hover { color: #2563EB; }
+                @media (max-width: 900px) { #toc-wrap { display: none; } .reader-layout { display: block; } }"#}
+            </style>
             if let Some(ch) = chapter {
                 <a href=(format!("/manuals/{}", series_slug)) style="font-size:13px; color:#6b7280; display:inline-flex; align-items:center; gap:6px; margin-bottom:24px;">
                     "<- 시리즈 목록"
                 </a>
 
-                <h1 style="font-size:1.75rem; font-weight:800; letter-spacing:-0.03em; margin-bottom:32px;">(ch.title.clone())</h1>
+                <h1 style="font-size:1.75rem; font-weight:800; letter-spacing:-0.03em; margin-bottom:8px;">(ch.title.clone())</h1>
+                <p style="font-size:13px; color:#9ca3af; margin-bottom:32px;">(format!("약 {}분 읽기", read_minutes))</p>
 
-                <div class="card" style="padding:40px 48px;">
-                    <div class="markdown-body">
-                        (topcoat::view::Unescaped::new_unchecked(ch.content_html.clone()))
+                <div class="reader-layout">
+                    <div class="reader-main">
+                        <div class="card" style="padding:40px 48px;">
+                            <div class="markdown-body">
+                                (topcoat::view::Unescaped::new_unchecked(ch.content_html.clone()))
+                            </div>
+                        </div>
                     </div>
+                    <aside id="toc-wrap">
+                        <h2>"목차"</h2>
+                        <ul id="toc-list"></ul>
+                    </aside>
                 </div>
+                <script>{(crate::services::markdown::TOC_JS)}</script>
+                <script>"buildToc();"</script>
 
                 {AdUnit(slot_id: "chapter_bottom".into())}
 
@@ -122,6 +203,39 @@ pub async fn chapter_detail(cx: &Cx) -> Result<impl View + '_> {
                     <a href=(format!("/manuals/{}", series_slug)) style="font-size:13px; color:#6b7280; transition:color 0.15s;">
                         "<- 시리즈 목록으로 돌아가기"
                     </a>
+                </div>
+
+                <div style="display:flex; gap:12px; margin-top:24px;">
+                    if let Some(nb) = prev {
+                        if nb.gate == crate::auth::access::Gate::Allow {
+                            <a href=(format!("/manuals/{}/{}", series_slug, nb.slug)) class="card" style="flex:1; padding:16px 20px; display:block;">
+                                <div style="font-size:11px; color:#9ca3af; margin-bottom:4px;">"<- 이전 챕터"</div>
+                                <div style="font-size:14px; font-weight:600;">(nb.title.clone())</div>
+                            </a>
+                        } else {
+                            <div class="card" style="flex:1; padding:16px 20px; background:#f8fafb;">
+                                <div style="font-size:11px; color:#9ca3af; margin-bottom:4px;">"<- 이전 챕터 (🔒)"</div>
+                                <div style="font-size:14px; font-weight:600; color:#9ca3af;">(nb.title.clone())</div>
+                            </div>
+                        }
+                    } else {
+                        <div style="flex:1;"></div>
+                    }
+                    if let Some(nb) = next {
+                        if nb.gate == crate::auth::access::Gate::Allow {
+                            <a href=(format!("/manuals/{}/{}", series_slug, nb.slug)) class="card" style="flex:1; padding:16px 20px; display:block; text-align:right;">
+                                <div style="font-size:11px; color:#9ca3af; margin-bottom:4px;">"다음 챕터 ->"</div>
+                                <div style="font-size:14px; font-weight:600;">(nb.title.clone())</div>
+                            </a>
+                        } else {
+                            <div class="card" style="flex:1; padding:16px 20px; background:#f8fafb; text-align:right;">
+                                <div style="font-size:11px; color:#9ca3af; margin-bottom:4px;">"다음 챕터 (🔒) ->"</div>
+                                <div style="font-size:14px; font-weight:600; color:#9ca3af;">(nb.title.clone())</div>
+                            </div>
+                        }
+                    } else {
+                        <div style="flex:1;"></div>
+                    }
                 </div>
             } else {
                 <div style="text-align:center; padding:100px 0;">

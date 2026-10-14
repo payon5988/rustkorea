@@ -46,17 +46,16 @@ pub async fn home(cx: &Cx) -> Result<impl View + '_> {
     .await
     .unwrap_or_default();
 
-    let series_count: i64 = sqlx::query_scalar(&format!(
-        "SELECT COUNT(*) FROM manual_series WHERE visibility = 'public' AND {}",
-        crate::util::published_clause("")
-    ))
+    let series_count: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM manual_series WHERE published_at IS NULL OR published_at::timestamptz <= NOW()")
     .fetch_one(db)
     .await
     .unwrap_or(0);
     let chapter_count: i64 = sqlx::query_scalar(
         "SELECT COUNT(*) FROM manual_chapters mc
          JOIN manual_series ms ON ms.id = mc.series_id
-         WHERE ms.visibility = 'public'",
+         WHERE (mc.published_at IS NULL OR mc.published_at::timestamptz <= NOW())
+           AND (ms.published_at IS NULL OR ms.published_at::timestamptz <= NOW())",
     )
     .fetch_one(db)
     .await

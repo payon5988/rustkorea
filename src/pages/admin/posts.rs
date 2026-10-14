@@ -78,6 +78,9 @@ pub async fn admin_posts(cx: &Cx) -> Result<impl View + '_> {
                                     <tr style="border-bottom:1px solid var(--line);">
                                         <td style="padding:14px 20px;">
                                             <a href=(format!("/community/{}", p.id)) style="font-weight:600; color:var(--text3);">(p.title.clone())</a>
+                                            if !crate::util::is_released(p.published_at.as_deref()) {
+                                                <span style="font-size:11px; font-weight:600; color:#b45309;">" 예약됨"</span>
+                                            }
                                         </td>
                                         <td style="padding:14px 20px; color:var(--muted);">(p.username.clone())</td>
                                         <td style="padding:14px 20px; color:var(--dim); font-size:12px;">(p.created_at.get(..10).unwrap_or("").to_string())</td>

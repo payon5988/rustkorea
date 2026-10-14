@@ -23,6 +23,8 @@ pub struct EditManual {
     pub difficulty: String,
     pub estimated_minutes: i32,
     pub visibility: String,
+    #[serde(default)]
+    pub published_at: String,
 }
 
 #[route(POST "/admin/manuals/update")]
@@ -46,9 +48,16 @@ pub async fn update_manual(
         return Ok(topcoat::router::error::see_other("/admin/manuals"));
     }
 
+    let published_at = match crate::util::parse_schedule_kst(&input.published_at) {
+        Ok(v) => v,
+        Err(()) => {
+            return Ok(topcoat::router::error::see_other("/admin/manuals"));
+        }
+    };
+
     sqlx::query(
-        "UPDATE manual_series SET slug = $1, title = $2, description = $3, difficulty = $4, estimated_minutes = $5, visibility = $6, updated_at = NOW()::text
-         WHERE id = $7"
+        "UPDATE manual_series SET slug = $1, title = $2, description = $3, difficulty = $4, estimated_minutes = $5, visibility = $6, published_at = $7, updated_at = NOW()::text
+         WHERE id = $8"
     )
     .bind(&input.slug)
     .bind(&input.title)
@@ -56,6 +65,7 @@ pub async fn update_manual(
     .bind(&input.difficulty)
     .bind(input.estimated_minutes)
     .bind(&input.visibility)
+    .bind(&published_at)
     .bind(&input.id)
     .execute(db)
     .await.ok();
@@ -175,6 +185,11 @@ pub async fn edit_manual(cx: &Cx) -> Result<impl View + '_> {
                                         <option value="staff" selected=(vis_staff)>"스태프전용"</option>
                                         <option value="premium" selected=(vis_premium)>"유료전용(준비중)"</option>
                                     </select>
+                                </div>
+                                <div style="margin-top:16px;">
+                                    <label style="display:block; font-size:13px; font-weight:600; color:var(--muted); margin-bottom:8px;">"예약 발행 (비우면 즉시 발행)"</label>
+                                    <input type="datetime-local" name="published_at" class="input" value=(crate::util::format_schedule_kst(s.published_at.as_deref()))>
+                                    <p style="font-size:11px; color:var(--dim); margin-top:4px;">"한국 시간 기준. 비우면 예약이 해제됩니다."</p>
                                 </div>
                             </div>
                             <button type="submit" style="background:#DE5B30; color:#fff; padding:12px 20px; border-radius:8px; font-weight:600; font-size:14px; display:inline-flex; align-items:center; width:100%; justify-content:center; border:none; cursor:pointer;">"변경 사항 저장"</button>

@@ -89,6 +89,9 @@ pub async fn admin_manuals(cx: &Cx) -> Result<impl View + '_> {
                                     <tr style="border-bottom:1px solid var(--line);">
                                         <td style="padding:14px 20px; font-weight:600; color:var(--text3);">
                                             <a href=(format!("/admin/manuals/{}", s.slug)) style="color:var(--text3); text-decoration:none;">(s.title.clone())</a>
+                                            if !crate::util::is_released(s.published_at.as_deref()) {
+                                                <span style="font-size:11px; font-weight:600; color:#b45309;">" 예약됨"</span>
+                                            }
                                         </td>
                                         <td style="padding:14px 20px; color:var(--dim); font-family:monospace; font-size:12px;">(s.slug.clone())</td>
                                         <td style="padding:14px 20px; color:var(--muted);">(chapters.len())</td>
@@ -127,6 +130,9 @@ pub async fn admin_manuals(cx: &Cx) -> Result<impl View + '_> {
                                                             <a href=(format!("/admin/manuals/chapters/edit?id={}", ch.id)) style="color:var(--text3); font-weight:600; text-decoration:none;">(ch.title.clone())</a>
                                                             <span style="color:var(--dim); font-family:monospace;">(ch.slug.clone())</span>
                                                             <span style="font-size:11px; color:var(--blue);">(crate::auth::access::visibility_label(&ch.visibility))</span>
+                                                            if !crate::util::is_released(ch.published_at.as_deref()) {
+                                                                <span style="font-size:11px; font-weight:600; color:#b45309;">"예약됨"</span>
+                                                            }
                                                             <span style="display:inline-flex; gap:4px; margin-left:auto;">
                                                                 <form action="/admin/manuals/chapters/move" method="POST" style="display:inline;">
                                                                     <input type="hidden" name="csrf_token" value=(csrf_token.clone())>

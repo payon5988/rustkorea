@@ -24,6 +24,8 @@ pub struct EditPost {
     pub title: String,
     pub content_md: String,
     pub category: String,
+    #[serde(default)]
+    pub published_at: String,
 }
 
 #[page("/community/{id}/edit")]
@@ -103,6 +105,11 @@ pub async fn edit_post_page(cx: &Cx) -> Result<impl View + '_> {
                             </div>
                             <textarea id="editor" name="content_md" rows="16" required="true" class="input">(post.content_md.clone())</textarea>
                         </div>
+                        <div>
+                            <label style="display:block; font-size:13px; font-weight:600; color:#374151; margin-bottom:8px;">"예약 발행 (비워두면 즉시 발행)"</label>
+                            <input type="datetime-local" name="published_at" class="input" value=(crate::util::format_schedule_kst(post.published_at.as_deref()))>
+                            <p style="font-size:12px; color:#9ca3af; margin-top:4px;">"한국 시간 기준. 비우면 예약이 해제됩니다."</p>
+                        </div>
                         <button type="submit" class="btn-primary" style="width:100%; justify-content:center; padding:14px;">"수정 완료"</button>
                     </form>
 
@@ -179,14 +186,26 @@ pub async fn update_post(
 
     let content_html = render_markdown(&input.content_md);
 
+    // Empty = publish immediately (clears any schedule).
+    let published_at = match crate::util::parse_schedule_kst(&input.published_at) {
+        Ok(v) => v,
+        Err(()) => {
+            return Ok(topcoat::router::error::see_other(format!(
+                "/community/{}/edit?error=schedule",
+                post.id
+            )));
+        }
+    };
+
     sqlx::query(
-        "UPDATE posts SET title = $1, content_md = $2, content_html = $3, category = $4, updated_at = NOW()::text
-         WHERE id = $5"
+        "UPDATE posts SET title = $1, content_md = $2, content_html = $3, category = $4, published_at = $5, updated_at = NOW()::text
+         WHERE id = $6"
     )
     .bind(&input.title)
     .bind(&input.content_md)
     .bind(&content_html)
     .bind(&category)
+    .bind(&published_at)
     .bind(&post.id)
     .execute(db)
     .await

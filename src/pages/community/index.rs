@@ -95,27 +95,34 @@ pub async fn community_index(cx: &Cx) -> Result<impl View + '_> {
         .max(1);
 
     let total = if let Some(cat) = &cat_filter {
-        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM posts WHERE category = $1")
-            .bind(cat)
-            .fetch_one(db)
-            .await
-            .unwrap_or(0)
+        sqlx::query_scalar::<_, i64>(&format!(
+            "SELECT COUNT(*) FROM posts WHERE category = $1 AND {}",
+            crate::util::published_clause("")
+        ))
+        .bind(cat)
+        .fetch_one(db)
+        .await
+        .unwrap_or(0)
     } else {
-        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM posts")
-            .fetch_one(db)
-            .await
-            .unwrap_or(0)
+        sqlx::query_scalar::<_, i64>(&format!(
+            "SELECT COUNT(*) FROM posts WHERE {}",
+            crate::util::published_clause("")
+        ))
+        .fetch_one(db)
+        .await
+        .unwrap_or(0)
     };
 
     let (total_pages, page_num, offset) =
         crate::util::paginate(total, requested_page, crate::util::DEFAULT_PER_PAGE);
 
     let posts = if let Some(cat) = &cat_filter {
-        sqlx::query_as::<_, PostListItem>(
+        sqlx::query_as::<_, PostListItem>(&format!(
             "SELECT p.*, COALESCE(u.username, p.author_id) AS username FROM posts p
              LEFT JOIN users u ON u.id = p.author_id
-             WHERE p.category = $1 ORDER BY p.created_at DESC LIMIT $2 OFFSET $3",
-        )
+             WHERE p.category = $1 AND {} ORDER BY p.created_at DESC LIMIT $2 OFFSET $3",
+            crate::util::published_clause("p")
+        ))
         .bind(cat)
         .bind(crate::util::DEFAULT_PER_PAGE)
         .bind(offset)
@@ -123,11 +130,12 @@ pub async fn community_index(cx: &Cx) -> Result<impl View + '_> {
         .await
         .unwrap_or_default()
     } else {
-        sqlx::query_as::<_, PostListItem>(
+        sqlx::query_as::<_, PostListItem>(&format!(
             "SELECT p.*, COALESCE(u.username, p.author_id) AS username FROM posts p
              LEFT JOIN users u ON u.id = p.author_id
-             ORDER BY p.created_at DESC LIMIT $1 OFFSET $2",
-        )
+             WHERE {} ORDER BY p.created_at DESC LIMIT $1 OFFSET $2",
+            crate::util::published_clause("p")
+        ))
         .bind(crate::util::DEFAULT_PER_PAGE)
         .bind(offset)
         .fetch_all(db)

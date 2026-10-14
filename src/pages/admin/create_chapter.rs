@@ -24,6 +24,8 @@ pub struct NewChapter {
     #[serde(default)]
     pub content_html_import: String,
     pub visibility: String,
+    #[serde(default)]
+    pub published_at: String,
 }
 
 #[route(POST "/admin/manuals/{series_slug}/chapters/create")]
@@ -66,6 +68,16 @@ pub async fn create_chapter(
             )));
         }
         let content_html = render_markdown(&content_md);
+        // Empty = publish immediately; otherwise a KST datetime.
+        let published_at = match crate::util::parse_schedule_kst(&input.published_at) {
+            Ok(v) => v,
+            Err(()) => {
+                return Ok(topcoat::router::error::see_other(format!(
+                    "/admin/manuals/{}/chapters/new?error=schedule",
+                    s.slug
+                )));
+            }
+        };
         // Chapter tier defaults to the series tier when unset/invalid.
         let visibility = if crate::auth::access::valid_visibility(&input.visibility) {
             input.visibility.clone()
@@ -81,8 +93,8 @@ pub async fn create_chapter(
         .unwrap_or((-1,));
 
         sqlx::query(
-            "INSERT INTO manual_chapters (series_id, slug, title, content_md, content_html, chapter_index, visibility)
-             VALUES ($1, $2, $3, $4, $5, $6, $7)"
+            "INSERT INTO manual_chapters (series_id, slug, title, content_md, content_html, chapter_index, visibility, published_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"
         )
         .bind(&s.id)
         .bind(&input.slug)
@@ -91,6 +103,7 @@ pub async fn create_chapter(
         .bind(&content_html)
         .bind(max_index.0 + 1)
         .bind(&visibility)
+        .bind(&published_at)
         .execute(db)
         .await.ok();
     }
@@ -182,6 +195,11 @@ pub async fn new_chapter(cx: &Cx) -> Result<impl View + '_> {
                                     <option value="staff" selected=(s.visibility == "staff")>"스태프전용"</option>
                                     <option value="premium" selected=(s.visibility == "premium")>"유료전용(준비중)"</option>
                                 </select>
+                            </div>
+                            <div style="margin-bottom:20px;">
+                                <label style="display:block; font-size:13px; font-weight:600; color:var(--muted); margin-bottom:8px;">"예약 발행 (비워두면 즉시 발행)"</label>
+                                <input type="datetime-local" name="published_at" class="input">
+                                <p style="font-size:11px; color:var(--dim); margin-top:4px;">"한국 시간 기준. 예약된 챕터는 시간이 되면 자동 공개됩니다."</p>
                             </div>
                             <div>
                                 <div style="display:flex; gap:8px; margin-bottom:12px;">

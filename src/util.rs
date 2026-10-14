@@ -38,6 +38,73 @@ pub fn youtube_watch_url(video_id: &str) -> String {
     format!("https://www.youtube.com/watch?v={video_id}")
 }
 
+/// SQL fragment for the scheduled-publishing gate. The column must exist on
+/// the (aliased) table; pass e.g. `"p"` / `"mc"` / `"ms"` / `""`.
+pub fn published_clause(alias: &str) -> String {
+    let col = if alias.is_empty() {
+        "published_at".to_string()
+    } else {
+        format!("{alias}.published_at")
+    };
+    format!("({col} IS NULL OR {col}::timestamptz <= NOW())")
+}
+
+/// Parse an HTML `datetime-local` input (assumed KST) into UTC storage text
+/// (`YYYY-MM-DD HH:MM:SS+00`). Empty input = publish immediately (None).
+/// Returns `Err` on malformed input.
+pub fn parse_schedule_kst(input: &str) -> Result<Option<String>, ()> {
+    let t = input.trim();
+    if t.is_empty() {
+        return Ok(None);
+    }
+    let naive = chrono::NaiveDateTime::parse_from_str(t, "%Y-%m-%dT%H:%M").map_err(|_| ())?;
+    let utc = naive - chrono::Duration::hours(9);
+    Ok(Some(utc.format("%Y-%m-%d %H:%M:%S+00").to_string()))
+}
+
+/// Normalize UTC storage text (`2026-10-12 01:20:30.779858+00`) to RFC3339.
+fn normalize_storage_ts(s: &str) -> String {
+    let mut t = s.replacen(' ', "T", 1);
+    if let Some(pos) = t.rfind(['+', '-']) {
+        if pos > 10 {
+            let tz = &t[pos..];
+            if tz.len() == 3 {
+                t.push_str(":00");
+            } else if tz.len() == 5 && !tz.contains(':') {
+                t.insert(pos + 3, ':');
+            }
+        }
+    }
+    t
+}
+
+/// Whether a `published_at` value is released (unset or not in the future).
+pub fn is_released(published_at: Option<&str>) -> bool {
+    let s = published_at.unwrap_or("").trim();
+    if s.is_empty() {
+        return true;
+    }
+    chrono::DateTime::parse_from_rfc3339(&normalize_storage_ts(s))
+        .map(|dt| dt <= chrono::Utc::now().fixed_offset())
+        .unwrap_or(true)
+}
+
+/// Format UTC storage text back to KST `datetime-local` for edit forms.
+/// Returns empty string when unset/unparseable.
+pub fn format_schedule_kst(stored: Option<&str>) -> String {
+    let s = stored.unwrap_or("").trim();
+    if s.is_empty() {
+        return String::new();
+    }
+    chrono::DateTime::parse_from_rfc3339(&normalize_storage_ts(s))
+        .map(|dt| {
+            (dt + chrono::Duration::hours(9))
+                .format("%Y-%m-%dT%H:%M")
+                .to_string()
+        })
+        .unwrap_or_default()
+}
+
 pub fn tags_json(input: Option<String>) -> String {
     let tags: Vec<String> = input
         .unwrap_or_default()
@@ -60,6 +127,23 @@ mod tests {
         assert_eq!(paginate(45, 9, 20), (3, 3, 40));
         assert_eq!(paginate(45, -2, 20), (3, 1, 0));
         assert_eq!(paginate(45, 2, 0), (45, 2, 1));
+    }
+
+    #[test]
+    fn schedule_kst_roundtrip() {
+        assert_eq!(parse_schedule_kst(""), Ok(None));
+        assert!(parse_schedule_kst("not-a-date").is_err());
+        // 2026-10-20 09:00 KST == 2026-10-20 00:00 UTC.
+        assert_eq!(
+            parse_schedule_kst("2026-10-20T09:00"),
+            Ok(Some("2026-10-20 00:00:00+00".to_string()))
+        );
+        assert_eq!(
+            format_schedule_kst(Some("2026-10-20 00:00:00+00")),
+            "2026-10-20T09:00"
+        );
+        assert_eq!(format_schedule_kst(None), "");
+        assert_eq!(format_schedule_kst(Some("garbage")), "");
     }
 
     #[test]

@@ -32,6 +32,7 @@ struct PostWithAuthor {
     view_count: i64,
     created_at: String,
     username: String,
+    published_at: Option<String>,
 }
 
 /// Article + Breadcrumb JSON-LD for search engines (emitted raw, so `</`
@@ -142,7 +143,7 @@ pub async fn post_detail(cx: &Cx) -> Result<impl View + '_> {
 
     let post: Option<PostWithAuthor> = sqlx::query_as::<_, PostWithAuthor>(
         "SELECT p.id, p.author_id, p.title, p.content_html, p.category, p.view_count, p.created_at,
-                COALESCE(u.username, p.author_id) AS username
+                p.published_at, COALESCE(u.username, p.author_id) AS username
          FROM posts p LEFT JOIN users u ON u.id = p.author_id
          WHERE p.id = $1",
     )
@@ -151,6 +152,18 @@ pub async fn post_detail(cx: &Cx) -> Result<impl View + '_> {
     .await
     .ok()
     .flatten();
+    // Scheduled posts are invisible except to their author (preview).
+    // A set-but-past timestamp counts as released.
+    let post = match post {
+        Some(p) if !crate::util::is_released(p.published_at.as_deref()) => {
+            let mine = current_user
+                .as_ref()
+                .map(|u| u.id == p.author_id)
+                .unwrap_or(false);
+            if mine { Some(p) } else { None }
+        }
+        other => other,
+    };
 
     let comments: Vec<CommentWithAuthor> = if let Some(p) = &post {
         sqlx::query_as::<_, CommentWithAuthor>(
@@ -219,6 +232,10 @@ pub async fn post_detail(cx: &Cx) -> Result<impl View + '_> {
                 </a>
 
                 <script type="application/ld+json">{(topcoat::view::Unescaped::new_unchecked(article_json_ld(&crate::config::site_url(), &p.id, &p.title, &p.username, &p.created_at, category_label(&p.category))))}</script>
+
+                if !crate::util::is_released(p.published_at.as_deref()) {
+                    <div style="background:rgba(251,191,36,0.1); border:1px solid rgba(251,191,36,0.3); border-radius:8px; padding:12px 16px; font-size:13px; color:#b45309; margin-bottom:24px;">"예약 발행 상태입니다. 본인에게만 보입니다."</div>
+                }
 
                 <div style="margin-bottom:10px;">
                     <span style=(format!("font-size:11px; font-weight:600; padding:3px 9px; border-radius:9999px; color:{}; background:{}1a;", category_color(&p.category), category_color(&p.category)))>

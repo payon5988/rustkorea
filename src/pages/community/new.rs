@@ -22,6 +22,8 @@ pub struct NewPost {
     pub content_md: String,
     pub category: String,
     pub tags: Option<String>,
+    #[serde(default)]
+    pub published_at: String,
 }
 
 #[route(POST "/community/create")]
@@ -71,9 +73,19 @@ pub async fn create_post(
 
     let tags_json = crate::util::tags_json(input.tags);
 
+    // Empty = publish immediately; otherwise a KST datetime for scheduled release.
+    let published_at = match crate::util::parse_schedule_kst(&input.published_at) {
+        Ok(v) => v,
+        Err(()) => {
+            return Ok(topcoat::router::error::see_other(
+                "/community/new?error=schedule",
+            ));
+        }
+    };
+
     sqlx::query(
-        "INSERT INTO posts (author_id, title, content_md, content_html, tags, category, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, $5, $6, NOW()::text, NOW()::text)"
+        "INSERT INTO posts (author_id, title, content_md, content_html, tags, category, published_at, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, NOW()::text, NOW()::text)"
     )
     .bind(&user.id)
     .bind(&input.title)
@@ -81,6 +93,7 @@ pub async fn create_post(
     .bind(&content_html)
     .bind(&tags_json)
     .bind(&category)
+    .bind(&published_at)
     .execute(db)
     .await
     .ok();
@@ -166,6 +179,11 @@ pub async fn new_post_page(cx: &Cx) -> Result<impl View + '_> {
                             <label style="display:block; font-size:13px; font-weight:600; color:#374151; margin-bottom:8px;">"태그 (쉼표 구분, 최대 5개)"</label>
                             <input type="text" name="tags" placeholder="예: rust, async, tokio" class="input">
                             <p style="font-size:12px; color:#9ca3af; margin-top:4px;">"검색에 활용됩니다."</p>
+                        </div>
+                        <div>
+                            <label style="display:block; font-size:13px; font-weight:600; color:#374151; margin-bottom:8px;">"예약 발행 (비워두면 즉시 발행)"</label>
+                            <input type="datetime-local" name="published_at" class="input">
+                            <p style="font-size:12px; color:#9ca3af; margin-top:4px;">"한국 시간 기준. 예약된 글은 시간이 되면 자동 공개됩니다."</p>
                         </div>
                         <div>
                             <label style="display:block; font-size:13px; font-weight:600; color:#374151; margin-bottom:8px;">"내용 (Markdown)"</label>

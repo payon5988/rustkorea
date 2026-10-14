@@ -41,7 +41,8 @@ pub async fn search_results(cx: &Cx, query: String) -> Result<impl View> {
     if !query.is_empty() {
         // Manuals
         let manuals: Vec<(String, String, String, String)> = sqlx::query_as(
-            "SELECT slug, title, description, difficulty FROM manual_series WHERE title LIKE $1 ESCAPE '\\' OR description LIKE $1 ESCAPE '\\' LIMIT $2"
+            &format!("SELECT slug, title, description, difficulty FROM manual_series WHERE (title LIKE $1 ESCAPE '\\' OR description LIKE $1 ESCAPE '\\') AND {} LIMIT $2",
+                crate::util::published_clause(""))
         ).bind(&pattern).bind(SEARCH_LIMIT_MANUALS).fetch_all(&db).await.unwrap_or_default();
         for (slug, title, desc, diff) in manuals {
             results.push(SearchResult {
@@ -58,9 +59,10 @@ pub async fn search_results(cx: &Cx, query: String) -> Result<impl View> {
 
         // Manual chapters
         let chapters: Vec<(String, String, String, String)> = sqlx::query_as(
-            "SELECT ms.slug, mc.title, mc.content_md, ms.title AS series_title
+            &format!("SELECT ms.slug, mc.title, mc.content_md, ms.title AS series_title
              FROM manual_chapters mc JOIN manual_series ms ON ms.id = mc.series_id
-             WHERE mc.title LIKE $1 ESCAPE '\\' OR mc.content_md LIKE $1 ESCAPE '\\' LIMIT $2",
+             WHERE (mc.title LIKE $1 ESCAPE '\\' OR mc.content_md LIKE $1 ESCAPE '\\') AND {} AND {} LIMIT $2",
+                crate::util::published_clause("mc"), crate::util::published_clause("ms")),
         )
         .bind(&pattern)
         .bind(SEARCH_LIMIT_CHAPTERS)
@@ -99,8 +101,9 @@ pub async fn search_results(cx: &Cx, query: String) -> Result<impl View> {
 
         // Posts
         let posts: Vec<(String, String, String, String, String)> = sqlx::query_as(
-            "SELECT p.id, p.title, p.category, p.tags, p.content_md
-             FROM posts p WHERE p.title LIKE $1 ESCAPE '\\' OR p.content_md LIKE $1 ESCAPE '\\' OR p.tags LIKE $1 ESCAPE '\\' LIMIT $2"
+            &format!("SELECT p.id, p.title, p.category, p.tags, p.content_md
+             FROM posts p WHERE (p.title LIKE $1 ESCAPE '\\' OR p.content_md LIKE $1 ESCAPE '\\' OR p.tags LIKE $1 ESCAPE '\\') AND {} LIMIT $2",
+                crate::util::published_clause("p")),
         ).bind(&pattern).bind(SEARCH_LIMIT_POSTS).fetch_all(&db).await.unwrap_or_default();
         for (id, title, category, _tags, content_md) in posts {
             let snippet = content_md

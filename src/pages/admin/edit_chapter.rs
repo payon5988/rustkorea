@@ -24,6 +24,8 @@ pub struct EditChapter {
     #[serde(default)]
     pub content_html_import: String,
     pub visibility: String,
+    #[serde(default)]
+    pub published_at: String,
 }
 
 #[route(POST "/admin/manuals/chapters/update")]
@@ -58,15 +60,23 @@ pub async fn update_chapter(
         return Ok(topcoat::router::error::see_other("/admin/manuals"));
     }
 
+    let published_at = match crate::util::parse_schedule_kst(&input.published_at) {
+        Ok(v) => v,
+        Err(()) => {
+            return Ok(topcoat::router::error::see_other("/admin/manuals"));
+        }
+    };
+
     sqlx::query(
-        "UPDATE manual_chapters SET slug = $1, title = $2, content_md = $3, content_html = $4, visibility = $5, updated_at = NOW()::text
-         WHERE id = $6"
+        "UPDATE manual_chapters SET slug = $1, title = $2, content_md = $3, content_html = $4, visibility = $5, published_at = $6, updated_at = NOW()::text
+         WHERE id = $7"
     )
     .bind(&input.slug)
     .bind(&input.title)
     .bind(&content_md)
     .bind(&content_html)
     .bind(&input.visibility)
+    .bind(&published_at)
     .bind(&input.id)
     .execute(db)
     .await.ok();
@@ -189,6 +199,11 @@ pub async fn edit_chapter(cx: &Cx) -> Result<impl View + '_> {
                                     <option value="staff" selected=(c.visibility == "staff")>"스태프전용"</option>
                                     <option value="premium" selected=(c.visibility == "premium")>"유료전용(준비중)"</option>
                                 </select>
+                            </div>
+                            <div style="margin-bottom:20px;">
+                                <label style="display:block; font-size:13px; font-weight:600; color:var(--muted); margin-bottom:8px;">"예약 발행 (비우면 즉시 발행)"</label>
+                                <input type="datetime-local" name="published_at" class="input" value=(crate::util::format_schedule_kst(c.published_at.as_deref()))>
+                                <p style="font-size:11px; color:var(--dim); margin-top:4px;">"한국 시간 기준. 비우면 예약이 해제됩니다."</p>
                             </div>
                             <div>
                                 <div style="display:flex; gap:8px; margin-bottom:12px;">

@@ -14,11 +14,13 @@ pub async fn manuals_index(cx: &Cx) -> Result<impl View + '_> {
     let db: &Db = topcoat::context::app_context(cx);
     // All series are listed (titles public); per-series/chapter content is
     // gated at the detail pages. Non-public series get a lock badge.
-    let series =
-        sqlx::query_as::<_, ManualSeries>("SELECT * FROM manual_series ORDER BY created_at DESC")
-            .fetch_all(db)
-            .await
-            .unwrap_or_default();
+    let series = sqlx::query_as::<_, ManualSeries>(&format!(
+        "SELECT * FROM manual_series WHERE {} ORDER BY created_at DESC",
+        crate::util::published_clause("")
+    ))
+    .fetch_all(db)
+    .await
+    .unwrap_or_default();
 
     Ok(view! {
         <div class="container" style="padding-top:60px; padding-bottom:80px;">

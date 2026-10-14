@@ -24,12 +24,15 @@ pub async fn chapter_detail(cx: &Cx) -> Result<impl View + '_> {
     let access = crate::auth::access::load_access(db, cx).await;
 
     // Effective gate is the chapter's own tier: a series can mix public
-    // previews with members/staff-only chapters.
-    let chapter: Option<ManualChapter> = sqlx::query_as::<_, ManualChapter>(
+    // previews with members/staff-only chapters. Both chapter and series
+    // must be released (published_at) for public access.
+    let chapter: Option<ManualChapter> = sqlx::query_as::<_, ManualChapter>(&format!(
         r#"SELECT mc.* FROM manual_chapters mc
             JOIN manual_series ms ON mc.series_id = ms.id
-            WHERE ms.slug = $1 AND mc.slug = $2"#,
-    )
+            WHERE ms.slug = $1 AND mc.slug = $2 AND {} AND {}"#,
+        crate::util::published_clause("mc"),
+        crate::util::published_clause("ms"),
+    ))
     .bind(series_slug)
     .bind(chapter_slug)
     .fetch_optional(db)
@@ -74,8 +77,9 @@ pub async fn chapter_detail(cx: &Cx) -> Result<impl View + '_> {
     }
     let prev: Option<Neighbor> = if let Some(ch) = &chapter {
         sqlx::query_as::<_, (String, String, String)>(
-            "SELECT slug, title, visibility FROM manual_chapters
-             WHERE series_id = $1 AND chapter_index < $2 ORDER BY chapter_index DESC LIMIT 1",
+            &format!("SELECT slug, title, visibility FROM manual_chapters
+             WHERE series_id = $1 AND chapter_index < $2 AND {} ORDER BY chapter_index DESC LIMIT 1",
+                crate::util::published_clause("")),
         )
         .bind(&ch.series_id)
         .bind(ch.chapter_index)
@@ -97,10 +101,11 @@ pub async fn chapter_detail(cx: &Cx) -> Result<impl View + '_> {
         None
     };
     let next: Option<Neighbor> = if let Some(ch) = &chapter {
-        sqlx::query_as::<_, (String, String, String)>(
+        sqlx::query_as::<_, (String, String, String)>(&format!(
             "SELECT slug, title, visibility FROM manual_chapters
-             WHERE series_id = $1 AND chapter_index > $2 ORDER BY chapter_index ASC LIMIT 1",
-        )
+             WHERE series_id = $1 AND chapter_index > $2 AND {} ORDER BY chapter_index ASC LIMIT 1",
+            crate::util::published_clause("")
+        ))
         .bind(&ch.series_id)
         .bind(ch.chapter_index)
         .fetch_optional(db)
@@ -293,11 +298,13 @@ pub async fn complete_chapter(
         return Ok(topcoat::router::error::see_other("/"));
     }
 
-    let chapter_id: Option<String> = sqlx::query_scalar(
+    let chapter_id: Option<String> = sqlx::query_scalar(&format!(
         "SELECT mc.id FROM manual_chapters mc
          JOIN manual_series ms ON mc.series_id = ms.id
-         WHERE ms.slug = $1 AND mc.slug = $2",
-    )
+         WHERE ms.slug = $1 AND mc.slug = $2 AND {} AND {}",
+        crate::util::published_clause("mc"),
+        crate::util::published_clause("ms"),
+    ))
     .bind(series_slug)
     .bind(chapter_slug)
     .fetch_optional(db)

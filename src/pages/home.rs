@@ -18,9 +18,10 @@ pub const HOME_POSTS: i64 = 5;
 pub async fn home(cx: &Cx) -> Result<impl View + '_> {
     let db: &Db = topcoat::context::app_context(cx);
 
-    let manuals = sqlx::query_as::<_, ManualSeries>(
-        "SELECT * FROM manual_series ORDER BY created_at DESC LIMIT $1",
-    )
+    let manuals = sqlx::query_as::<_, ManualSeries>(&format!(
+        "SELECT * FROM manual_series WHERE {} ORDER BY created_at DESC LIMIT $1",
+        crate::util::published_clause("")
+    ))
     .bind(HOME_MANUALS)
     .fetch_all(db)
     .await
@@ -34,21 +35,24 @@ pub async fn home(cx: &Cx) -> Result<impl View + '_> {
     .await
     .unwrap_or_default();
 
-    let posts = sqlx::query_as::<_, PostListItem>(
+    let posts = sqlx::query_as::<_, PostListItem>(&format!(
         "SELECT p.*, COALESCE(u.username, p.author_id) AS username FROM posts p
          LEFT JOIN users u ON u.id = p.author_id
-         ORDER BY p.created_at DESC LIMIT $1",
-    )
+         WHERE {} ORDER BY p.created_at DESC LIMIT $1",
+        crate::util::published_clause("p"),
+    ))
     .bind(HOME_POSTS)
     .fetch_all(db)
     .await
     .unwrap_or_default();
 
-    let series_count: i64 =
-        sqlx::query_scalar("SELECT COUNT(*) FROM manual_series WHERE visibility = 'public'")
-            .fetch_one(db)
-            .await
-            .unwrap_or(0);
+    let series_count: i64 = sqlx::query_scalar(&format!(
+        "SELECT COUNT(*) FROM manual_series WHERE visibility = 'public' AND {}",
+        crate::util::published_clause("")
+    ))
+    .fetch_one(db)
+    .await
+    .unwrap_or(0);
     let chapter_count: i64 = sqlx::query_scalar(
         "SELECT COUNT(*) FROM manual_chapters mc
          JOIN manual_series ms ON ms.id = mc.series_id
@@ -61,10 +65,13 @@ pub async fn home(cx: &Cx) -> Result<impl View + '_> {
         .fetch_one(db)
         .await
         .unwrap_or(0);
-    let post_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM posts")
-        .fetch_one(db)
-        .await
-        .unwrap_or(0);
+    let post_count: i64 = sqlx::query_scalar(&format!(
+        "SELECT COUNT(*) FROM posts WHERE {}",
+        crate::util::published_clause("")
+    ))
+    .fetch_one(db)
+    .await
+    .unwrap_or(0);
 
     Ok(view! {
         <div>

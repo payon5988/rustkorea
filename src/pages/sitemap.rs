@@ -75,11 +75,13 @@ pub async fn sitemap_xml(cx: &Cx) -> Result<TypedBody> {
     }
 
     // Public chapters only: anonymous crawlers hit the lock page otherwise.
-    let chapters: Vec<(String, String, String)> = sqlx::query_as(
+    let chapters: Vec<(String, String, String)> = sqlx::query_as(&format!(
         "SELECT ms.slug, mc.slug, mc.updated_at FROM manual_chapters mc
          JOIN manual_series ms ON ms.id = mc.series_id
-         WHERE mc.visibility = 'public' ORDER BY mc.updated_at DESC LIMIT $1",
-    )
+         WHERE mc.visibility = 'public' AND {} AND {} ORDER BY mc.updated_at DESC LIMIT $1",
+        crate::util::published_clause("mc"),
+        crate::util::published_clause("ms"),
+    ))
     .bind(SITEMAP_CHAPTER_LIMIT)
     .fetch_all(db)
     .await

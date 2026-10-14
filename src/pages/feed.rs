@@ -86,12 +86,13 @@ pub async fn feed_rss(cx: &Cx) -> Result<TypedBody> {
         )
     };
 
-    let posts: Vec<FeedPost> = sqlx::query_as::<_, FeedPost>(
+    let posts: Vec<FeedPost> = sqlx::query_as::<_, FeedPost>(&format!(
         "SELECT p.id, p.title, p.content_html, p.author_id, p.created_at,
                 COALESCE(u.username, p.author_id) AS username
          FROM posts p LEFT JOIN users u ON u.id = p.author_id
-         ORDER BY p.created_at DESC LIMIT $1",
-    )
+         WHERE {} ORDER BY p.created_at DESC LIMIT $1",
+        crate::util::published_clause("p"),
+    ))
     .bind(FEED_LIMIT)
     .fetch_all(db)
     .await

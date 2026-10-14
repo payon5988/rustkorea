@@ -37,6 +37,7 @@ pub struct ManualSeries {
     pub visibility: String,
     pub created_at: String,
     pub updated_at: String,
+    pub published_at: Option<String>,
 }
 
 /// Manual difficulty keys + Korean labels (single source).
@@ -71,6 +72,7 @@ pub struct ManualChapter {
     pub visibility: String,
     pub created_at: String,
     pub updated_at: String,
+    pub published_at: Option<String>,
 }
 
 #[allow(dead_code)]
@@ -118,6 +120,7 @@ pub struct Post {
     pub view_count: i64,
     pub created_at: String,
     pub updated_at: String,
+    pub published_at: Option<String>,
 }
 
 impl Post {
@@ -139,6 +142,7 @@ pub struct PostListItem {
     pub view_count: i64,
     pub created_at: String,
     pub username: String,
+    pub published_at: Option<String>,
 }
 
 #[allow(dead_code)]

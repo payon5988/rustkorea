@@ -17,19 +17,23 @@ pub async fn series_detail(cx: &Cx) -> Result<impl View + '_> {
     let db: &Db = topcoat::context::app_context(cx);
     let access = crate::auth::access::load_access(db, cx).await;
 
-    let series = sqlx::query_as::<_, ManualSeries>("SELECT * FROM manual_series WHERE slug = $1")
-        .bind(slug)
-        .fetch_optional(db)
-        .await
-        .ok()
-        .flatten();
+    let series = sqlx::query_as::<_, ManualSeries>(&format!(
+        "SELECT * FROM manual_series WHERE slug = $1 AND {}",
+        crate::util::published_clause("")
+    ))
+    .bind(slug)
+    .fetch_optional(db)
+    .await
+    .ok()
+    .flatten();
 
     // Series page itself is always visible (titles public). Each chapter is
     // gated by its own visibility tier; locked chapters show a lock row.
     let chapters = if let Some(ref s) = series {
-        sqlx::query_as::<_, crate::models::ManualChapter>(
-            "SELECT * FROM manual_chapters WHERE series_id = $1 ORDER BY chapter_index",
-        )
+        sqlx::query_as::<_, crate::models::ManualChapter>(&format!(
+            "SELECT * FROM manual_chapters WHERE series_id = $1 AND {} ORDER BY chapter_index",
+            crate::util::published_clause("")
+        ))
         .bind(&s.id)
         .fetch_all(db)
         .await

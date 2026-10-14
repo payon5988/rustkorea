@@ -20,6 +20,8 @@ pub struct NewManual {
     pub difficulty: String,
     pub estimated_minutes: i32,
     pub visibility: String,
+    #[serde(default)]
+    pub published_at: String,
 }
 
 #[route(POST "/admin/manuals/create")]
@@ -47,9 +49,18 @@ pub async fn create_manual(
         ));
     }
 
+    let published_at = match crate::util::parse_schedule_kst(&input.published_at) {
+        Ok(v) => v,
+        Err(()) => {
+            return Ok(topcoat::router::error::see_other(
+                "/admin/manuals/new?error=schedule",
+            ));
+        }
+    };
+
     sqlx::query(
-        "INSERT INTO manual_series (slug, title, description, difficulty, estimated_minutes, visibility)
-         VALUES ($1, $2, $3, $4, $5, $6)"
+        "INSERT INTO manual_series (slug, title, description, difficulty, estimated_minutes, visibility, published_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)"
     )
     .bind(&input.slug)
     .bind(&input.title)
@@ -57,6 +68,7 @@ pub async fn create_manual(
     .bind(&input.difficulty)
     .bind(input.estimated_minutes)
     .bind(&input.visibility)
+    .bind(&published_at)
     .execute(db)
     .await.ok();
     let actor = crate::auth::access::load_access(db, cx)
@@ -151,6 +163,11 @@ pub async fn new_manual(cx: &Cx) -> Result<impl View + '_> {
                                 <option value="staff">"스태프전용"</option>
                                 <option value="premium">"유료전용(준비중)"</option>
                             </select>
+                        </div>
+                        <div style="margin-top:16px;">
+                            <label style="display:block; font-size:13px; font-weight:600; color:var(--muted); margin-bottom:8px;">"예약 발행 (비워두면 즉시 발행)"</label>
+                            <input type="datetime-local" name="published_at" class="input">
+                            <p style="font-size:11px; color:var(--dim); margin-top:4px;">"한국 시간 기준. 예약된 매뉴얼은 시간이 되면 자동 공개됩니다."</p>
                         </div>
                     </div>
                     <button type="submit" style="background:#DE5B30; color:#fff; padding:12px 20px; border-radius:8px; font-weight:600; font-size:14px; display:inline-flex; align-items:center; width:100%; justify-content:center; border:none; cursor:pointer;">"매뉴얼 생성"</button>

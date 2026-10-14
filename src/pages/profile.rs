@@ -19,6 +19,7 @@ struct UserPost {
     category: String,
     view_count: i64,
     created_at: String,
+    published_at: Option<String>,
 }
 
 #[allow(dead_code)]
@@ -90,9 +91,19 @@ pub async fn user_profile(cx: &Cx) -> Result<impl View + '_> {
 
     let posts: Vec<UserPost> = if let Some(u) = &user {
         if tab == "posts" || tab == "likes" {
-            sqlx::query_as::<_, UserPost>(
-                 "SELECT id, title, category, view_count, created_at FROM posts WHERE author_id = $1 ORDER BY created_at DESC LIMIT $2"
-            ).bind(&u.id).bind(PROFILE_LIMIT).fetch_all(db).await.unwrap_or_default()
+            // Owners see their scheduled posts too (with a badge); others
+            // only see released ones.
+            let mine = viewer.as_ref().map(|v| v.id == u.id).unwrap_or(false);
+            if mine {
+                sqlx::query_as::<_, UserPost>(
+                     "SELECT id, title, category, view_count, created_at, published_at FROM posts WHERE author_id = $1 ORDER BY created_at DESC LIMIT $2"
+                ).bind(&u.id).bind(PROFILE_LIMIT).fetch_all(db).await.unwrap_or_default()
+            } else {
+                sqlx::query_as::<_, UserPost>(&format!(
+                     "SELECT id, title, category, view_count, created_at, published_at FROM posts WHERE author_id = $1 AND {} ORDER BY created_at DESC LIMIT $2",
+                     crate::util::published_clause(""),
+                )).bind(&u.id).bind(PROFILE_LIMIT).fetch_all(db).await.unwrap_or_default()
+            }
         } else {
             vec![]
         }
@@ -245,6 +256,9 @@ pub async fn user_profile(cx: &Cx) -> Result<impl View + '_> {
                                 <a href=(format!("/community/{}", p.id)) style="display:flex; align-items:center; padding:14px 20px; background:#fff; gap:12px; transition:background 0.15s;">
                                     <span style=(format!("font-size:11px; font-weight:600; padding:3px 9px; border-radius:9999px; color:{bc}; background:{bc}1a; flex-shrink:0;"))>(bl)</span>
                                     <span style="font-size:14px; font-weight:600; flex:1; color:#16181d;">(p.title.clone())</span>
+                                    if !crate::util::is_released(p.published_at.as_deref()) {
+                                        <span style="font-size:11px; font-weight:600; color:#b45309; background:rgba(251,191,36,0.12); padding:3px 9px; border-radius:9999px; white-space:nowrap;">"예약됨"</span>
+                                    }
                                     <span style="font-size:12px; color:#9ca3af;">(p.created_at.split(' ').next().unwrap_or(""))</span>
                                 </a>
                             }

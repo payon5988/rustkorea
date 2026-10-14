@@ -11,6 +11,7 @@ use topcoat::{
 use crate::admin_ui::ADMIN_STYLE;
 use crate::components::admin_sidebar::AdminSidebar;
 use crate::db::Db;
+use crate::models::NavItem;
 
 #[derive(serde::Deserialize)]
 pub struct NavItemForm {
@@ -39,6 +40,158 @@ pub struct DeleteNavItemForm {
 pub struct ToggleNavItemForm {
     pub csrf_token: String,
     pub item_id: String,
+}
+
+#[derive(serde::Deserialize)]
+pub struct UpdateNavItemForm {
+    pub csrf_token: String,
+    pub item_id: String,
+    pub label: String,
+    pub href: String,
+}
+
+#[route(POST "/admin/menus/update")]
+pub async fn admin_menu_update(
+    cx: &Cx,
+    Form(input): Form<UpdateNavItemForm>,
+) -> Result<topcoat::router::error::SeeOther> {
+    let __denied = {
+        let __adb: &crate::db::Db = topcoat::context::app_context(cx);
+        crate::auth::access::require_perm(__adb, cx, crate::auth::access::perms::SETTINGS_MANAGE)
+            .await
+            .is_none()
+    };
+    if __denied {
+        return Ok(topcoat::router::error::see_other("/admin/login"));
+    }
+
+    let db: &Db = topcoat::context::app_context(cx);
+
+    if !crate::auth::session::verify_csrf_logged(db, cx, &input.csrf_token, "admin.menus.update")
+        .await
+    {
+        return Ok(topcoat::router::error::see_other("/admin/login"));
+    }
+
+    if input.label.trim().is_empty() || input.href.trim().is_empty() {
+        return Ok(topcoat::router::error::see_other(
+            "/admin/menus?error=empty",
+        ));
+    }
+
+    sqlx::query(
+        "UPDATE nav_items SET label = $1, href = $2, updated_at = NOW()::text WHERE id = $3",
+    )
+    .bind(input.label.trim())
+    .bind(input.href.trim())
+    .bind(&input.item_id)
+    .execute(db)
+    .await
+    .ok();
+
+    Ok(topcoat::router::error::see_other("/admin/menus?updated=1"))
+}
+
+#[derive(serde::Deserialize)]
+pub struct MoveNavItemForm {
+    pub csrf_token: String,
+    pub item_id: String,
+    pub direction: String,
+}
+
+#[route(POST "/admin/menus/move")]
+pub async fn admin_menu_move(
+    cx: &Cx,
+    Form(input): Form<MoveNavItemForm>,
+) -> Result<topcoat::router::error::SeeOther> {
+    let __denied = {
+        let __adb: &crate::db::Db = topcoat::context::app_context(cx);
+        crate::auth::access::require_perm(__adb, cx, crate::auth::access::perms::SETTINGS_MANAGE)
+            .await
+            .is_none()
+    };
+    if __denied {
+        return Ok(topcoat::router::error::see_other("/admin/login"));
+    }
+
+    let db: &Db = topcoat::context::app_context(cx);
+
+    if !crate::auth::session::verify_csrf_logged(db, cx, &input.csrf_token, "admin.menus.move")
+        .await
+    {
+        return Ok(topcoat::router::error::see_other("/admin/login"));
+    }
+
+    let current: Option<NavItem> =
+        sqlx::query_as::<_, NavItem>("SELECT * FROM nav_items WHERE id = $1")
+            .bind(&input.item_id)
+            .fetch_optional(db)
+            .await
+            .ok()
+            .flatten();
+    let Some(current) = current else {
+        return Ok(topcoat::router::error::see_other("/admin/menus"));
+    };
+
+    let neighbor: Option<NavItem> = if input.direction == "up" {
+        sqlx::query_as::<_, NavItem>(
+            "SELECT * FROM nav_items WHERE section = $1 AND position < $2
+             ORDER BY position DESC LIMIT 1",
+        )
+        .bind(&current.section)
+        .bind(current.position)
+        .fetch_optional(db)
+        .await
+        .ok()
+        .flatten()
+    } else {
+        sqlx::query_as::<_, NavItem>(
+            "SELECT * FROM nav_items WHERE section = $1 AND position > $2
+             ORDER BY position ASC LIMIT 1",
+        )
+        .bind(&current.section)
+        .bind(current.position)
+        .fetch_optional(db)
+        .await
+        .ok()
+        .flatten()
+    };
+
+    if let Some(other) = neighbor {
+        let mut tx = match db.begin().await {
+            Ok(tx) => tx,
+            Err(e) => {
+                eprintln!("[admin] move menu tx begin failed: {e}");
+                return Ok(topcoat::router::error::see_other("/admin/menus?error=1"));
+            }
+        };
+        let tmp_pos = -1;
+        let ok = sqlx::query("UPDATE nav_items SET position = $1 WHERE id = $2")
+            .bind(tmp_pos)
+            .bind(&current.id)
+            .execute(&mut *tx)
+            .await
+            .is_ok()
+            && sqlx::query("UPDATE nav_items SET position = $1 WHERE id = $2")
+                .bind(current.position)
+                .bind(&other.id)
+                .execute(&mut *tx)
+                .await
+                .is_ok()
+            && sqlx::query("UPDATE nav_items SET position = $1 WHERE id = $2")
+                .bind(other.position)
+                .bind(&current.id)
+                .execute(&mut *tx)
+                .await
+                .is_ok();
+        if ok {
+            tx.commit().await.ok();
+        } else {
+            eprintln!("[admin] move menu tx failed: {}", current.id);
+        }
+    }
+
+    Ok(topcoat::router::error::see_other("/admin/menus"))
 }
 
 #[page("/admin/menus")]
@@ -126,9 +279,26 @@ pub async fn admin_menus_page(cx: &Cx) -> Result<impl View + '_> {
                                 for item in &header_items {
                                     <div style="display:flex; align-items:center; gap:12px; padding:12px 20px; border-bottom:1px solid var(--line);">
                                         <div style="color:var(--dim); font-size:13px; font-weight:600; width:20px; text-align:center;">(item.position)</div>
-                                        <div style="flex:1; min-width:0;">
-                                            <div style="font-size:13px; font-weight:600; color:var(--text3);">(item.label.clone())</div>
-                                            <div style="font-size:11px; color:var(--dim); font-family:monospace; margin-top:2px;">(item.href.clone())</div>
+                                        <form action="/admin/menus/update" method="POST" style="flex:1; min-width:0; display:flex; gap:6px; align-items:center;">
+                                            <input type="hidden" name="csrf_token" value=(csrf_token.clone())>
+                                            <input type="hidden" name="item_id" value=(item.id.clone())>
+                                            <input type="text" name="label" required="true" value=(item.label.clone()) style="width:130px; background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:6px 8px; font-size:12px; font-weight:600; color:var(--text3); outline:none;">
+                                            <input type="text" name="href" required="true" value=(item.href.clone()) style="flex:1; min-width:0; background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:6px 8px; font-size:11px; font-family:monospace; color:var(--dim); outline:none;">
+                                            <button type="submit" style="background:none; border:1px solid rgba(96,165,250,0.3); color:var(--blue); padding:4px 8px; border-radius:6px; font-size:11px; cursor:pointer; white-space:nowrap;">"저장"</button>
+                                        </form>
+                                        <div style="display:flex; gap:2px;">
+                                            <form action="/admin/menus/move" method="POST" style="display:inline;">
+                                                <input type="hidden" name="csrf_token" value=(csrf_token.clone())>
+                                                <input type="hidden" name="item_id" value=(item.id.clone())>
+                                                <input type="hidden" name="direction" value="up">
+                                                <button type="submit" style="background:none; border:none; color:var(--muted2); cursor:pointer; font-size:12px; padding:4px;" title="위로">"▲"</button>
+                                            </form>
+                                            <form action="/admin/menus/move" method="POST" style="display:inline;">
+                                                <input type="hidden" name="csrf_token" value=(csrf_token.clone())>
+                                                <input type="hidden" name="item_id" value=(item.id.clone())>
+                                                <input type="hidden" name="direction" value="down">
+                                                <button type="submit" style="background:none; border:none; color:var(--muted2); cursor:pointer; font-size:12px; padding:4px;" title="아래로">"▼"</button>
+                                            </form>
                                             if !item.required_permission.is_empty() {
                                                 <div style="font-size:11px; color:var(--purple); font-family:monospace; margin-top:2px;">(format!("🔒 {}", item.required_permission))</div>
                                             }
@@ -184,9 +354,26 @@ pub async fn admin_menus_page(cx: &Cx) -> Result<impl View + '_> {
                                 for item in &footer_items {
                                     <div style="display:flex; align-items:center; gap:12px; padding:12px 20px; border-bottom:1px solid var(--line);">
                                         <div style="color:var(--dim); font-size:13px; font-weight:600; width:20px; text-align:center;">(item.position)</div>
-                                        <div style="flex:1; min-width:0;">
-                                            <div style="font-size:13px; font-weight:600; color:var(--text3);">(item.label.clone())</div>
-                                            <div style="font-size:11px; color:var(--dim); font-family:monospace; margin-top:2px;">(item.href.clone())</div>
+                                        <form action="/admin/menus/update" method="POST" style="flex:1; min-width:0; display:flex; gap:6px; align-items:center;">
+                                            <input type="hidden" name="csrf_token" value=(csrf_token.clone())>
+                                            <input type="hidden" name="item_id" value=(item.id.clone())>
+                                            <input type="text" name="label" required="true" value=(item.label.clone()) style="width:130px; background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:6px 8px; font-size:12px; font-weight:600; color:var(--text3); outline:none;">
+                                            <input type="text" name="href" required="true" value=(item.href.clone()) style="flex:1; min-width:0; background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:6px 8px; font-size:11px; font-family:monospace; color:var(--dim); outline:none;">
+                                            <button type="submit" style="background:none; border:1px solid rgba(96,165,250,0.3); color:var(--blue); padding:4px 8px; border-radius:6px; font-size:11px; cursor:pointer; white-space:nowrap;">"저장"</button>
+                                        </form>
+                                        <div style="display:flex; gap:2px;">
+                                            <form action="/admin/menus/move" method="POST" style="display:inline;">
+                                                <input type="hidden" name="csrf_token" value=(csrf_token.clone())>
+                                                <input type="hidden" name="item_id" value=(item.id.clone())>
+                                                <input type="hidden" name="direction" value="up">
+                                                <button type="submit" style="background:none; border:none; color:var(--muted2); cursor:pointer; font-size:12px; padding:4px;" title="위로">"▲"</button>
+                                            </form>
+                                            <form action="/admin/menus/move" method="POST" style="display:inline;">
+                                                <input type="hidden" name="csrf_token" value=(csrf_token.clone())>
+                                                <input type="hidden" name="item_id" value=(item.id.clone())>
+                                                <input type="hidden" name="direction" value="down">
+                                                <button type="submit" style="background:none; border:none; color:var(--muted2); cursor:pointer; font-size:12px; padding:4px;" title="아래로">"▼"</button>
+                                            </form>
                                             if !item.required_permission.is_empty() {
                                                 <div style="font-size:11px; color:var(--purple); font-family:monospace; margin-top:2px;">(format!("🔒 {}", item.required_permission))</div>
                                             }

@@ -71,6 +71,9 @@ pub fn render_markdown(md: &str) -> String {
 
     let mut html_output = String::new();
     html::push_html(&mut html_output, parser);
+    // Plain-text URLs become links (blog-standard autolink). Text inside
+    // existing links and code blocks is left alone.
+    html_output = linkify_bare_urls(&html_output);
 
     // XSS 방지를 ammonia로 필터링 (스킴 제한 + 외부링크 rel)
 
@@ -124,6 +127,97 @@ pub fn render_markdown(md: &str) -> String {
         .map(|line| restore_youtube_embeds(line, &embeds))
         .collect::<Vec<_>>()
         .join("\n")
+}
+
+/// Wrap bare `http(s)://...` in text nodes with `<a>`. Skips content
+/// inside `<a>`, `<code>` and `<pre>`. Runs before ammonia, which applies
+/// scheme filtering and `rel` afterwards.
+fn linkify_bare_urls(html: &str) -> String {
+    fn tag_name(tag: &str) -> (bool, &str) {
+        let t = tag.strip_prefix('/').unwrap_or(tag);
+        let name: &str = t.split([' ', '\t', '\n', '\r', '/']).next().unwrap_or("");
+        (tag.starts_with('/'), name)
+    }
+    fn linkify_text(text: &str) -> String {
+        let mut out = String::with_capacity(text.len());
+        let mut rest = text;
+        loop {
+            let start = rest
+                .find("https://")
+                .map(|i| (i, 8))
+                .or_else(|| rest.find("http://").map(|i| (i, 7)));
+            let Some((i, scheme_len)) = start else {
+                out.push_str(rest);
+                break;
+            };
+            // Skip if preceded by a URL char (already part of a link target).
+            if i > 0 {
+                let prev = rest.as_bytes()[i - 1];
+                if prev.is_ascii_alphanumeric() || prev == b'"' || prev == b'\'' || prev == b'=' {
+                    out.push_str(&rest[..i + scheme_len]);
+                    rest = &rest[i + scheme_len..];
+                    continue;
+                }
+            }
+            let mut end = rest.len();
+            for (j, c) in rest.char_indices().skip_while(|(j, _)| *j < i + scheme_len) {
+                if c.is_whitespace() || c == '<' || c == '"' || c == '\'' {
+                    end = j;
+                    break;
+                }
+            }
+            let mut url = &rest[i..end];
+            url = url.trim_end_matches(['.', ',', ';', ':', '!', '?', ')']);
+            out.push_str(&rest[..i]);
+            out.push_str(&format!("<a href=\"{url}\">{url}</a>"));
+            rest = &rest[i + url.len()..];
+        }
+        out
+    }
+
+    let mut out = String::with_capacity(html.len());
+    let mut rest = html;
+    let mut skip: i32 = 0;
+    while let Some(lt) = rest.find('<') {
+        let text = &rest[..lt];
+        if skip > 0 {
+            out.push_str(text);
+        } else {
+            out.push_str(&linkify_text(text));
+        }
+        if lt + 1 >= rest.len() {
+            out.push('<');
+            rest = "";
+            break;
+        }
+        let after = &rest[lt + 1..];
+        let gt = after.find('>').map(|i| lt + 1 + i).unwrap_or(rest.len());
+        if gt >= rest.len() {
+            // Unclosed `<`: emit literally and stop.
+            out.push_str(&rest[lt..]);
+            rest = "";
+            break;
+        }
+        let tag = &rest[lt + 1..gt];
+        let (closing, name) = tag_name(tag.trim_end_matches('/'));
+        if matches!(name, "a" | "code" | "pre") {
+            if closing {
+                skip = (skip - 1).max(0);
+            } else if !tag.ends_with('/') {
+                skip += 1;
+            }
+        }
+        out.push('<');
+        out.push_str(tag);
+        out.push('>');
+        rest = &rest[gt + 1..];
+    }
+    if skip > 0 {
+        out.push_str(rest);
+    } else {
+        out.push_str(&linkify_text(rest));
+    }
+    out
 }
 
 /// YouTube video IDs: exactly 11 chars of `[A-Za-z0-9_-]`.
@@ -299,6 +393,27 @@ mod tests {
         assert!(out.contains("<h1>제목</h1>"), "heading lost: {md}");
         assert!(out.contains("<table"), "table lost: {md}");
         assert!(!out.contains("alert"), "script leaked");
+    }
+
+    #[test]
+    fn bare_urls_autolinked_outside_code() {
+        let out = render_markdown("방문 https://rustkorea.kr/공지. 끝");
+        assert!(
+            out.contains("<a href=\"https://rustkorea.kr/공지\""),
+            "bare url not linked: {out}"
+        );
+        assert!(
+            out.contains("</a>. 끝"),
+            "trailing period mishandled: {out}"
+        );
+        let code = render_markdown("`https://rustkorea.kr/x`");
+        assert!(!code.contains("<a href"), "code span linked: {code}");
+        let linked = render_markdown("[R](https://rustkorea.kr/y)");
+        assert_eq!(
+            linked.matches("<a href").count(),
+            1,
+            "double link: {linked}"
+        );
     }
 
     #[test]

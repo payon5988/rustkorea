@@ -3,6 +3,7 @@ pub mod markdown;
 pub mod notifications;
 pub mod seed;
 pub mod site_settings;
+pub mod uploads;
 pub mod youtube;
 pub mod youtube_worker;
 

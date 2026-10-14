@@ -1,11 +1,11 @@
 use topcoat::Result;
 use topcoat::context::Cx;
 use topcoat::router::header::{CONTENT_TYPE, HeaderValue};
-use topcoat::router::route;
 use topcoat::router::{
     Body,
     response::{IntoResponse, Response},
 };
+use topcoat::router::{path_param, route};
 
 pub struct TypedBody {
     pub content_type: &'static str,
@@ -137,6 +137,47 @@ pub async fn apple_touch_icon(_cx: &Cx) -> Result<BinBody> {
     Ok(BinBody {
         content_type: "image/png",
         body: include_bytes!("../../public/icons/apple-touch-icon.png"),
+    })
+}
+
+topcoat::router::path_param!(upload_name);
+
+/// Runtime uploads (product images) from `UPLOAD_DIR`. Only serves files
+/// whose names match the generated pattern (`[A-Za-z0-9_-]+.(png|jpg|jpeg|webp|gif)`);
+/// everything else is 404 (no traversal possible).
+#[route(GET "/uploads/{upload_name}")]
+pub async fn uploaded_file(cx: &Cx) -> Result<BinBody> {
+    let name = path_param::<UploadName>(cx);
+    let valid = !name.is_empty()
+        && name.len() <= 64
+        && name
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == '.')
+        && !name.contains("..")
+        && ["png", "jpg", "jpeg", "webp", "gif"]
+            .iter()
+            .any(|ext| name.to_lowercase().ends_with(&format!(".{ext}")));
+    if !valid {
+        return Err(topcoat::router::error::not_found().into());
+    }
+    let lowered = name.to_lowercase();
+    let content_type = if lowered.ends_with(".png") {
+        "image/png"
+    } else if lowered.ends_with(".gif") {
+        "image/gif"
+    } else if lowered.ends_with(".webp") {
+        "image/webp"
+    } else {
+        "image/jpeg"
+    };
+    let path = std::path::Path::new(&crate::config::upload_dir()).join(name);
+    let bytes = std::fs::read(&path).map_err(|_| topcoat::router::error::not_found())?;
+    if bytes.len() > crate::services::uploads::MAX_UPLOAD_BYTES {
+        return Err(topcoat::router::error::not_found().into());
+    }
+    Ok(BinBody {
+        content_type,
+        body: Box::leak(bytes.into_boxed_slice()),
     })
 }
 

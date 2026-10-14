@@ -14,5 +14,6 @@ pub mod profile;
 pub mod ranking;
 pub mod search;
 pub mod search_shard;
+pub mod showcase;
 pub mod sitemap;
 pub mod youtube;

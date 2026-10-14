@@ -41,6 +41,8 @@ pub async fn AdminSidebar(cx: &Cx, active: String) -> Result<impl View + '_> {
     let d_audit = nav_item("/admin/audit", &active);
     let d_menus = nav_item("/admin/menus", &active);
     let d_badges = nav_item("/admin/badges", &active);
+    let d_products = nav_item("/admin/products", &active);
+    let d_inquiries = nav_item("/admin/inquiries", &active);
     let d_settings = nav_item("/admin/settings", &active);
     let d_profile = nav_item("/admin/profile", &active);
     let d_categories = nav_item("/admin/categories", &active);
@@ -237,6 +239,18 @@ pub async fn AdminSidebar(cx: &Cx, active: String) -> Result<impl View + '_> {
                     <a href="/admin/badges" style=(d_badges)>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="6"/><path d="M15.5 13l1.5 8-5-3-5 3 1.5-8"/></svg>
                         "등급/배지"
+                    </a>
+                    }
+                    if can_settings {
+                    <a href="/admin/products" style=(d_products)>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+                        "상품 관리"
+                    </a>
+                    }
+                    if can_settings {
+                    <a href="/admin/inquiries" style=(d_inquiries)>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                        "문의 관리"
                     </a>
                     }
                     if can_users {

@@ -26,6 +26,8 @@ services:
       NAVER_SITE_VERIFICATION: ${NAVER_SITE_VERIFICATION:-}
       HOST: "0.0.0.0"
       PORT: "3000"
+    volumes:
+      - uploads_data:/app/data
     depends_on:
       db:
         condition: service_healthy
@@ -60,3 +62,4 @@ services:
 
 volumes:
   pgdata:
+  uploads_data:

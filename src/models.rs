@@ -370,3 +370,88 @@ pub struct EmailSubscription {
     pub token: String,
     pub created_at: String,
 }
+
+#[allow(dead_code)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct ProductCategory {
+    pub id: String,
+    pub slug: String,
+    pub name: String,
+    pub position: i32,
+    pub created_at: String,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct Product {
+    pub id: String,
+    pub category_id: Option<String>,
+    pub slug: String,
+    pub title: String,
+    pub summary: String,
+    pub description_md: String,
+    pub description_html: String,
+    pub price: Option<i64>,
+    pub price_visible: i32,
+    pub preview_url: String,
+    pub video_id: String,
+    pub techs: String,
+    pub thumbnail_url: String,
+    pub main_image_url: String,
+    pub visibility: String,
+    pub published_at: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct ProductImage {
+    pub id: String,
+    pub product_id: String,
+    pub url: String,
+    pub position: i32,
+    pub created_at: String,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct Inquiry {
+    pub id: String,
+    pub product_id: Option<String>,
+    pub name: String,
+    pub contact: String,
+    pub message: String,
+    pub ip: String,
+    pub status: String,
+    pub created_at: String,
+}
+
+impl Product {
+    /// Comma-separated tech stack as a trimmed list.
+    pub fn tech_list(&self) -> Vec<String> {
+        self.techs
+            .split(',')
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .collect()
+    }
+
+    /// Display price (`None` when hidden or unset).
+    pub fn price_label(&self) -> Option<String> {
+        if self.price_visible != 1 {
+            return None;
+        }
+        self.price.map(|p| {
+            let s = p.to_string();
+            let mut out = String::new();
+            for (i, c) in s.chars().rev().enumerate() {
+                if i > 0 && i % 3 == 0 {
+                    out.push(',');
+                }
+                out.push(c);
+            }
+            format!("{}원", out.chars().rev().collect::<String>())
+        })
+    }
+}

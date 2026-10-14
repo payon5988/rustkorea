@@ -58,6 +58,11 @@ pub fn mail_domain() -> String {
     env_or("MAIL_DOMAIN", "rustkorea.kr")
 }
 
+/// Local upload directory (product images). Served at `/uploads/*`.
+pub fn upload_dir() -> String {
+    env_or("UPLOAD_DIR", "data/uploads")
+}
+
 /// YouTube sync interval (seconds).
 pub fn youtube_poll_secs() -> u64 {
     env_or("YOUTUBE_POLL_SECS", "900").parse().unwrap_or(900)

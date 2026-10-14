@@ -73,6 +73,26 @@ pub async fn home(cx: &Cx) -> Result<impl View + '_> {
     .await
     .unwrap_or(0);
 
+    // Promo banner: settings-driven copy + latest notice link + expiry.
+    let banner_enabled =
+        crate::services::site_settings::get_setting(db, "banner_enabled").await == "true";
+    let banner_until = crate::services::site_settings::get_setting(db, "banner_until").await;
+    let banner_kicker = crate::services::site_settings::get_setting(db, "banner_kicker").await;
+    let banner_title = crate::services::site_settings::get_setting(db, "banner_title").await;
+    let banner_text = crate::services::site_settings::get_setting(db, "banner_text").await;
+    let banner_cta = crate::services::site_settings::get_setting(db, "banner_cta").await;
+    let banner_post: Option<String> = sqlx::query_scalar(&format!(
+        "SELECT id FROM posts WHERE category = 'announce' AND {} ORDER BY created_at DESC LIMIT 1",
+        crate::util::published_clause("")
+    ))
+    .fetch_optional(db)
+    .await
+    .ok()
+    .flatten();
+    let show_banner =
+        crate::util::banner_visible_on(banner_enabled, &banner_until, &crate::util::today_kst())
+            && banner_post.is_some();
+
     Ok(view! {
         <div>
 
@@ -96,6 +116,41 @@ pub async fn home(cx: &Cx) -> Result<impl View + '_> {
                     </div>
                 </div>
             </section>
+
+            if show_banner {
+                <style>
+                    {r#".book-banner-inner { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+                    .book-banner-cta { flex-shrink: 0; }
+                    @media (max-width: 640px) { .book-banner-inner { flex-direction: column; align-items: flex-start; } }"#}
+                </style>
+                <div class="book-banner-container" id="book-banner" style="max-width:1200px; margin:1.5rem auto; padding:0 1rem;">
+                    <a href=(format!("/community/{}", banner_post.clone().unwrap_or_default())) style="text-decoration:none; display:block;">
+                        <div class="topcoat-book-banner" style="background:linear-gradient(135deg, #1f2833 0%, #25283d 100%); border:1px solid #45a29e; border-radius:6px; padding:1rem 1.5rem; box-shadow:0 4px 15px rgba(0,0,0,0.2);">
+                            <div class="book-banner-inner">
+                                <div style="display:flex; align-items:center; gap:1rem; min-width:0;">
+                                    <span style="background:#45a29e; color:#fff; padding:0.2rem 0.6rem; font-size:0.8rem; font-weight:bold; border-radius:4px; text-transform:uppercase; letter-spacing:1px; white-space:nowrap;">(banner_kicker.clone())</span>
+                                    <p style="color:#fff; margin:0; font-size:1.05rem; font-weight:500; line-height:1.4;">
+                                        "신간 "
+                                        <strong style="color:#e5c158;">(banner_title.clone())</strong>
+                                        " 출시 — "
+                                        (banner_text.clone())
+                                    </p>
+                                </div>
+                                <div class="book-banner-cta" style="color:#45a29e; font-weight:bold; font-size:0.95rem; display:flex; align-items:center; gap:0.3rem; white-space:nowrap;">
+                                    (banner_cta.clone())
+                                    <span>" ➔"</span>
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+                    <div style="text-align:right; margin-top:4px;">
+                        <button type="button" onclick="dismissBookBanner()" style="background:none; border:none; font-size:11px; color:#9ca3af; cursor:pointer;">"닫기"</button>
+                    </div>
+                </div>
+                <script>
+                    {r#"function dismissBookBanner(){try{localStorage.setItem('rk-book-banner','0');}catch(e){}var b=document.getElementById('book-banner');if(b){b.style.display='none';}}(function(){try{if(localStorage.getItem('rk-book-banner')==='0'){var b=document.getElementById('book-banner');if(b){b.style.display='none';}}}catch(e){}})();"#}
+                </script>
+            }
 
             <section class="container" style="margin-top:-30px; margin-bottom:60px;">
                 <div class="grid-3" style="display:grid; grid-template-columns:repeat(3,1fr); gap:24px;">

@@ -31,6 +31,12 @@ pub struct SettingsForm {
     pub adsense_enabled: Option<String>,
     pub adsense_client: String,
     pub require_approval: Option<String>,
+    pub banner_enabled: Option<String>,
+    pub banner_until: String,
+    pub banner_kicker: String,
+    pub banner_title: String,
+    pub banner_text: String,
+    pub banner_cta: String,
 }
 
 async fn get_setting(db: &Db, key: &str) -> String {
@@ -107,6 +113,12 @@ pub async fn admin_settings_page(cx: &Cx) -> Result<impl View + '_> {
     let adsense_client = get_setting(db, "adsense_client").await;
     let adsense_checked = adsense_enabled == "true";
     let require_approval = get_setting(db, "require_approval").await == "true";
+    let banner_enabled = get_setting(db, "banner_enabled").await == "true";
+    let banner_until = get_setting(db, "banner_until").await;
+    let banner_kicker = get_setting(db, "banner_kicker").await;
+    let banner_title = get_setting(db, "banner_title").await;
+    let banner_text = get_setting(db, "banner_text").await;
+    let banner_cta = get_setting(db, "banner_cta").await;
     let youtube_visibility = get_setting(db, "youtube_visibility").await;
     let youtube_visibility = if youtube_visibility.is_empty() {
         "public".to_string()
@@ -293,6 +305,46 @@ pub async fn admin_settings_page(cx: &Cx) -> Result<impl View + '_> {
                     </div>
 
                     <div style="background:var(--card); border:1px solid var(--border); border-radius:10px; padding:24px; margin-bottom:20px;">
+                        <h2 style="font-size:15px; font-weight:700; color:var(--text); margin-bottom:4px;">"홍보 배너"</h2>
+                        <p style="font-size:12px; color:var(--muted2); margin-bottom:20px;">"메인 히어로 아래에 표시되는 캠페인 배너. 종료일이 지나면 자동 숨김."</p>
+
+                        <label style="display:flex; align-items:center; gap:12px; cursor:pointer; margin-bottom:16px;">
+                            if banner_enabled {
+                                <input type="checkbox" name="banner_enabled" value="true" checked="true" style="width:18px; height:18px; accent-color:#DE5B30; cursor:pointer;">
+                            } else {
+                                <input type="checkbox" name="banner_enabled" value="true" style="width:18px; height:18px; accent-color:#DE5B30; cursor:pointer;">
+                            }
+                            <div>
+                                <div style="font-size:14px; font-weight:600; color:var(--text2);">"배너 표시"</div>
+                                <div style="font-size:12px; color:var(--muted2);">"최신 공지글로 연결됩니다."</div>
+                            </div>
+                        </label>
+
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                            <div>
+                                <label for="banner_until" style=(FIELD_LABEL_STYLE)>"종료일 (비워두면 상시)"</label>
+                                <input type="date" id="banner_until" name="banner_until" value=(banner_until) style=(input_style)>
+                            </div>
+                            <div>
+                                <label for="banner_kicker" style=(FIELD_LABEL_STYLE)>"뱃지 문구"</label>
+                                <input type="text" id="banner_kicker" name="banner_kicker" value=(banner_kicker) placeholder="저서 출간" style=(input_style)>
+                            </div>
+                            <div>
+                                <label for="banner_title" style=(FIELD_LABEL_STYLE)>"제목 (책 이름)"</label>
+                                <input type="text" id="banner_title" name="banner_title" value=(banner_title) placeholder="《미래를 묻는 인간》" style=(input_style)>
+                            </div>
+                            <div>
+                                <label for="banner_cta" style=(FIELD_LABEL_STYLE)>"버튼 문구"</label>
+                                <input type="text" id="banner_cta" name="banner_cta" value=(banner_cta) placeholder="실증 철학 보기" style=(input_style)>
+                            </div>
+                            <div style="grid-column:1 / -1;">
+                                <label for="banner_text" style=(FIELD_LABEL_STYLE)>"설명 문구"</label>
+                                <input type="text" id="banner_text" name="banner_text" value=(banner_text) placeholder="신간 출시 — AI 시대의 초생산성 공식을 실증합니다." style=(input_style)>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="background:var(--card); border:1px solid var(--border); border-radius:10px; padding:24px; margin-bottom:20px;">
                         <h2 style="font-size:15px; font-weight:700; color:var(--text); margin-bottom:4px;">"OAuth 로그인"</h2>
                         <p style="font-size:12px; color:var(--muted2); margin-bottom:20px;">"소셜 로그인 제공자를 활성화 또는 비활성화합니다."</p>
 
@@ -449,6 +501,31 @@ pub async fn admin_save_settings(
     )
     .await;
     save_setting(db, "adsense_client", input.adsense_client.trim()).await;
+
+    // Promo banner: validate expiry date (empty = no expiry).
+    let banner_until = input.banner_until.trim().to_string();
+    if !banner_until.is_empty()
+        && chrono::NaiveDate::parse_from_str(&banner_until, "%Y-%m-%d").is_err()
+    {
+        return Ok(topcoat::router::error::see_other(
+            "/admin/settings?error=invalid",
+        ));
+    }
+    save_setting(
+        db,
+        "banner_enabled",
+        if input.banner_enabled.is_some() {
+            "true"
+        } else {
+            "false"
+        },
+    )
+    .await;
+    save_setting(db, "banner_until", &banner_until).await;
+    save_setting(db, "banner_kicker", input.banner_kicker.trim()).await;
+    save_setting(db, "banner_title", input.banner_title.trim()).await;
+    save_setting(db, "banner_text", input.banner_text.trim()).await;
+    save_setting(db, "banner_cta", input.banner_cta.trim()).await;
 
     let actor = crate::auth::access::load_access(db, cx)
         .await

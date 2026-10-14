@@ -116,6 +116,26 @@ pub fn tags_json(input: Option<String>) -> String {
     serde_json::to_string(&tags).unwrap_or_else(|_| "[]".into())
 }
 
+/// Promo banner visibility: enabled flag plus optional `YYYY-MM-DD` expiry
+/// (inclusive, compared in KST). Pure for unit tests.
+pub fn banner_visible_on(enabled: bool, until: &str, today_kst: &str) -> bool {
+    if !enabled {
+        return false;
+    }
+    let until = until.trim();
+    if until.is_empty() {
+        return true;
+    }
+    until >= today_kst.trim()
+}
+
+/// Today's date in KST (`YYYY-MM-DD`).
+pub fn today_kst() -> String {
+    (chrono::Utc::now() + chrono::Duration::hours(9))
+        .format("%Y-%m-%d")
+        .to_string()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -127,6 +147,15 @@ mod tests {
         assert_eq!(paginate(45, 9, 20), (3, 3, 40));
         assert_eq!(paginate(45, -2, 20), (3, 1, 0));
         assert_eq!(paginate(45, 2, 0), (45, 2, 1));
+    }
+
+    #[test]
+    fn banner_expiry() {
+        assert!(!banner_visible_on(false, "", "2026-10-14"));
+        assert!(banner_visible_on(true, "", "2026-10-14"));
+        assert!(banner_visible_on(true, "2026-10-14", "2026-10-14"));
+        assert!(banner_visible_on(true, "2026-12-31", "2026-10-14"));
+        assert!(!banner_visible_on(true, "2026-10-13", "2026-10-14"));
     }
 
     #[test]

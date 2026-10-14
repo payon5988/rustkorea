@@ -34,6 +34,15 @@ pub async fn seed_database(db: &Db) {
         ("adsense_client", ""),
         ("require_approval", "false"),
         ("youtube_visibility", "public"),
+        ("banner_enabled", "false"),
+        ("banner_until", ""),
+        ("banner_kicker", "저서 출간"),
+        ("banner_title", "《미래를 묻는 인간》"),
+        (
+            "banner_text",
+            "AI 시대의 초생산성 공식을 Rust와 바이브 코딩으로 실증합니다.",
+        ),
+        ("banner_cta", "실증 철학 보기"),
     ];
     for (k, v) in defaults {
         sqlx::query(

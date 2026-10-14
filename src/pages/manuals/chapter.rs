@@ -93,8 +93,8 @@ pub async fn chapter_detail(cx: &Cx) -> Result<impl View + '_> {
             gate: crate::auth::access::visibility_gate(
                 access.as_ref(),
                 &visibility,
-                "manuals.view_staff",
-                "premium.access",
+                crate::auth::access::perms::MANUALS_VIEW_STAFF,
+                crate::auth::access::perms::PREMIUM_ACCESS,
             ),
         })
     } else {
@@ -118,8 +118,8 @@ pub async fn chapter_detail(cx: &Cx) -> Result<impl View + '_> {
             gate: crate::auth::access::visibility_gate(
                 access.as_ref(),
                 &visibility,
-                "manuals.view_staff",
-                "premium.access",
+                crate::auth::access::perms::MANUALS_VIEW_STAFF,
+                crate::auth::access::perms::PREMIUM_ACCESS,
             ),
         })
     } else {

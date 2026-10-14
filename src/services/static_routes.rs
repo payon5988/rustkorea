@@ -140,6 +140,14 @@ pub async fn apple_touch_icon(_cx: &Cx) -> Result<BinBody> {
     })
 }
 
+#[route(GET "/og-image.png")]
+pub async fn og_image(_cx: &Cx) -> Result<BinBody> {
+    Ok(BinBody {
+        content_type: "image/png",
+        body: include_bytes!("../../public/og-image.png"),
+    })
+}
+
 topcoat::router::path_param!(upload_name);
 
 /// Runtime uploads (product images) from `UPLOAD_DIR`. Only serves files

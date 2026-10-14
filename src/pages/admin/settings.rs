@@ -175,7 +175,7 @@ pub async fn admin_settings_page(cx: &Cx) -> Result<impl View + '_> {
                         </div>
                         <div style="margin-bottom:20px;">
                             <label for="site_description" style=(FIELD_LABEL_STYLE)>"사이트 설명"</label>
-                            <textarea id="site_description" name="site_description" rows="3" placeholder="한국 Rust 생태계의 단일 진실 공급원" style=(textarea_style)>(site_description)</textarea>
+                            <textarea id="site_description" name="site_description" rows="3" placeholder="Rust 몰라도 10분 만에 끝내는 고성능 풀스택 앱 개발 — Rust Korea" style=(textarea_style)>(site_description)</textarea>
                         </div>
                         <div style="margin-bottom:20px;">
                             <label for="site_keywords" style=(FIELD_LABEL_STYLE)>"사이트 메타 키워드"</label>

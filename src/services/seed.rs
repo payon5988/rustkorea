@@ -22,7 +22,10 @@ pub async fn seed_database(db: &Db) {
     let defaults = [
         ("youtube_channel_id", channel_id.as_str()),
         ("site_title", "Rust Korea Hub"),
-        ("site_description", "한국 Rust 생태계의 단일 진실 공급원"),
+        (
+            "site_description",
+            "Rust 몰라도 10분 만에 끝내는 고성능 풀스택 앱 개발 — Rust Korea",
+        ),
         ("site_keywords", "rust, 러스트, 커뮤니티, topcoat"),
         (
             "footer_text",

@@ -34,7 +34,7 @@ pub async fn root_layout(
     let site_description =
         crate::services::site_settings::get_setting(db, "site_description").await;
     let site_description = if site_description.is_empty() {
-        "한국 Rust 생태계의 단일 진실 공급원".to_string()
+        "Rust 몰라도 10분 만에 끝내는 고성능 풀스택 앱 개발 — Rust Korea".to_string()
     } else {
         site_description
     };
@@ -51,6 +51,13 @@ pub async fn root_layout(
     let canonical = format!("{}{}", crate::config::site_url(), path);
     let robots_content = if bare { ROBOTS_NOINDEX } else { ROBOTS_INDEX };
 
+    // Per-URL Open Graph: community posts and manual chapters expose their
+    // own title/summary so shares match the content (KakaoTalk etc.).
+    // Falls back to the site defaults on any failure.
+    let (og_title, og_description, og_kind) =
+        resolve_page_og(db, path, &site_title, &site_description).await;
+    let og_image = format!("{}/og-image.png", crate::config::site_url());
+
     Ok(view! {
         <!DOCTYPE html>
         <html lang="ko">
@@ -59,13 +66,15 @@ pub async fn root_layout(
                 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
                 <title>(site_title.clone())</title>
                 <meta name="description" content=(site_description.clone()) />
-                <meta property="og:title" content=(site_title.clone()) />
-                <meta property="og:description" content=(site_description.clone()) />
-                <meta property="og:type" content="website" />
+                <meta property="og:title" content=(og_title.clone()) />
+                <meta property="og:description" content=(og_description.clone()) />
+                <meta property="og:type" content=(og_kind.clone()) />
                 <meta property="og:url" content=(canonical.clone()) />
+                <meta property="og:image" content=(og_image.clone()) />
                 <meta property="og:site_name" content=(site_title.clone()) />
                 <meta property="og:locale" content="ko_KR" />
-                <meta name="twitter:card" content="summary" />
+                <meta name="twitter:card" content="summary_large_image" />
+                <meta name="twitter:image" content=(og_image.clone()) />
                 <meta name="robots" content=(robots_content) />
                 if !google_verification.is_empty() {
                     <meta name="google-site-verification" content=(google_verification.clone()) />
@@ -201,4 +210,82 @@ pub async fn root_layout(
             </body>
         </html>
     })
+}
+
+/// Per-URL Open Graph (title, description, type). Community posts and manual
+/// chapters resolve their own metadata (released rows only, so scrapers see
+/// what anonymous visitors see); everything else uses the site defaults.
+async fn resolve_page_og(
+    db: &crate::db::Db,
+    path: &str,
+    site_title: &str,
+    site_description: &str,
+) -> (String, String, String) {
+    fn summary(md: &str) -> String {
+        let one_line: String = md
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ")
+            .chars()
+            .take(140)
+            .collect();
+        // Strip leading markdown markers for a clean preview.
+        one_line
+            .trim_start_matches(['#', '>', '-', '*', ' '])
+            .to_string()
+    }
+    let segs: Vec<&str> = path.split('/').filter(|s| !s.is_empty()).collect();
+    match segs.as_slice() {
+        ["community", id] if *id != "new" => {
+            let row: Option<(String, String)> = sqlx::query_as(&format!(
+                "SELECT title, content_md FROM posts WHERE id = $1 AND {}",
+                crate::util::published_clause("")
+            ))
+            .bind(*id)
+            .fetch_optional(db)
+            .await
+            .ok()
+            .flatten();
+            match row {
+                Some((title, md)) => (title, summary(&md), "article".to_string()),
+                None => (
+                    site_title.to_string(),
+                    site_description.to_string(),
+                    "website".to_string(),
+                ),
+            }
+        }
+        ["manuals", series, chapter] => {
+            let row: Option<(String, String, String)> = sqlx::query_as(&format!(
+                "SELECT mc.title, mc.content_md, ms.title FROM manual_chapters mc
+                 JOIN manual_series ms ON ms.id = mc.series_id
+                 WHERE ms.slug = $1 AND mc.slug = $2 AND {} AND {}",
+                crate::util::published_clause("mc"),
+                crate::util::published_clause("ms"),
+            ))
+            .bind(*series)
+            .bind(*chapter)
+            .fetch_optional(db)
+            .await
+            .ok()
+            .flatten();
+            match row {
+                Some((title, md, series_title)) => (
+                    format!("{title} - {series_title}"),
+                    summary(&md),
+                    "article".to_string(),
+                ),
+                None => (
+                    site_title.to_string(),
+                    site_description.to_string(),
+                    "website".to_string(),
+                ),
+            }
+        }
+        _ => (
+            site_title.to_string(),
+            site_description.to_string(),
+            "website".to_string(),
+        ),
+    }
 }

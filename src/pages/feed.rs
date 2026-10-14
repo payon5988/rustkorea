@@ -61,7 +61,7 @@ pub async fn feed_rss(cx: &Cx) -> Result<TypedBody> {
     let site_description =
         crate::services::site_settings::get_setting(db, "site_description").await;
     let site_description = if site_description.is_empty() {
-        "한국 Rust 생태계의 단일 진실 공급원".to_string()
+        "Rust 몰라도 10분 만에 끝내는 고성능 풀스택 앱 개발 — Rust Korea".to_string()
     } else {
         site_description
     };

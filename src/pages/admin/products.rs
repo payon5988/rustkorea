@@ -61,6 +61,8 @@ pub struct ProductForm {
     pub title: String,
     pub summary: String,
     pub description_md: String,
+    #[serde(default)]
+    pub description_html_import: String,
     pub category_id: String,
     pub price: String,
     pub price_visible: Option<String>,
@@ -133,7 +135,12 @@ pub async fn create_product(
     } else {
         Some(input.category_id.trim().to_string())
     };
-    let description_html = render_markdown(&input.description_md);
+    let description_md = if input.description_html_import.trim().is_empty() {
+        input.description_md.clone()
+    } else {
+        crate::services::markdown::html_to_markdown(&input.description_html_import)
+    };
+    let description_html = render_markdown(&description_md);
     sqlx::query(
         "INSERT INTO products (category_id, slug, title, summary, description_md, description_html,
          price, price_visible, preview_url, video_id, techs, thumbnail_url, main_image_url,
@@ -144,7 +151,7 @@ pub async fn create_product(
     .bind(&slug)
     .bind(input.title.trim())
     .bind(input.summary.trim())
-    .bind(&input.description_md)
+    .bind(&description_md)
     .bind(&description_html)
     .bind(price)
     .bind(if input.price_visible.is_some() { 1 } else { 0 })
@@ -169,6 +176,8 @@ pub struct ProductUpdateForm {
     pub title: String,
     pub summary: String,
     pub description_md: String,
+    #[serde(default)]
+    pub description_html_import: String,
     pub category_id: String,
     pub price: String,
     pub price_visible: Option<String>,
@@ -220,7 +229,12 @@ pub async fn update_product(
     } else {
         Some(input.category_id.trim().to_string())
     };
-    let description_html = render_markdown(&input.description_md);
+    let description_md = if input.description_html_import.trim().is_empty() {
+        input.description_md.clone()
+    } else {
+        crate::services::markdown::html_to_markdown(&input.description_html_import)
+    };
+    let description_html = render_markdown(&description_md);
     sqlx::query(
         "UPDATE products SET category_id = $1, slug = $2, title = $3, summary = $4,
          description_md = $5, description_html = $6, price = $7, price_visible = $8,
@@ -232,7 +246,7 @@ pub async fn update_product(
     .bind(&slug)
     .bind(input.title.trim())
     .bind(input.summary.trim())
-    .bind(&input.description_md)
+    .bind(&description_md)
     .bind(&description_html)
     .bind(price)
     .bind(if input.price_visible.is_some() { 1 } else { 0 })
@@ -732,13 +746,24 @@ pub async fn new_product(cx: &Cx) -> Result<impl View + '_> {
                             <input type="datetime-local" name="published_at" class="input">
                         </div>
                         <div style="grid-column:1 / -1;">
+                            <div style="display:flex; gap:8px; margin-bottom:12px;">
+                                <button type="button" id="tabbtn-md" onclick="showEditorTab('md')" style="font-size:12px; font-weight:600; padding:6px 14px; border-radius:6px; border:1px solid var(--brand); background:rgba(222,91,48,0.12); color:var(--text); cursor:pointer;">"마크다운"</button>
+                                <button type="button" id="tabbtn-html" onclick="showEditorTab('html')" style="font-size:12px; font-weight:600; padding:6px 14px; border-radius:6px; border:1px solid var(--border); background:transparent; color:var(--muted); cursor:pointer;">"HTML 가져오기"</button>
+                            </div>
+                            <div id="tab-md">
                             <label style="display:block; font-size:13px; font-weight:600; color:var(--muted); margin-bottom:8px;">"상세 설명 (Markdown)"</label>
                             <textarea id="editor" name="description_md" rows="16" class="input" style="font-family:monospace; font-size:13px; line-height:1.7;"></textarea>
+                            </div>
+                            <div id="tab-html" style="display:none;">
+                                <label style="display:block; font-size:13px; font-weight:600; color:var(--muted); margin-bottom:8px;">"HTML 소스 붙여넣기"</label>
+                                <textarea name="description_html_import" rows="16" class="input" style="font-family:monospace; font-size:13px; line-height:1.7;" placeholder="여기에 HTML 소스를 붙여넣으세요"></textarea>
+                            </div>
                         </div>
                     </div>
                     <button type="submit" style="background:#DE5B30; color:#fff; padding:12px 20px; border-radius:8px; font-weight:600; font-size:14px; width:100%; border:none; cursor:pointer;">"상품 저장"</button>
                 </form>
                 <script>
+                    {(crate::services::markdown::EDITOR_TAB_JS)}
                     {(crate::services::markdown::EASYMDE_INIT_JS)}
                     "var easymde=null;try{easymde=initEasyMDE('editor');}catch(e){}"
                 </script>
@@ -879,8 +904,18 @@ pub async fn edit_product(cx: &Cx) -> Result<impl View + '_> {
                                     <input type="datetime-local" name="published_at" class="input" value=(crate::util::format_schedule_kst(p.published_at.as_deref()))>
                                 </div>
                                 <div style="grid-column:1 / -1;">
+                                    <div style="display:flex; gap:8px; margin-bottom:12px;">
+                                        <button type="button" id="tabbtn-md" onclick="showEditorTab('md')" style="font-size:12px; font-weight:600; padding:6px 14px; border-radius:6px; border:1px solid var(--brand); background:rgba(222,91,48,0.12); color:var(--text); cursor:pointer;">"마크다운"</button>
+                                        <button type="button" id="tabbtn-html" onclick="showEditorTab('html')" style="font-size:12px; font-weight:600; padding:6px 14px; border-radius:6px; border:1px solid var(--border); background:transparent; color:var(--muted); cursor:pointer;">"HTML 가져오기"</button>
+                                    </div>
+                                    <div id="tab-md">
                                     <label style="display:block; font-size:13px; font-weight:600; color:var(--muted); margin-bottom:8px;">"상세 설명 (Markdown)"</label>
                                     <textarea id="editor" name="description_md" rows="16" class="input" style="font-family:monospace; font-size:13px; line-height:1.7;">(p.description_md.clone())</textarea>
+                                    </div>
+                                    <div id="tab-html" style="display:none;">
+                                        <label style="display:block; font-size:13px; font-weight:600; color:var(--muted); margin-bottom:8px;">"HTML 소스 붙여넣기 (비워두면 기존 유지)"</label>
+                                        <textarea name="description_html_import" rows="16" class="input" style="font-family:monospace; font-size:13px; line-height:1.7;" placeholder="여기에 HTML 소스를 붙여넣으세요"></textarea>
+                                    </div>
                                 </div>
                             </div>
                             <button type="submit" style="background:#DE5B30; color:#fff; padding:12px 20px; border-radius:8px; font-weight:600; font-size:14px; width:100%; border:none; cursor:pointer;">"변경 사항 저장"</button>
@@ -919,6 +954,7 @@ pub async fn edit_product(cx: &Cx) -> Result<impl View + '_> {
                             }
                         </div>
                         <script>
+                            {(crate::services::markdown::EDITOR_TAB_JS)}
                             {(crate::services::markdown::EASYMDE_INIT_JS)}
                             "var easymde=null;try{easymde=initEasyMDE('editor');}catch(e){}"
                         </script>

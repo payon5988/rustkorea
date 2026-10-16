@@ -159,8 +159,8 @@ pub async fn edit_chapter(cx: &Cx) -> Result<impl View + '_> {
                 <meta charset="utf-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <title>"챕터 수정 - Rust Korea Admin"</title>
-                <link rel="stylesheet" href=(crate::admin_ui::TOAST_CSS_URL) integrity=(crate::admin_ui::TOAST_CSS_SRI) crossorigin="anonymous">
-                <script src=(crate::admin_ui::TOAST_JS_URL) integrity=(crate::admin_ui::TOAST_JS_SRI) crossorigin="anonymous"></script>
+                <link rel="stylesheet" href=(crate::admin_ui::TOAST_CSS_URL)>
+                <script src=(crate::admin_ui::TOAST_JS_URL)></script>
                 <style>{(ADMIN_STYLE)}</style>
                 <script>{(crate::admin_ui::ADMIN_THEME_JS)}</script>
                 <style>{(crate::services::markdown::MARKDOWN_CSS)}</style>

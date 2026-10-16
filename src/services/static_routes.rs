@@ -148,6 +148,22 @@ pub async fn og_image(_cx: &Cx) -> Result<BinBody> {
     })
 }
 
+#[route(GET "/vendor/toastui-editor.min.css")]
+pub async fn vendor_toast_css(_cx: &Cx) -> Result<TypedBody> {
+    Ok(TypedBody {
+        content_type: "text/css; charset=utf-8",
+        body: include_str!("../../public/vendor/toastui-editor.min.css").to_string(),
+    })
+}
+
+#[route(GET "/vendor/toastui-editor-all.min.js")]
+pub async fn vendor_toast_js(_cx: &Cx) -> Result<TypedBody> {
+    Ok(TypedBody {
+        content_type: "application/javascript; charset=utf-8",
+        body: include_str!("../../public/vendor/toastui-editor-all.min.js").to_string(),
+    })
+}
+
 topcoat::router::path_param!(upload_name);
 
 /// Runtime uploads (product images) from `UPLOAD_DIR`. Only serves files

@@ -42,11 +42,8 @@ a { color: inherit; text-decoration: none; }
 /// `prefers-color-scheme`. Include via `<script>{(ADMIN_THEME_JS)}</script>`.
 pub const ADMIN_THEME_JS: &str = r#"(function(){var K="rk-admin-theme";var cur="dark";try{cur=localStorage.getItem(K)||"dark"}catch(e){}function mark(m){try{var bs=document.querySelectorAll("[data-admin-theme-btn]");if(bs.forEach){bs.forEach(function(b){if(b.getAttribute("data-admin-theme-btn")===m){b.setAttribute("data-active","1")}else{b.removeAttribute("data-active")}})}}catch(e){}}function apply(m){var t=m;if(m==="system"){var isLight=false;try{var mq=window.matchMedia("(prefers-color-scheme: light)");if(mq){isLight=mq.matches}}catch(e){}if(isLight){t="light"}else{t="dark"}}document.documentElement.setAttribute("data-theme",t);mark(m)}try{window.__rkSetAdminTheme=function(m){try{localStorage.setItem(K,m)}catch(e){}apply(m)}}catch(e){}apply(cur);try{if(window.matchMedia){window.matchMedia("(prefers-color-scheme: light)").addEventListener("change",function(){var v="dark";try{v=localStorage.getItem(K)||"dark"}catch(e){}if(v==="system"){apply("system")}})}}catch(e){}})();"#;
 
-/// Toast UI Editor (NHN) CDN, pinned 3.2.2 + SRI. Markdown/WYSIWYG dual
-/// mode with table GUI editing and paste-to-upload via `addImageBlobHook`.
-pub const TOAST_CSS_URL: &str = "https://uicdn.toast.com/editor/3.2.2/toastui-editor.min.css";
-pub const TOAST_CSS_SRI: &str =
-    "sha384-Uw+ry/KtbmFNRGJd+U+hpfJou1QMHCAQc8k8OdZkclgUySjn8aJJcVTkkCeSwP6H";
-pub const TOAST_JS_URL: &str = "https://uicdn.toast.com/editor/3.2.2/toastui-editor-all.min.js";
-pub const TOAST_JS_SRI: &str =
-    "sha384-FF8a/n4tsDcp0oRDFHNNygVDoaTZfIGmaSzvbL8wMqj/8R5sD+JKKKqfQmwJQAQY";
+/// Toast UI Editor (NHN) 3.2.2, self-hosted under `/vendor/` (no CDN
+/// dependency). Markdown/WYSIWYG dual mode with table GUI editing and
+/// paste-to-upload via `addImageBlobHook`.
+pub const TOAST_CSS_URL: &str = "/vendor/toastui-editor.min.css";
+pub const TOAST_JS_URL: &str = "/vendor/toastui-editor-all.min.js";

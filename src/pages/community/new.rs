@@ -201,8 +201,8 @@ pub async fn new_post_page(cx: &Cx) -> Result<impl View + '_> {
                         <a href="/community" style="color:#2563EB; font-weight:500;">"<- 커뮤니티로 돌아가기"</a>
                     </div>
                 </div>
-                <link rel="stylesheet" href=(crate::admin_ui::EASYMDE_CSS_URL)>
-                <script src=(crate::admin_ui::EASYMDE_JS_URL)></script>
+                <link rel="stylesheet" href=(crate::admin_ui::TOAST_CSS_URL) integrity=(crate::admin_ui::TOAST_CSS_SRI) crossorigin="anonymous">
+                <script src=(crate::admin_ui::TOAST_JS_URL) integrity=(crate::admin_ui::TOAST_JS_SRI) crossorigin="anonymous"></script>
                 <script>
                     {(crate::services::markdown::EASYMDE_INIT_JS)}
                     {(crate::services::markdown::MD_UPLOAD_JS)}

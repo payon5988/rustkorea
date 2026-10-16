@@ -350,10 +350,12 @@ mod hl_version_tests {
     }
 }
 
-/// Shared EasyMDE initializer (single source; replaces 6 copies).
-/// Defines `initEasyMDE(id)` and returns the editor instance.
-/// No `<`, `>`, `&` characters (view! would HTML-escape them).
-pub const EASYMDE_INIT_JS: &str = r#"function initEasyMDE(id){var el=document.getElementById(id);if(!el){return null;}var ed=new EasyMDE({element:el,minHeight:'300px',status:false,toolbar:['bold','italic','strikethrough','heading','|','quote','unordered-list','ordered-list','table','horizontal-rule','|','link','image','code','preview','side-by-side','fullscreen','guide'],previewClass:['markdown-body','editor-preview']});return ed;}"#;
+/// Shared editor initializer (single source; replaces 7 copies).
+/// Defines `initEasyMDE(id)` backed by Toast UI Editor (markdown mode with
+/// WYSIWYG toggle, table GUI, paste-to-upload). Returns an adapter with a
+/// `.value()` getter/setter so existing callers keep working; falls back to
+/// the raw textarea when the CDN is unreachable. No `<`, `>`, `&` characters.
+pub const EASYMDE_INIT_JS: &str = r#"function editorCsrf(){var i=document.querySelector('input[name="csrf_token"]');if(i){return i.value;}return '';}function uploadEditorImage(blob,callback){var fd=new FormData();fd.append('csrf_token',editorCsrf());fd.append('file',blob);fetch('/admin/uploads',{method:'POST',body:fd}).then(function(r){return r.json();}).then(function(j){if(j&&j.url){callback(j.url,'image');}else{callback('','');}}).catch(function(){callback('','');});}function initEasyMDE(id){var ta=document.getElementById(id);if(!ta){return null;}try{if(!window.toastui||!window.toastui.Editor){return null;}var wrap=document.createElement('div');ta.parentNode.insertBefore(wrap,ta);ta.style.display='none';var ed=new window.toastui.Editor({el:wrap,height:'500px',initialEditType:'markdown',previewStyle:'vertical',initialValue:ta.value,hooks:{addImageBlobHook:function(blob,callback){uploadEditorImage(blob,callback);}}});ed.on('change',function(){ta.value=ed.getMarkdown();});return {value:function(t){if(t===undefined){return ed.getMarkdown();}ed.setMarkdown(t);ta.value=t;}};}catch(e){if(ta){ta.style.display='';}return null;}}"#;
 
 /// Syntax highlighting + copy buttons for `pre code` blocks.
 /// Call as `initHighlight()` after render. No `<`, `>`, `&` characters.

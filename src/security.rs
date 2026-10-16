@@ -25,8 +25,8 @@ pub const X_FRAME_OPTIONS: &str = "SAMEORIGIN";
 pub const REFERRER_POLICY: &str = "strict-origin-when-cross-origin";
 pub const PERMISSIONS_POLICY: &str = "camera=(), microphone=(), geolocation=()";
 pub const CONTENT_SECURITY_POLICY: &str = "default-src 'self'; \
-     script-src 'self' 'unsafe-inline' https://www.youtube.com https://s.ytimg.com https://cdnjs.cloudflare.com https://pagead2.googlesyndication.com https://www.googletagservices.com; \
-     style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; \
+     script-src 'self' 'unsafe-inline' https://www.youtube.com https://s.ytimg.com https://cdnjs.cloudflare.com https://uicdn.toast.com https://pagead2.googlesyndication.com https://www.googletagservices.com; \
+     style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com https://uicdn.toast.com; \
      font-src 'self' https://fonts.gstatic.com; \
      img-src 'self' data: https:; \
      media-src 'self' https:; \

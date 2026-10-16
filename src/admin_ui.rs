@@ -16,10 +16,7 @@ a { color: inherit; text-decoration: none; }
 .atheme-btn { flex: 1; background: transparent; border: 1px solid var(--border); color: var(--muted); border-radius: 6px; font-size: 11px; font-weight: 600; padding: 6px 4px; cursor: pointer; font-family: inherit; transition: all 0.15s; }
 .atheme-btn:hover { color: var(--text); border-color: var(--dim); }
 .atheme-btn[data-active='1'] { background: rgba(222,91,48,0.12); border-color: var(--brand); color: var(--text); }
-.EasyMDEEditor, .EasyMDEEditor .editor-toolbar, .EasyMDEEditor textarea, .EasyMDEEditor .CodeMirror, .editor-toolbar, .CodeMirror { background: #fff !important; color: #333 !important; border-color: #d1d5db !important; }
-.editor-toolbar button { color: #555 !important; background: none !important; }
-.editor-toolbar button.active { background: #ddd !important; }
-.editor-toolbar i.separator { border-color: #d1d5db !important; }
+.toastui-editor-defaultUI { border-color: #d1d5db !important; }
 .wrap { max-width: 420px; margin: 0 auto; padding: 80px 24px; }
 .logo { text-align: center; margin-bottom: 40px; }
 .logo-icon { width: 48px; height: 48px; border-radius: 12px; background: rgba(222,91,48,0.1); display: inline-flex; align-items: center; justify-content: center; margin-bottom: 16px; }
@@ -45,6 +42,11 @@ a { color: inherit; text-decoration: none; }
 /// `prefers-color-scheme`. Include via `<script>{(ADMIN_THEME_JS)}</script>`.
 pub const ADMIN_THEME_JS: &str = r#"(function(){var K="rk-admin-theme";var cur="dark";try{cur=localStorage.getItem(K)||"dark"}catch(e){}function mark(m){try{var bs=document.querySelectorAll("[data-admin-theme-btn]");if(bs.forEach){bs.forEach(function(b){if(b.getAttribute("data-admin-theme-btn")===m){b.setAttribute("data-active","1")}else{b.removeAttribute("data-active")}})}}catch(e){}}function apply(m){var t=m;if(m==="system"){var isLight=false;try{var mq=window.matchMedia("(prefers-color-scheme: light)");if(mq){isLight=mq.matches}}catch(e){}if(isLight){t="light"}else{t="dark"}}document.documentElement.setAttribute("data-theme",t);mark(m)}try{window.__rkSetAdminTheme=function(m){try{localStorage.setItem(K,m)}catch(e){}apply(m)}}catch(e){}apply(cur);try{if(window.matchMedia){window.matchMedia("(prefers-color-scheme: light)").addEventListener("change",function(){var v="dark";try{v=localStorage.getItem(K)||"dark"}catch(e){}if(v==="system"){apply("system")}})}}catch(e){}})();"#;
 
-/// EasyMDE markdown editor CDN (jsdelivr, pinned version).
-pub const EASYMDE_CSS_URL: &str = "https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.css";
-pub const EASYMDE_JS_URL: &str = "https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.js";
+/// Toast UI Editor (NHN) CDN, pinned 3.2.2 + SRI. Markdown/WYSIWYG dual
+/// mode with table GUI editing and paste-to-upload via `addImageBlobHook`.
+pub const TOAST_CSS_URL: &str = "https://uicdn.toast.com/editor/3.2.2/toastui-editor.min.css";
+pub const TOAST_CSS_SRI: &str =
+    "sha384-Uw+ry/KtbmFNRGJd+U+hpfJou1QMHCAQc8k8OdZkclgUySjn8aJJcVTkkCeSwP6H";
+pub const TOAST_JS_URL: &str = "https://uicdn.toast.com/editor/3.2.2/toastui-editor-all.min.js";
+pub const TOAST_JS_SRI: &str =
+    "sha384-FF8a/n4tsDcp0oRDFHNNygVDoaTZfIGmaSzvbL8wMqj/8R5sD+JKKKqfQmwJQAQY";

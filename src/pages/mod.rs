@@ -16,4 +16,5 @@ pub mod search;
 pub mod search_shard;
 pub mod showcase;
 pub mod sitemap;
+pub mod uploads;
 pub mod youtube;

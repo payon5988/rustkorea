@@ -941,7 +941,7 @@ pub async fn edit_product(cx: &Cx) -> Result<impl View + '_> {
                                 <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:16px;">
                                     for img in &images {
                                         <div style="position:relative;">
-                                            <img src=(img.url.clone()) alt="" style="width:120px; height:80px; object-fit:cover; border-radius:6px; border:1px solid var(--border); display:block;">
+                                            <img src=(img.url.clone()) alt="" onclick="openShot(this.src)" style="width:120px; height:80px; object-fit:cover; border-radius:6px; border:1px solid var(--border); display:block; cursor:zoom-in;" title="클릭하면 크게 보기">
                                             <form action="/admin/products/images/delete" method="POST" onsubmit="return confirm('이 이미지를 삭제하시겠습니까?')" style="display:inline;">
                                                 <input type="hidden" name="csrf_token" value=(csrf_token.clone())>
                                                 <input type="hidden" name="id" value=(img.id.clone())>
@@ -957,6 +957,12 @@ pub async fn edit_product(cx: &Cx) -> Result<impl View + '_> {
                             {(crate::services::markdown::EDITOR_TAB_JS)}
                             {(crate::services::markdown::EASYMDE_INIT_JS)}
                             "var easymde=null;try{easymde=initEasyMDE('editor');}catch(e){}"
+                        </script>
+                        <div id="shot-lightbox" onclick="closeShot()" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.85); z-index:100; align-items:center; justify-content:center; padding:24px;">
+                            <img id="shot-lightbox-img" src="" alt="확대 보기" style="max-width:100%; max-height:100%; border-radius:12px;">
+                        </div>
+                        <script>
+                            {r#"function openShot(u){var l=document.getElementById('shot-lightbox');var i=document.getElementById('shot-lightbox-img');if(l&&i){i.setAttribute('src',u);l.style.display='flex';}}function closeShot(){var l=document.getElementById('shot-lightbox');if(l){l.style.display='none';}}"#}
                         </script>
                     </div>
                 </body>

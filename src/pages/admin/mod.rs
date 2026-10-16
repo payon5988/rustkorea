@@ -12,6 +12,7 @@ pub mod delete_chapter;
 pub mod delete_manual;
 pub mod edit_chapter;
 pub mod edit_manual;
+pub mod editor_test;
 pub mod inquiries;
 pub mod manuals;
 pub mod menus;

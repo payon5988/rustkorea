@@ -255,6 +255,25 @@ async fn resolve_page_og(
                 ),
             }
         }
+        ["blog", slug] => {
+            let row: Option<(String, String)> = sqlx::query_as(&format!(
+                "SELECT title, content_md FROM blog_posts WHERE slug = $1 AND {}",
+                crate::util::published_clause("")
+            ))
+            .bind(*slug)
+            .fetch_optional(db)
+            .await
+            .ok()
+            .flatten();
+            match row {
+                Some((title, md)) => (title, summary(&md), "article".to_string()),
+                None => (
+                    site_title.to_string(),
+                    site_description.to_string(),
+                    "website".to_string(),
+                ),
+            }
+        }
         ["manuals", series, chapter] => {
             let row: Option<(String, String, String)> = sqlx::query_as(&format!(
                 "SELECT mc.title, mc.content_md, ms.title FROM manual_chapters mc

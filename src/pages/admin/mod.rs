@@ -2,6 +2,7 @@ pub mod admin_events;
 pub mod admin_manual_detail;
 pub mod audit;
 pub mod badges;
+pub mod blog;
 pub mod categories;
 pub mod comments;
 pub mod create_chapter;

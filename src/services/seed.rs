@@ -68,7 +68,8 @@ pub async fn seed_database(db: &Db) {
             ("매뉴얼", "/manuals", 0),
             ("영상", "/youtube", 1),
             ("커뮤니티", "/community", 2),
-            ("검색", "/search", 3),
+            ("블로그", "/blog", 3),
+            ("검색", "/search", 4),
         ];
         for (label, href, position) in default_navs {
             sqlx::query("INSERT INTO nav_items (label, href, position, visible, section) VALUES ($1, $2, $3, 1, 'header')")

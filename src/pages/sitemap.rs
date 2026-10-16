@@ -95,6 +95,23 @@ pub async fn sitemap_xml(cx: &Cx) -> Result<TypedBody> {
         }
     }
 
+    let blog_slugs: Vec<(String, String)> = sqlx::query_as(&format!(
+        "SELECT slug, updated_at FROM blog_posts WHERE {} ORDER BY updated_at DESC LIMIT $1",
+        crate::util::published_clause("")
+    ))
+    .bind(SITEMAP_POST_LIMIT)
+    .fetch_all(db)
+    .await
+    .unwrap_or_default();
+    for (slug, updated) in &blog_slugs {
+        let lastmod = to_iso_date(updated);
+        if lastmod.is_empty() {
+            entries.push(format!(r#"  <url><loc>{domain}/blog/{slug}</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>"#));
+        } else {
+            entries.push(format!(r#"  <url><loc>{domain}/blog/{slug}</loc><lastmod>{lastmod}</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>"#));
+        }
+    }
+
     let xml = format!(
         r#"<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">

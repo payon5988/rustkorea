@@ -42,6 +42,7 @@ pub async fn AdminSidebar(cx: &Cx, active: String) -> Result<impl View + '_> {
     let d_menus = nav_item("/admin/menus", &active);
     let d_badges = nav_item("/admin/badges", &active);
     let d_products = nav_item("/admin/products", &active);
+    let d_blog = nav_item("/admin/blog", &active);
     let d_inquiries = nav_item("/admin/inquiries", &active);
     let d_settings = nav_item("/admin/settings", &active);
     let d_profile = nav_item("/admin/profile", &active);
@@ -245,6 +246,12 @@ pub async fn AdminSidebar(cx: &Cx, active: String) -> Result<impl View + '_> {
                     <a href="/admin/products" style=(d_products)>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
                         "상품 관리"
+                    </a>
+                    }
+                    if can_settings {
+                    <a href="/admin/blog" style=(d_blog)>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+                        "블로그 관리"
                     </a>
                     }
                     if can_settings {

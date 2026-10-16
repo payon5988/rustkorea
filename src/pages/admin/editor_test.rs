@@ -10,6 +10,9 @@ use crate::components::admin_sidebar::AdminSidebar;
 
 /// Editor diagnostics: loads the same Toast assets as the writing forms and
 /// reports each init step as plain text (no devtools needed).
+///
+/// The script must avoid `&`, `<`, `>` (view! escapes them inside `{...}`).
+pub const DIAG_JS: &str = r#"function diagLine(t){var ul=document.getElementById('diag-list');if(!ul){return;}while(ul.firstChild){ul.removeChild(ul.firstChild);}var li=document.createElement('li');li.textContent=t;ul.appendChild(li);}function diagAdd(t){var ul=document.getElementById('diag-list');if(!ul){return;}var li=document.createElement('li');li.textContent=t;ul.appendChild(li);}try{var tags=document.querySelectorAll('script[src*="toast"]');var s1='NO';if(tags.length){s1='YES';}diagLine('1. script tag: '+s1);var hasG='NO';if(window.toastui){if(window.toastui.Editor){hasG='YES';}}diagAdd('2. toastui.Editor: '+hasG);if(hasG==='YES'){var box=document.getElementById('diag-box');var ed=new window.toastui.Editor({el:box,height:'200px',initialEditType:'wysiwyg',initialValue:'test'});var n=box.querySelectorAll('button').length;diagAdd('3. constructor: OK');diagAdd('4. toolbar buttons: '+n);}else{diagAdd('3. constructor: SKIP');diagAdd('4. toolbar buttons: SKIP');}}catch(e){var msg='?';if(e){if(e.message){msg=e.message;}}diagAdd('ERROR: '+String(msg).slice(0,120));}"#;
 #[page("/admin/editor-test")]
 pub async fn editor_test(cx: &Cx) -> Result<impl View + '_> {
     let __denied = {
@@ -50,10 +53,23 @@ pub async fn editor_test(cx: &Cx) -> Result<impl View + '_> {
                     <div id="diag-box"></div>
                 </div>
                 <script>
-                    {r#"function diagLine(t){var ul=document.getElementById('diag-list');if(!ul){return;}while(ul.firstChild){ul.removeChild(ul.firstChild);}var li=document.createElement('li');li.textContent=t;ul.appendChild(li);}function diagAdd(t){var ul=document.getElementById('diag-list');if(!ul){return;}var li=document.createElement('li');li.textContent=t;ul.appendChild(li);}try{var tags=document.querySelectorAll('script[src*="toast"]');var s1='NO';if(tags.length){s1='YES';}diagLine('1. script tag: '+s1);var hasG='NO';if(window.toastui&&window.toastui.Editor){hasG='YES';}diagAdd('2. toastui.Editor: '+hasG);if(hasG==='YES'){var box=document.getElementById('diag-box');var ed=new window.toastui.Editor({el:box,height:'200px',initialEditType:'wysiwyg',initialValue:'test'});var n=box.querySelectorAll('button').length;diagAdd('3. constructor: OK');diagAdd('4. toolbar buttons: '+n);}else{diagAdd('3. constructor: SKIP');diagAdd('4. toolbar buttons: SKIP');}}catch(e){var msg='?';if(e&&e.message){msg=e.message;}diagAdd('ERROR: '+String(msg).slice(0,120));}"#}
+                    {(DIAG_JS)}
                 </script>
             </div>
         </body>
         </html>
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::DIAG_JS;
+
+    #[test]
+    fn diag_js_escape_safe() {
+        assert!(
+            !DIAG_JS.contains(['&', '<', '>']),
+            "view! would escape these and freeze the diagnostics"
+        );
+    }
 }

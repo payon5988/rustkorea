@@ -962,7 +962,7 @@ pub async fn edit_product(cx: &Cx) -> Result<impl View + '_> {
                             <img id="shot-lightbox-img" src="" alt="확대 보기" style="max-width:100%; max-height:100%; border-radius:12px;">
                         </div>
                         <script>
-                            {r#"function openShot(u){var l=document.getElementById('shot-lightbox');var i=document.getElementById('shot-lightbox-img');if(l&&i){i.setAttribute('src',u);l.style.display='flex';}}function closeShot(){var l=document.getElementById('shot-lightbox');if(l){l.style.display='none';}}"#}
+                            {r#"function openShot(u){var l=document.getElementById('shot-lightbox');var i=document.getElementById('shot-lightbox-img');if(l){if(i){i.setAttribute('src',u);l.style.display='flex';}}}function closeShot(){var l=document.getElementById('shot-lightbox');if(l){l.style.display='none';}}"#}
                         </script>
                     </div>
                 </body>

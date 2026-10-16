@@ -276,8 +276,8 @@ fn restore_youtube_embeds(line: &str, embeds: &[String]) -> String {
 /// preview via `previewClass`). Single source of truth — do not fork.
 pub const MARKDOWN_CSS: &str = r#"
 .markdown-body { font-size: 1rem; line-height: 1.8; color: #1f2937; word-wrap: break-word; }
-.markdown-body > *:first-child { margin-top: 0; }
-.markdown-body > *:last-child { margin-bottom: 0; }
+.markdown-body :first-child { margin-top: 0; }
+.markdown-body :last-child { margin-bottom: 0; }
 .markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4, .markdown-body h5, .markdown-body h6 { font-weight: 800; letter-spacing: -0.02em; line-height: 1.3; color: #111827; margin: 1.6em 0 0.8em; }
 .markdown-body h1 { font-size: 1.75rem; padding-bottom: 0.4em; border-bottom: 1px solid #e5e7eb; }
 .markdown-body h2 { font-size: 1.5rem; padding-bottom: 0.35em; border-bottom: 1px solid #e5e7eb; }
@@ -288,12 +288,12 @@ pub const MARKDOWN_CSS: &str = r#"
 .markdown-body a:hover { text-decoration: underline; }
 .markdown-body ul, .markdown-body ol { margin: 0 0 1em; padding-left: 1.5em; }
 .markdown-body li { margin: 0.3em 0; }
-.markdown-body li > ul, .markdown-body li > ol { margin-bottom: 0; }
+.markdown-body li ul, .markdown-body li ol { margin-bottom: 0; }
 .markdown-body ul.contains-task-list { list-style: none; padding-left: 0.2em; }
 .markdown-body li.task-list-item { list-style: none; }
 .markdown-body input[type="checkbox"] { margin-right: 0.5em; accent-color: #DE5B30; width: 1em; height: 1em; }
 .markdown-body blockquote { margin: 0 0 1em; padding: 0.8em 1.2em; border-left: 4px solid #DE5B30; background: #fafaf9; color: #4b5563; border-radius: 0 8px 8px 0; }
-.markdown-body blockquote > *:last-child { margin-bottom: 0; }
+.markdown-body blockquote :last-child { margin-bottom: 0; }
 .markdown-body table { display: block; overflow-x: auto; border-collapse: collapse; margin: 0 0 1em; font-size: 0.9em; }
 .markdown-body th, .markdown-body td { border: 1px solid #e5e7eb; padding: 8px 12px; text-align: left; }
 .markdown-body th { background: #f9fafb; font-weight: 700; }
@@ -337,7 +337,29 @@ pub const HL_RUST_SRI: &str =
 
 #[cfg(test)]
 mod hl_version_tests {
-    use super::{HL_CSS_URL, HL_JS_URL, HL_RUST_URL, HL_VERSION};
+    use super::{
+        EASYMDE_INIT_JS, EDITOR_TAB_JS, HL_CSS_URL, HL_INIT_JS, HL_JS_URL, HL_RUST_URL, HL_VERSION,
+        MARKDOWN_CSS, MD_UPLOAD_JS, TOC_JS,
+    };
+
+    #[test]
+    fn interpolated_assets_escape_safe() {
+        // view! HTML-escapes `&`, `<`, `>` inside `{...}` interpolations,
+        // which silently breaks inline JS/CSS (was: dead editor, dead TOC).
+        for js in [
+            EASYMDE_INIT_JS,
+            EDITOR_TAB_JS,
+            TOC_JS,
+            HL_INIT_JS,
+            MD_UPLOAD_JS,
+            MARKDOWN_CSS,
+        ] {
+            assert!(
+                !js.contains(['&', '<', '>']),
+                "interpolated asset contains escapable char"
+            );
+        }
+    }
 
     #[test]
     fn urls_pin_hl_version() {
@@ -355,7 +377,7 @@ mod hl_version_tests {
 /// WYSIWYG toggle, table GUI, paste-to-upload). Returns an adapter with a
 /// `.value()` getter/setter so existing callers keep working; falls back to
 /// the raw textarea when the CDN is unreachable. No `<`, `>`, `&` characters.
-pub const EASYMDE_INIT_JS: &str = r#"function editorCsrf(){var i=document.querySelector('input[name="csrf_token"]');if(i){return i.value;}return '';}function uploadEditorImage(blob,callback){var fd=new FormData();fd.append('csrf_token',editorCsrf());fd.append('file',blob);fetch('/admin/uploads',{method:'POST',body:fd}).then(function(r){return r.json();}).then(function(j){if(j&&j.url){callback(j.url,'image');}else{callback('','');}}).catch(function(){callback('','');});}function initEasyMDE(id){var ta=document.getElementById(id);if(!ta){return null;}try{if(!window.toastui||!window.toastui.Editor){return null;}var wrap=document.createElement('div');wrap.setAttribute('style','background:#fff;border-radius:8px;color-scheme:light;');ta.parentNode.insertBefore(wrap,ta);ta.style.display='none';var ed=new window.toastui.Editor({el:wrap,height:'500px',initialEditType:'wysiwyg',previewStyle:'vertical',initialValue:ta.value,hooks:{addImageBlobHook:function(blob,callback){uploadEditorImage(blob,callback);}}});ed.on('change',function(){ta.value=ed.getMarkdown();});return {value:function(t){if(t===undefined){return ed.getMarkdown();}ed.setMarkdown(t);ta.value=t;}};}catch(e){if(ta){ta.style.display='';}return null;}}"#;
+pub const EASYMDE_INIT_JS: &str = r#"function editorCsrf(){var i=document.querySelector('input[name="csrf_token"]');if(i){return i.value;}return '';}function uploadEditorImage(blob,callback){var fd=new FormData();fd.append('csrf_token',editorCsrf());fd.append('file',blob);fetch('/admin/uploads',{method:'POST',body:fd}).then(function(r){return r.json();}).then(function(j){if(j){if(j.url){callback(j.url,'image');return;}}callback('','');}).catch(function(){callback('','');});}function initEasyMDE(id){var ta=document.getElementById(id);if(!ta){return null;}try{if(!window.toastui||!window.toastui.Editor){return null;}var wrap=document.createElement('div');wrap.setAttribute('style','background:#fff;border-radius:8px;color-scheme:light;');ta.parentNode.insertBefore(wrap,ta);ta.style.display='none';var ed=new window.toastui.Editor({el:wrap,height:'500px',initialEditType:'wysiwyg',previewStyle:'vertical',initialValue:ta.value,hooks:{addImageBlobHook:function(blob,callback){uploadEditorImage(blob,callback);}}});ed.on('change',function(){ta.value=ed.getMarkdown();});return {value:function(t){if(t===undefined){return ed.getMarkdown();}ed.setMarkdown(t);ta.value=t;}};}catch(e){if(ta){ta.style.display='';}return null;}}"#;
 
 /// Syntax highlighting + copy buttons for `pre code` blocks.
 /// Call as `initHighlight()` after render. No `<`, `>`, `&` characters.

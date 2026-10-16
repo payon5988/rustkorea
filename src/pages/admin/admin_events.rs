@@ -125,7 +125,7 @@ pub async fn admin_events_page(cx: &Cx) -> Result<impl View + '_> {
 
                 <div style="background:var(--card); border:1px solid var(--border); border-radius:10px; padding:16px 20px; margin-bottom:16px; display:flex; gap:12px; align-items:center;">
                     <input type="text" id="event-search" placeholder="제목으로 검색..." oninput=(r#"var q=this.value.toLowerCase();document.querySelectorAll('#events-tbody tr').forEach(function(r){r.style.display=r.textContent.toLowerCase().includes(q)?'':'none'})"#) style="flex:1; background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:10px 14px; font-size:14px; color:var(--text2); outline:none;">
-                    <input type="date" id="event-date-filter" onchange=(r#"var d=this.value;document.querySelectorAll('#events-tbody tr').forEach(function(r){if(!d){r.style.display=''}else{var c=r.querySelector('td:nth-child(2)');r.style.display=c&&c.textContent.trim()===d?'':'none'}})"#) style="background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:10px 14px; font-size:14px; color:var(--text2); outline:none;">
+                    <input type="date" id="event-date-filter" onchange=(r#"var d=this.value;document.querySelectorAll('#events-tbody tr').forEach(function(r){if(!d){r.style.display='';return;}var c=r.querySelector('td:nth-child(2)');var show='none';if(c){if(c.textContent.trim()===d){show='';}}r.style.display=show})"#) style="background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:10px 14px; font-size:14px; color:var(--text2); outline:none;">
                 </div>
 
                 if events.is_empty() {

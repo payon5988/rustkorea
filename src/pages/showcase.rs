@@ -205,7 +205,7 @@ pub async fn showcase_detail(cx: &Cx) -> Result<impl View + '_> {
                 @media (max-width: 820px) { .shop-layout { grid-template-columns: 1fr; } .shop-info { position: static; } }"#}
             </style>
             <script>
-                {r#"function showShot(u){var m=document.getElementById('shot-main');if(m){m.setAttribute('src',u);}}function openShot(u){var l=document.getElementById('shot-lightbox');var i=document.getElementById('shot-lightbox-img');if(l&&i){i.setAttribute('src',u);l.style.display='flex';}}function closeShot(){var l=document.getElementById('shot-lightbox');if(l){l.style.display='none';}}"#}
+                {r#"function showShot(u){var m=document.getElementById('shot-main');if(m){m.setAttribute('src',u);}}function openShot(u){var l=document.getElementById('shot-lightbox');var i=document.getElementById('shot-lightbox-img');if(l){if(i){i.setAttribute('src',u);l.style.display='flex';}}}function closeShot(){var l=document.getElementById('shot-lightbox');if(l){l.style.display='none';}}"#}
             </script>
             if let Some(p) = product {
                 <a href="/vibecoding" style="font-size:13px; color:#6b7280; display:inline-flex; align-items:center; gap:6px; margin-bottom:24px;">

@@ -47,3 +47,24 @@ pub const ADMIN_THEME_JS: &str = r#"(function(){var K="rk-admin-theme";var cur="
 /// paste-to-upload via `addImageBlobHook`.
 pub const TOAST_CSS_URL: &str = "/vendor/toastui-editor.min.css";
 pub const TOAST_JS_URL: &str = "/vendor/toastui-editor-all.min.js";
+
+#[cfg(test)]
+mod tests {
+    use super::{ADMIN_STYLE, ADMIN_THEME_JS};
+
+    #[test]
+    fn theme_js_escape_safe() {
+        assert!(
+            !ADMIN_THEME_JS.contains(['&', '<', '>']),
+            "view! would escape these and kill the theme script"
+        );
+    }
+
+    #[test]
+    fn admin_style_escape_safe() {
+        assert!(
+            !ADMIN_STYLE.contains(['&', '<', '>']),
+            "view! would escape these and break admin CSS"
+        );
+    }
+}

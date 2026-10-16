@@ -455,3 +455,32 @@ impl Product {
         })
     }
 }
+
+#[allow(dead_code)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct BlogPost {
+    pub id: String,
+    pub slug: String,
+    pub title: String,
+    pub summary: String,
+    pub content_md: String,
+    pub content_html: String,
+    pub thumbnail_url: String,
+    pub source_url: String,
+    pub tags: String,
+    pub visibility: String,
+    pub published_at: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+impl BlogPost {
+    /// Comma-separated tags as a trimmed list.
+    pub fn tag_list(&self) -> Vec<String> {
+        self.tags
+            .split(',')
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .collect()
+    }
+}

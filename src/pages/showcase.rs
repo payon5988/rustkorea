@@ -168,41 +168,93 @@ pub async fn showcase_detail(cx: &Cx) -> Result<impl View + '_> {
         .map(|q| q.contains("sent=1"))
         .unwrap_or(false);
 
+    // Related products (same category, excluding self).
+    let related: Vec<Product> = if let Some(ref p) = product {
+        if p.category_id.is_none() {
+            vec![]
+        } else {
+            let mut list = sqlx::query_as::<_, Product>(&format!(
+                "SELECT * FROM products WHERE id != $1 AND category_id = $2 AND {} ORDER BY created_at DESC LIMIT 8",
+                crate::util::published_clause("")
+            ))
+            .bind(&p.id)
+            .bind(&p.category_id)
+            .fetch_all(db)
+            .await
+            .unwrap_or_default();
+            list.retain(|r| {
+                product_gate(access.as_ref(), &r.visibility) == crate::auth::access::Gate::Allow
+            });
+            list.truncate(4);
+            list
+        }
+    } else {
+        vec![]
+    };
+
     Ok(view! {
         <div class="container" style="padding-top:40px; padding-bottom:80px; max-width:960px;">
             <style>
-                {r#".show-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
-                .show-gallery img { width: 100%; height: 160px; object-fit: cover; border-radius: 10px; border: 1px solid #E4E4E7; }
-                @media (max-width: 640px) { .show-hero { height: 200px !important; } }"#}
+                {r#".shop-layout { display: grid; grid-template-columns: 1.15fr 1fr; gap: 28px; align-items: start; margin-bottom: 28px; }
+                .shop-info { position: sticky; top: 80px; background: #fff; border: 1px solid #E4E4E7; border-radius: 14px; padding: 24px; }
+                .shot-strip { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+                .shot-strip img { width: 72px; height: 54px; object-fit: cover; border-radius: 8px; border: 1px solid #E4E4E7; cursor: pointer; }
+                .shot-strip img:hover { border-color: #DE5B30; }
+                #shot-lightbox { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); z-index: 100; align-items: center; justify-content: center; padding: 24px; }
+                #shot-lightbox img { max-width: 100%; max-height: 100%; border-radius: 12px; }
+                @media (max-width: 820px) { .shop-layout { grid-template-columns: 1fr; } .shop-info { position: static; } }"#}
             </style>
+            <script>
+                {r#"function showShot(u){var m=document.getElementById('shot-main');if(m){m.setAttribute('src',u);}}function openShot(u){var l=document.getElementById('shot-lightbox');var i=document.getElementById('shot-lightbox-img');if(l&&i){i.setAttribute('src',u);l.style.display='flex';}}function closeShot(){var l=document.getElementById('shot-lightbox');if(l){l.style.display='none';}}"#}
+            </script>
             if let Some(p) = product {
                 <a href="/vibecoding" style="font-size:13px; color:#6b7280; display:inline-flex; align-items:center; gap:6px; margin-bottom:24px;">
                     "<- 프로젝트 목록"
                 </a>
 
-                if !p.main_image_url.is_empty() {
-                    <img src=(p.main_image_url.clone()) alt=(p.title.clone()) class="show-hero" style="width:100%; height:320px; object-fit:cover; border-radius:14px; margin-bottom:28px; display:block;">
-                }
-
-                <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px; flex-wrap:wrap;">
-                    if !category_name.is_empty() {
-                        <span class="badge" style="background:#eff6ff; color:#2563EB;">(category_name.clone())</span>
-                    }
-                    for tech in p.tech_list() {
-                        <span style="font-size:11px; font-weight:600; padding:3px 9px; border-radius:9999px; color:#1e40af; background:#dbeafe;">(tech)</span>
-                    }
+                <div class="shop-layout">
+                    <div style="min-width:0;">
+                        if !p.main_image_url.is_empty() {
+                            <img id="shot-main" src=(p.main_image_url.clone()) alt=(p.title.clone()) onclick="openShot(this.src)" style="width:100%; height:360px; object-fit:cover; border-radius:14px; display:block; cursor:zoom-in; border:1px solid #E4E4E7;">
+                        } else if !p.thumbnail_url.is_empty() {
+                            <img id="shot-main" src=(p.thumbnail_url.clone()) alt=(p.title.clone()) onclick="openShot(this.src)" style="width:100%; height:360px; object-fit:cover; border-radius:14px; display:block; cursor:zoom-in; border:1px solid #E4E4E7;">
+                        } else {
+                            <div style="width:100%; height:360px; border-radius:14px; background:linear-gradient(135deg, #1f2833 0%, #25283d 100%); display:flex; align-items:center; justify-content:center; font-size:72px;">"🦀"</div>
+                        }
+                        if !images.is_empty() {
+                            <div class="shot-strip">
+                                for img in &images {
+                                    <img src=(img.url.clone()) alt="프로젝트 화면" loading="lazy" onclick="showShot(this.src)">
+                                }
+                            </div>
+                        }
+                    </div>
+                    <div class="shop-info">
+                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px; flex-wrap:wrap;">
+                            if !category_name.is_empty() {
+                                <span class="badge" style="background:#eff6ff; color:#2563EB;">(category_name.clone())</span>
+                            }
+                            for tech in p.tech_list() {
+                                <span style="font-size:11px; font-weight:600; padding:3px 9px; border-radius:9999px; color:#1e40af; background:#dbeafe;">(tech)</span>
+                            }
+                        </div>
+                        <h1 style="font-size:1.6rem; font-weight:800; letter-spacing:-0.02em; margin-bottom:8px;">(p.title.clone())</h1>
+                        <p style="font-size:14px; color:#6b7280; line-height:1.6; margin-bottom:16px;">(p.summary.clone())</p>
+                        if let Some(price) = p.price_label() {
+                            <div style="font-size:1.75rem; font-weight:800; color:#DE5B30; margin-bottom:16px;">(price)</div>
+                        } else {
+                            <div style="font-size:1rem; font-weight:700; color:#374151; margin-bottom:16px;">"가격 협의"</div>
+                        }
+                        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                            if !p.preview_url.is_empty() {
+                                <a href=(p.preview_url.clone()) target="_blank" rel="noopener" class="btn-primary" style="flex:1; justify-content:center;">"미리보기"</a>
+                            }
+                            <a href="#inquiry" class="btn-secondary" style="flex:1; justify-content:center;">"도입 문의"</a>
+                        </div>
+                    </div>
                 </div>
-
-                <h1 style="font-size:2rem; font-weight:800; letter-spacing:-0.03em; margin-bottom:8px;">(p.title.clone())</h1>
-                <p class="section-sub" style="margin-bottom:16px;">(p.summary.clone())</p>
-
-                <div style="display:flex; gap:12px; align-items:center; margin-bottom:32px; flex-wrap:wrap;">
-                    if let Some(price) = p.price_label() {
-                        <div style="font-size:1.5rem; font-weight:800; color:#DE5B30;">(price)</div>
-                    }
-                    if !p.preview_url.is_empty() {
-                        <a href=(p.preview_url.clone()) target="_blank" rel="noopener" class="btn-primary">"미리보기"</a>
-                    }
+                <div id="shot-lightbox" onclick="closeShot()">
+                    <img id="shot-lightbox-img" src="" alt="확대 보기">
                 </div>
 
                 <div class="card" style="padding:40px 48px; margin-bottom:24px;">
@@ -217,16 +269,7 @@ pub async fn showcase_detail(cx: &Cx) -> Result<impl View + '_> {
                     </div>
                 }
 
-                if !images.is_empty() {
-                    <h2 style="font-size:1.1rem; font-weight:700; margin-bottom:12px;">"화면 미리보기"</h2>
-                    <div class="show-gallery" style="margin-bottom:24px;">
-                        for img in &images {
-                            <img src=(img.url.clone()) alt="프로젝트 화면" loading="lazy">
-                        }
-                    </div>
-                }
-
-                <div class="card" style="padding:32px; margin-top:8px;">
+                <div class="card" id="inquiry" style="padding:32px; margin-top:8px; scroll-margin-top:80px;">
                     <h2 style="font-size:1.1rem; font-weight:700; margin-bottom:4px;">"도입 문의"</h2>
                     <p style="font-size:13px; color:#6b7280; margin-bottom:20px;">"연락처를 남겨주시면 확인 후 연락드립니다."</p>
                     if sent {
@@ -241,6 +284,27 @@ pub async fn showcase_detail(cx: &Cx) -> Result<impl View + '_> {
                         <button type="submit" class="btn-primary" style="justify-content:center;">"문의 보내기"</button>
                     </form>
                 </div>
+
+                if !related.is_empty() {
+                    <h2 style="font-size:1.1rem; font-weight:700; margin:32px 0 12px;">"함께 보기"</h2>
+                    <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:16px;">
+                        for rel in &related {
+                            <a href=(format!("/vibecoding/{}", rel.slug)) class="card" style="display:block; overflow:hidden;">
+                                if !rel.thumbnail_url.is_empty() {
+                                    <img src=(rel.thumbnail_url.clone()) alt=(rel.title.clone()) loading="lazy" style="width:100%; height:130px; object-fit:cover; display:block;">
+                                } else {
+                                    <div style="width:100%; height:130px; background:linear-gradient(135deg, #1f2833 0%, #25283d 100%); display:flex; align-items:center; justify-content:center; font-size:36px;">"🦀"</div>
+                                }
+                                <div style="padding:14px 16px;">
+                                    <div style="font-size:14px; font-weight:700;">(rel.title.clone())</div>
+                                    if let Some(rprice) = rel.price_label() {
+                                        <div style="font-size:13px; font-weight:800; color:#DE5B30; margin-top:4px;">(rprice)</div>
+                                    }
+                                </div>
+                            </a>
+                        }
+                    </div>
+                }
             } else {
                 <div style="text-align:center; padding:100px 0;">
                     if forbidden {

@@ -140,6 +140,14 @@ pub async fn apple_touch_icon(_cx: &Cx) -> Result<BinBody> {
     })
 }
 
+#[route(GET "/favicon.ico")]
+pub async fn favicon_ico(_cx: &Cx) -> Result<BinBody> {
+    Ok(BinBody {
+        content_type: "image/png",
+        body: include_bytes!("../../public/icons/icon-192.png"),
+    })
+}
+
 #[route(GET "/og-image.png")]
 pub async fn og_image(_cx: &Cx) -> Result<BinBody> {
     Ok(BinBody {

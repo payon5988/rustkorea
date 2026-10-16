@@ -198,11 +198,11 @@ pub async fn showcase_detail(cx: &Cx) -> Result<impl View + '_> {
                 {r#".shop-layout { display: grid; grid-template-columns: 1.15fr 1fr; gap: 28px; align-items: start; margin-bottom: 28px; }
                 .shop-info { position: sticky; top: 80px; background: #fff; border: 1px solid #E4E4E7; border-radius: 14px; padding: 24px; }
                 .shot-strip { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
-                .shot-strip img { width: 72px; height: 54px; object-fit: cover; border-radius: 8px; border: 1px solid #E4E4E7; cursor: pointer; }
+                .shot-strip img { width: 96px; height: 72px; object-fit: cover; border-radius: 8px; border: 1px solid #E4E4E7; cursor: pointer; }
                 .shot-strip img:hover { border-color: #DE5B30; }
                 #shot-lightbox { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); z-index: 100; align-items: center; justify-content: center; padding: 24px; }
                 #shot-lightbox img { max-width: 100%; max-height: 100%; border-radius: 12px; }
-                @media (max-width: 820px) { .shop-layout { grid-template-columns: 1fr; } .shop-info { position: static; } }"#}
+                @media (max-width: 820px) { .shop-layout { grid-template-columns: 1fr; } .shop-info { position: static; } #shot-main { height: 280px !important; } }"#}
             </style>
             <script>
                 {r#"function showShot(u){var m=document.getElementById('shot-main');if(m){m.setAttribute('src',u);}}function openShot(u){var l=document.getElementById('shot-lightbox');var i=document.getElementById('shot-lightbox-img');if(l){if(i){i.setAttribute('src',u);l.style.display='flex';}}}function closeShot(){var l=document.getElementById('shot-lightbox');if(l){l.style.display='none';}}"#}
@@ -215,9 +215,9 @@ pub async fn showcase_detail(cx: &Cx) -> Result<impl View + '_> {
                 <div class="shop-layout">
                     <div style="min-width:0;">
                         if !p.main_image_url.is_empty() {
-                            <img id="shot-main" src=(p.main_image_url.clone()) alt=(p.title.clone()) onclick="openShot(this.src)" style="width:100%; height:360px; object-fit:cover; border-radius:14px; display:block; cursor:zoom-in; border:1px solid #E4E4E7;">
+                            <img id="shot-main" src=(p.main_image_url.clone()) alt=(p.title.clone()) onclick="openShot(this.src)" style="width:100%; height:480px; object-fit:cover; border-radius:14px; display:block; cursor:zoom-in; border:1px solid #E4E4E7;">
                         } else if !p.thumbnail_url.is_empty() {
-                            <img id="shot-main" src=(p.thumbnail_url.clone()) alt=(p.title.clone()) onclick="openShot(this.src)" style="width:100%; height:360px; object-fit:cover; border-radius:14px; display:block; cursor:zoom-in; border:1px solid #E4E4E7;">
+                            <img id="shot-main" src=(p.thumbnail_url.clone()) alt=(p.title.clone()) onclick="openShot(this.src)" style="width:100%; height:480px; object-fit:cover; border-radius:14px; display:block; cursor:zoom-in; border:1px solid #E4E4E7;">
                         } else {
                             <div style="width:100%; height:360px; border-radius:14px; background:linear-gradient(135deg, #1f2833 0%, #25283d 100%); display:flex; align-items:center; justify-content:center; font-size:72px;">"🦀"</div>
                         }

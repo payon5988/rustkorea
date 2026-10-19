@@ -1,58 +1,57 @@
+# UIUX: Rust Korea Hub 디자인 시스템 (현행)
 
----
+초기 기획은 "다크 우선 + 앰버 포인트(#DE5B30)"였다. 현재 사이트는 **라이트 기본 + 블루 포인트**이고, 다크는 사용자가 토글해서 쓴다.
+앰버(#DE5B30)는 PWA 매니페스트 테마색과 일부 섹션 라벨에만 남아 있다.
+토큰의 단일 출처는 `src/app.rs`의 `:root` 블록이고, 관리자 콘솔은 `src/admin_ui.rs`에 따로 있다.
 
-## 📄 3. UIUX.md (사용자 경험 및 디자인 시스템) - **극대화된 심화판**
+## 1. 디자인 토큰 (`src/app.rs`)
 
-```markdown
-# UIUX: Rust Korea Hub 디자인 시스템 및 경험 설계
-
-## 1. 디자인 철학: "Midnight Rust & Warm Amber"
-개발자 도구의 차가움(Rust의 신뢰성)과 사용자가 추구하는 "따뜻하고 풍부한(Warm and rich)" 감성을 결합.
-- **Dark Mode First**: 장시간 코딩/읽기에 최적화된 깊은 다크 테마를 기본으로 하되, 차갑지 않은 따뜻한 앰버(Amber) 톤으로 포인트를 줌.
-- **Cinematic Readability**: 시네마틱한 시각적 스토리텔링 원칙을 차용하여, 매뉴얼의 히어로 섹션에는 분위기 있는 그라데이션과 부드러운 그림자 사용.
-
-## 2. 디자인 토큰 (Design Tokens)
-### 2.1 컬러 팔레트 (Tailwind CSS 확장)
 ```css
 :root {
-  /* 베이스: 따뜻하고 깊은 다크 */
-  --color-bg-primary: #121214;      /* 완전 블랙이 아닌 따뜻한 짙은 회색 */
-  --color-bg-secondary: #1C1B1A;    /* 카드/사이드바 배경 */
-  --color-bg-tertiary: #272624;     /* 호버/인풋 배경 */
-  
-  /* 포인트: Rust 공식 오렌지의 따뜻한 변형 */
-  --color-brand-primary: #DE5B30;   /* 메인 액션, 링크 (기존 #CE422B보다 약간 밝고 따뜻하게) */
-  --color-brand-glow: rgba(222, 91, 48, 0.15); /* 그림자/글로우 효과용 */
-  
-  /* 텍스트: 가독성 최적화 */
-  --color-text-primary: #F5F1EA;    /* 순백(#FFF)보다 눈이 편안한 웜 화이트 */
-  --color-text-secondary: #A8A29E;  /* 보조 텍스트 (Warm Gray 400) */
-  --color-text-muted: #78716C;      /* 비활성/메타 정보 */
-  
-  /* 상태 */
-  --color-success: #10B981;
-  --color-warning: #F59E0B;
-  --color-error: #EF4444;
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', system-ui, sans-serif;
+  --color-brand: #2563EB;        /* 링크·주요 버튼·활성 탭 */
+  --color-brand-hover: #1D4ED8;
+  --color-bg: #FFFFFF;
+  --color-bg-secondary: #f8f9fa;
+  --color-border: #E4E4E7;
+  --color-text: #16181d;
+  --color-text-secondary: #6b7280;
+  --color-text-muted: #9ca3af;
 }
+html.dark body  { background: #0f1117; color: #e5e7eb; }
+html.dark .card { background: #1a1d27; border-color: #2a2d3a; }
+```
 
-2.2 타이포그래피 및 간격
-Font Family:
-한국어 본문: Pretendard (Variable, 400~700)
-영어/코드: JetBrains Mono (Ligatures 활성화)
-Type Scale: text-xs(0.75rem) ~ text-5xl(3rem). 매뉴얼 본문은 text-base(1rem)에 leading-relaxed(1.625) 적용.
-Spacing: 4px 그리드 시스템 기반 (0.25rem 단위).
-3. 핵심 화면 및 컴포넌트 명세
-3.1 매뉴얼 리딩 화면 (The Reading Experience)
-레이아웃: 3-Pane 구조 (좌: 목차 250px, 중앙: 콘텐츠 최대 800px, 우: 진행률/TOC 200px). 모바일에서는 목차가 드로어(Drawer)로 숨김.
-비율 최적화: 매뉴얼 내 삽입되는 YouTube Shorts나 프로모션 영상은 사용자가 선호하는 9:16 (세로) 또는 4:5 (피드) 종횡비를 명시적으로 지원하도록 컨테이너 설계 (aspect-ratio: 9/16).
-마이크로 인터랙션:
-코드 블록 호버 시: 우측 상단에 복사 아이콘이 부드럽게(transition-opacity duration-200) 페이드인.
-스크롤 진행률: 우측 상단에 얇은 --color-brand-primary 프로그레스 바가 스크롤에 연동되어 채워짐.
-3.2 Topcoat UI 컴포넌트 매핑
-topcoat ui add로 가져온 컴포넌트를 다음과 같이 커스터마이징:
-Button: bg-brand-primary hover:bg-brand-primary/90 text-white rounded-md shadow-[0_0_15px_var(--color-brand-glow)] transition-all
-Card: bg-bg-secondary border border-white/5 rounded-xl p-6 hover:border-brand-primary/30 transition-colors
-4. 접근성 (Accessibility, WCAG 2.1 AA)
-모든 색상 조합의 명도 대비(Contrast Ratio) 4.5:1 이상 보장.
-포커스 상태(:focus-visible): outline-2 outline-brand-primary outline-offset-2 적용.
-이미지/아이콘: 모든 img 태그에 의미 있는 alt 텍스트 강제.
+- **테마**: `theme` 쿠키(light/dark)와 `toggleTheme()`. 관리자 콘솔은 시스템/라이트/다크 3단계다.
+- **본문**: 16px, `line-height: 1.6`. 컨테이너 최대 폭은 1280px(일반)과 960px(좁은 본문)이다.
+- **코드 강조**: highlight.js 11.9.0(cdnjs, 버전 고정 + SRI).
+- **에디터**: Toast UI Editor. 다크 테마의 간섭을 막으려고 항상 라이트 표면으로 띄운다.
+
+## 2. 공통 컴포넌트 클래스
+
+| 클래스 | 용도 |
+|---|---|
+| `.card` | 흰 배경, 1px 테두리, 반경 8px, hover 시 그림자 |
+| `.btn-primary` / `.btn-secondary` | 주요 버튼(브랜드 블루) / 보조 버튼(테두리) |
+| `.badge` | 알약형 라벨(12px) |
+| `.input` | 16px 입력(모바일 확대 방지), focus 시 브랜드 링 |
+
+## 3. 내비게이션
+
+- 상단 메뉴, 푸터(서비스·링크·참여 그룹), 모바일 하단 탭은 모두 `/admin/menus`에서 DB로 관리한다.
+- 현재 위치 표시는 `aria-current="page"`로 한다.
+- **모바일(768px 이하)**
+  - 상단에는 전체 메뉴 버튼(`<dialog>`)이 있다.
+  - 하단 탭은 고정 64px에 safe-area를 더하고, 항목이 많으면 가로 스크롤된다. 로그인/프로필 탭은 자동으로 붙는다.
+
+## 4. 콘텐츠 화면
+
+- **매뉴얼 챕터**: 본문과 TOC를 보여 주고, 진행률을 저장한다(`reading_progress`).
+- **블로그·상품 이미지**: 자르지 않고 원본 비율로 표시한다(`object-fit: contain`). 상품 상세는 메인 480px에 썸네일 스트립이 붙고, 라이트박스로 확대된다.
+
+## 5. 접근성
+
+- 입력 폰트 16px, 아이콘 버튼 `aria-label`, 대화상자 `aria-haspopup`/`aria-controls`를 쓴다.
+- 남은 과제
+  - 다크 모드 보조 텍스트(#9ca3af on #0f1117)의 명도 대비를 점검해야 한다.
+  - `:focus-visible` 스타일을 통일해야 한다.

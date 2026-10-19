@@ -1,101 +1,56 @@
-HARNESS: 테스트 전략 및 자동화
-1. 테스트 피라미드 및 도구
-단위 테스트 (70%): cargo nextest (병렬 실행으로 속도 향상), mockall (외부 의존성 목킹).
-통합 테스트 (25%): testcontainers (PostgreSQL, Redis 컨테이너를 테스트마다 격리하여 기동).
-E2E 테스트 (5%): playwright (Rust 바인딩 또는 TS 스크립트)로 핵심 사용자 여정 검증.
-2. 통합 테스트 구현 예시 (Topcoat + Testcontainers)
-   // tests/manual_integration.rs
-use sqlx::PgPool;
-use testcontainers::{clients::Cli, RunnableImage};
-use testcontainers_modules::postgres::Postgres;
+# HARNESS: 테스트 전략 및 자동화 (현행)
 
-async fn setup_db() -> PgPool {
-    let docker = Cli::default();
-    let image = RunnableImage::from(Postgres::default()).with_tag("16-alpine");
-    let container = docker.run(image);
-    let conn_str = format!(
-        "postgres://postgres:postgres@{}:{}/postgres",
-        container.get_host_port_ipv4(5432),
-        container.get_host_port_ipv4(5432)
-    );
-    sqlx::PgPool::connect(&conn_str).await.unwrap()
-}
+초기 기획(nextest, mockall, testcontainers, Playwright, k6)은 아직 쓰지 않는다.
+현재 테스트는 **`cargo test` 단위 테스트**와 **실제 라우터로 보내는 DB 회귀 테스트**의 두 층이다.
 
-#[sqlx::test]
-async fn test_create_and_fetch_manual_series(pool: PgPool) {
-    // 1. Given: DB에 시리즈 삽입
-    let series_id = uuid::Uuid::new_v4();
-    sqlx::query!(
-        r#"INSERT INTO manual_series (id, slug, title) VALUES ($1, $2, $3)"#,
-        series_id, "topcoat-basics", "Topcoat 기초"
-    )
-    .execute(&pool)
-    .await
-    .unwrap();
+## 1. 테스트 종류
 
-    // 2. When: Topcoat Cx를 모킹하여 페칭 함수 호출 (실제 구현체에 따라 다름)
-    // let result = fetch_manual_series(&mock_cx, &pool).await;
+| 종류 | 위치 | 실행 조건 |
+|---|---|---|
+| 단위 테스트 | 각 모듈 `#[cfg(test)]` (markdown, navigation, outbound, uploads, youtube, util, access, totp …) | 항상 |
+| DB 회귀 테스트 | `#[sqlx::test]` + `#[ignore]`: `pages/admin/authz_tests.rs`, `products_tests.rs`, `services/navigation_tests.rs` | `DATABASE_URL` + 자산 번들 + `--include-ignored` |
+| 네트워크 테스트 | `services::outbound::fetches_public_page_and_caps_size` | `RUN_NETWORK_TESTS=1` |
 
-    // 3. Then: 결과 검증
-    // assert_eq!(result.unwrap().title, "Topcoat 기초");
-}
- 3. CI/CD 파이프라인 (GitHub Actions)
-name: Rust Korea Hub CI/CD
+DB 회귀 테스트는 `Router::builder()...discover()`로 실제 앱 라우터를 만들고, `router.handle(Request)`로 HTTP 요청을 흘려보낸다.
+`#[sqlx::test]`는 테스트마다 격리된 DB를 만들고 마이그레이션을 적용한 뒤, 끝나면 지운다.
+따라서 접속 계정에 DB 생성 권한이 있어야 한다.
 
-on:
-  push:
-    branches: [main, develop]
-  pull_request:
-    branches: [main]
+### 권한·보안 회귀 테스트 (`authz_tests.rs`)
 
-jobs:
-  quality-and-test:
-    runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_PASSWORD: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+- 일반 회원이 관리자 변경 POST 9개를 호출하면 거부되고 DB가 그대로인지 확인한다(관리자는 정상 동작).
+- TOTP 계정이 `/auth/login`으로 로그인하면 대기 세션만 받는지 확인한다.
+- 로그아웃: GET이나 잘못된 CSRF로는 세션이 유지되는지 확인한다.
+- 이름만 `session`으로 바꾼 쿠키가 거부되는지, 에디터 업로드 기록·회원 제한·관리자 예외가 동작하는지 확인한다.
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+## 2. 로컬 실행
 
-      - name: Setup Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          components: clippy, rustfmt
+```bash
+cargo fmt --check
+cargo clippy --all-targets -- -D warnings
+cargo audit                       # 예외는 .cargo/audit.toml (근거 주석 필수)
 
-      - name: Cache cargo registry
-        uses: Swatinem/rust-cache@v2
+# DB 회귀 테스트: 운영 DB 대신 임시 컨테이너 사용
+docker run -d --rm --name rk-test-pg -e POSTGRES_PASSWORD=postgres \
+  -p 127.0.0.1:55435:5432 postgres:16-alpine
+cargo build && topcoat asset bundle
+DATABASE_URL=postgres://postgres:postgres@127.0.0.1:55435/postgres \
+  UPLOAD_DIR=/tmp/rk-test-uploads cargo test -- --include-ignored
+docker stop rk-test-pg
+```
 
-      - name: Install Topcoat CLI
-        run: cargo install topcoat-cli
+## 3. CI (`.github/workflows/ci.yml`)
 
-      - name: Format check
-        run: topcoat fmt --check
+`main`/`develop`에 push하거나 `main` 대상 PR을 올리면 PostgreSQL 16 서비스 컨테이너와 함께 아래 순서로 실행된다.
 
-      - name: Clippy (Deny warnings)
-        run: cargo clippy --all-targets --all-features -- -D warnings
+1. 포맷 검사
+2. clippy(경고 시 실패)
+3. `cargo audit`
+4. topcoat-cli 설치
+5. `cargo build` → 자산 번들 → `cargo test -- --include-ignored`
+6. release 빌드와 release 자산 번들
+7. 스모크 테스트: 바이너리를 띄워 `/healthz`, robots, sitemap, manifest, sw.js, assetlinks 확인
 
-      - name: Run tests with nextest
-        run: cargo nextest run
-        env:
-          DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
+## 4. 남은 과제
 
-      - name: Build release binary
-        run: cargo build --release
-4. 성능 테스트 (k6)
-시나리오: 50명의 가상 사용자가 1분 동안 /manuals/topcoat-basics 페이지에 지속적으로 접근.
-목표: p95 응답 시간 < 200ms, 에러율 0%.
-실행: k6 run scripts/performance.js (C
----
-
-
+- E2E(브라우저) 테스트가 없다. 모바일 메뉴 dialog, 에디터 업로드 같은 클라이언트 동작은 수동으로 확인한다.
+- 성능 목표(p95 < 200ms)를 측정하는 자동 부하 테스트가 없다.

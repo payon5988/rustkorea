@@ -26,6 +26,11 @@ pub struct EditChapter {
     pub visibility: String,
     #[serde(default)]
     pub published_at: String,
+    #[serde(default)]
+    pub title_en: String,
+    /// English body (Markdown); empty = public English view shows Korean.
+    #[serde(default)]
+    pub content_md_en: String,
 }
 
 #[route(POST "/admin/manuals/chapters/update")]
@@ -76,9 +81,17 @@ pub async fn update_chapter(
         }
     };
 
+    let content_md_en = input.content_md_en.trim();
+    let content_html_en = if content_md_en.is_empty() {
+        String::new()
+    } else {
+        render_markdown(content_md_en)
+    };
+
     sqlx::query(
-        "UPDATE manual_chapters SET slug = $1, title = $2, content_md = $3, content_html = $4, visibility = $5, published_at = $6, updated_at = NOW()::text
-         WHERE id = $7"
+        "UPDATE manual_chapters SET slug = $1, title = $2, content_md = $3, content_html = $4, visibility = $5, published_at = $6,
+                title_en = $7, content_md_en = $8, content_html_en = $9, updated_at = NOW()::text
+         WHERE id = $10"
     )
     .bind(&input.slug)
     .bind(&input.title)
@@ -86,6 +99,9 @@ pub async fn update_chapter(
     .bind(&content_html)
     .bind(&input.visibility)
     .bind(&published_at)
+    .bind(input.title_en.trim())
+    .bind(content_md_en)
+    .bind(&content_html_en)
     .bind(&input.id)
     .execute(db)
     .await.ok();
@@ -201,6 +217,10 @@ pub async fn edit_chapter(cx: &Cx) -> Result<impl View + '_> {
                                 <input type="text" name="title" required="true" class="input" value=(c.title.clone())>
                             </div>
                             <div style="margin-bottom:20px;">
+                                <label style="display:block; font-size:13px; font-weight:600; color:var(--muted); margin-bottom:8px;">"영어 챕터 제목 (선택)"</label>
+                                <input type="text" name="title_en" lang="en" class="input" value=(c.title_en.clone())>
+                            </div>
+                            <div style="margin-bottom:20px;">
                                 <label style="display:block; font-size:13px; font-weight:600; color:var(--muted); margin-bottom:8px;">"공개 범위 (챕터별)"</label>
                                 <select name="visibility" class="input">
                                     <option value="public" selected=(c.visibility == "public")>"전체공개 (비회원 포함)"</option>
@@ -233,6 +253,11 @@ pub async fn edit_chapter(cx: &Cx) -> Result<impl View + '_> {
                                     <p style="font-size:11px; color:var(--dim); margin-bottom:8px;">"표·이미지·제목구조가 마크다운으로 변환되어 저장됩니다."</p>
                                     <textarea id="html-paste" name="content_html_import" rows="20" class="input" style="font-family:'SF Mono','Fira Code',monospace; font-size:13px; line-height:1.7;" placeholder="여기에 HTML 소스를 붙여넣으세요"></textarea>
                                 </div>
+                            </div>
+                            <div style="margin-top:20px;">
+                                <label style="display:block; font-size:13px; font-weight:600; color:var(--muted); margin-bottom:8px;">"영어 본문 (Markdown, 선택)"</label>
+                                <p style="font-size:11px; color:var(--dim); margin-bottom:8px;">"비워두면 영어 화면에서 한국어 원문과 '번역 준비 중' 안내가 표시됩니다."</p>
+                                <textarea name="content_md_en" rows="12" lang="en" class="input" style="font-family:'SF Mono','Fira Code',monospace; font-size:13px; line-height:1.7;">(c.content_md_en.clone())</textarea>
                             </div>
                         </div>
                         <button type="submit" style="background:#DE5B30; color:#fff; padding:12px 20px; border-radius:8px; font-weight:600; font-size:14px; display:inline-flex; align-items:center; width:100%; justify-content:center; border:none; cursor:pointer;">"변경 사항 저장"</button>

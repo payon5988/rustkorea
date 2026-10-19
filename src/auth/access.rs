@@ -164,6 +164,16 @@ pub fn valid_visibility(v: &str) -> bool {
     VISIBILITY_TIERS.iter().any(|(k, _)| *k == v)
 }
 
+/// Public-site tier label in `loc` (admin screens use [`visibility_label`]).
+pub fn visibility_label_in(tier: &str, loc: crate::services::i18n::Locale) -> &'static str {
+    match tier {
+        "members" => loc.pick("회원전용", "Members only"),
+        "staff" => loc.pick("스태프전용", "Staff only"),
+        "premium" => loc.pick("유료전용(준비중)", "Premium (coming soon)"),
+        _ => loc.pick("전체공개", "Public"),
+    }
+}
+
 pub fn visibility_label(tier: &str) -> &str {
     VISIBILITY_TIERS
         .iter()

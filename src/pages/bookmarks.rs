@@ -8,7 +8,7 @@ use topcoat::{
 
 use crate::db::Db;
 use crate::pages::community::helpers::{
-    category_color, category_label, get_current_user, login_redirect,
+    category_color, category_label_in, get_current_user, login_redirect,
 };
 
 #[allow(dead_code)]
@@ -29,6 +29,7 @@ pub async fn bookmarks_page(cx: &Cx) -> Result<impl View + '_> {
         return Err(login_redirect(cx, "/my/bookmarks").await);
     };
     let db: &Db = topcoat::context::app_context(cx);
+    let loc = crate::services::i18n::locale(cx);
 
     let page_num: i64 = topcoat::router::request::uri(cx)
         .query()
@@ -70,8 +71,11 @@ pub async fn bookmarks_page(cx: &Cx) -> Result<impl View + '_> {
     Ok(view! {
         <div class="container" style="padding-top:40px; padding-bottom:80px; max-width:720px;">
             <div style="margin-bottom:32px;">
-                <h1 style="font-size:1.5rem; font-weight:800; letter-spacing:-0.02em;">"북마크"</h1>
-                <p style="font-size:13px; color:#6b7280; margin-top:4px;">(format!("{}개 북마크", total))</p>
+                <h1 style="font-size:1.5rem; font-weight:800; letter-spacing:-0.02em;">(loc.pick("북마크", "Bookmarks"))</h1>
+                <p style="font-size:13px; color:#6b7280; margin-top:4px;">(match loc {
+                    crate::services::i18n::Locale::Ko => format!("{total}개 북마크"),
+                    crate::services::i18n::Locale::En => format!("{total} bookmarks"),
+                })</p>
             </div>
 
             if bookmarks.is_empty() {
@@ -79,14 +83,14 @@ pub async fn bookmarks_page(cx: &Cx) -> Result<impl View + '_> {
                     <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="1.5" stroke-linecap="round" style="margin:0 auto 16px;">
                         <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/>
                     </svg>
-                    <p style="color:#6b7280; margin-bottom:16px;">"아직 북마크한 글이 없습니다."</p>
-                    <a href="/community" class="btn-primary" style="display:inline-flex;">"커뮤니티 둘러보기"</a>
+                    <p style="color:#6b7280; margin-bottom:16px;">(loc.pick("아직 북마크한 글이 없습니다.", "You haven't bookmarked any posts yet."))</p>
+                    <a href="/community" class="btn-primary" style="display:inline-flex;">(loc.pick("커뮤니티 둘러보기", "Browse the community"))</a>
                 </div>
             } else {
                 <div style="display:flex; flex-direction:column; gap:2px; background:#e5e7eb; border-radius:12px; overflow:hidden;">
                     for b in &bookmarks {
                         let badge_color = category_color(&b.category);
-                        let badge_label = category_label(&b.category);
+                        let badge_label = category_label_in(&b.category, loc);
                         <a href=(format!("/community/{}", b.id)) style="display:flex; align-items:center; padding:16px 20px; background:#fff;">
                             <span style=(format!("font-size:11px; font-weight:600; padding:3px 9px; border-radius:9999px; color:{badge_color}; background:{badge_color}1a; flex-shrink:0; white-space:nowrap;"))>(badge_label)</span>
                             <div style="min-width:0; flex:1; margin-left:12px;">
@@ -107,11 +111,11 @@ pub async fn bookmarks_page(cx: &Cx) -> Result<impl View + '_> {
                 if total_pages > 1 {
                     <div style="display:flex; align-items:center; justify-content:center; gap:6px; margin-top:32px;">
                         if page_num > 1 {
-                            <a href=(format!("/my/bookmarks?page={}", page_num - 1)) style="height:32px; padding:0 14px; display:inline-flex; align-items:center; border-radius:8px; border:1px solid #E4E4E7; background:#fff; color:#374151; font-size:13px; font-weight:500;">"이전"</a>
+                            <a href=(format!("/my/bookmarks?page={}", page_num - 1)) style="height:32px; padding:0 14px; display:inline-flex; align-items:center; border-radius:8px; border:1px solid #E4E4E7; background:#fff; color:#374151; font-size:13px; font-weight:500;">(loc.pick("이전", "Previous"))</a>
                         }
                         <span style="font-size:13px; color:#6b7280;">(format!("{page_num} / {total_pages}"))</span>
                         if page_num < total_pages {
-                            <a href=(format!("/my/bookmarks?page={}", page_num + 1)) style="height:32px; padding:0 14px; display:inline-flex; align-items:center; border-radius:8px; border:1px solid #E4E4E7; background:#fff; color:#374151; font-size:13px; font-weight:500;">"다음"</a>
+                            <a href=(format!("/my/bookmarks?page={}", page_num + 1)) style="height:32px; padding:0 14px; display:inline-flex; align-items:center; border-radius:8px; border:1px solid #E4E4E7; background:#fff; color:#374151; font-size:13px; font-weight:500;">(loc.pick("다음", "Next"))</a>
                         }
                     </div>
                 }

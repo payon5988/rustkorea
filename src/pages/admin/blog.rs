@@ -57,6 +57,32 @@ pub struct BlogForm {
     pub visibility: String,
     #[serde(default)]
     pub published_at: String,
+    #[serde(flatten)]
+    pub en: BlogEnglish,
+}
+
+/// English (public site) fields; empty = the Korean original is shown.
+#[derive(serde::Deserialize, Default)]
+pub struct BlogEnglish {
+    #[serde(default)]
+    pub title_en: String,
+    #[serde(default)]
+    pub summary_en: String,
+    #[serde(default)]
+    pub content_md_en: String,
+}
+
+impl BlogEnglish {
+    /// Trimmed `(title, summary, markdown, rendered html)`.
+    fn prepared(&self) -> (&str, &str, &str, String) {
+        let md = self.content_md_en.trim();
+        let html = if md.is_empty() {
+            String::new()
+        } else {
+            render_markdown(md)
+        };
+        (self.title_en.trim(), self.summary_en.trim(), md, html)
+    }
 }
 
 fn parse_blog_form(
@@ -107,10 +133,11 @@ pub async fn create_blog_post(
             ));
         }
     };
+    let (en_title, en_summary, en_md, en_html) = input.en.prepared();
     sqlx::query(
         "INSERT INTO blog_posts (slug, title, summary, content_md, content_html, thumbnail_url,
-         source_url, tags, visibility, published_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
+         source_url, tags, visibility, published_at, title_en, summary_en, content_md_en, content_html_en)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)",
     )
     .bind(&slug)
     .bind(input.title.trim())
@@ -122,6 +149,10 @@ pub async fn create_blog_post(
     .bind(input.tags.trim())
     .bind(&input.visibility)
     .bind(&published_at)
+    .bind(en_title)
+    .bind(en_summary)
+    .bind(en_md)
+    .bind(&en_html)
     .execute(db)
     .await
     .ok();
@@ -144,6 +175,8 @@ pub struct BlogUpdateForm {
     pub visibility: String,
     #[serde(default)]
     pub published_at: String,
+    #[serde(flatten)]
+    pub en: BlogEnglish,
 }
 
 #[route(POST "/admin/blog/update")]
@@ -180,10 +213,12 @@ pub async fn update_blog_post(
         Err(()) => return Ok(topcoat::router::error::see_other("/admin/blog")),
     };
     let description_html = render_markdown(&content_md);
+    let (en_title, en_summary, en_md, en_html) = input.en.prepared();
     sqlx::query(
         "UPDATE blog_posts SET slug = $1, title = $2, summary = $3, content_md = $4,
          content_html = $5, thumbnail_url = $6, source_url = $7, tags = $8,
-         visibility = $9, published_at = $10, updated_at = NOW()::text WHERE id = $11",
+         visibility = $9, published_at = $10, title_en = $11, summary_en = $12,
+         content_md_en = $13, content_html_en = $14, updated_at = NOW()::text WHERE id = $15",
     )
     .bind(&slug)
     .bind(input.title.trim())
@@ -195,6 +230,10 @@ pub async fn update_blog_post(
     .bind(input.tags.trim())
     .bind(&input.visibility)
     .bind(&published_at)
+    .bind(en_title)
+    .bind(en_summary)
+    .bind(en_md)
+    .bind(&en_html)
     .bind(&input.id)
     .execute(db)
     .await
@@ -498,6 +537,14 @@ pub async fn new_blog_post(cx: &Cx) -> Result<impl View + '_> {
                             <label style="display:block; font-size:13px; font-weight:600; color:var(--muted); margin-bottom:8px;">"요약"</label>
                             <input type="text" name="summary" class="input">
                         </div>
+                        <details style="grid-column:1 / -1; border:1px solid var(--border); border-radius:8px; padding:12px 16px;">
+                            <summary style="font-size:13px; font-weight:600; color:var(--muted); cursor:pointer;">"영어 버전 (선택, 비우면 한국어 표시)"</summary>
+                            <div style="display:grid; gap:12px; margin-top:12px;">
+                                <input type="text" name="title_en" lang="en" class="input" placeholder="English title">
+                                <input type="text" name="summary_en" lang="en" class="input" placeholder="English summary">
+                                <textarea name="content_md_en" rows="10" lang="en" class="input" placeholder="English body (Markdown)" style="font-family:monospace; font-size:13px; line-height:1.7;"></textarea>
+                            </div>
+                        </details>
                         <div>
                             <label style="display:block; font-size:13px; font-weight:600; color:var(--muted); margin-bottom:8px;">"태그 (쉼표 구분)"</label>
                             <input type="text" name="tags" class="input" placeholder="rust, oss">
@@ -602,6 +649,14 @@ pub async fn edit_blog_post(cx: &Cx) -> Result<impl View + '_> {
                             <label style="display:block; font-size:13px; font-weight:600; color:var(--muted); margin-bottom:8px;">"요약"</label>
                             <input type="text" name="summary" class="input" value=(p.summary.clone())>
                         </div>
+                        <details open=(!p.title_en.is_empty() || !p.content_md_en.is_empty()) style="grid-column:1 / -1; border:1px solid var(--border); border-radius:8px; padding:12px 16px;">
+                            <summary style="font-size:13px; font-weight:600; color:var(--muted); cursor:pointer;">"영어 버전 (선택, 비우면 한국어 표시)"</summary>
+                            <div style="display:grid; gap:12px; margin-top:12px;">
+                                <input type="text" name="title_en" lang="en" class="input" placeholder="English title" value=(p.title_en.clone())>
+                                <input type="text" name="summary_en" lang="en" class="input" placeholder="English summary" value=(p.summary_en.clone())>
+                                <textarea name="content_md_en" rows="10" lang="en" class="input" placeholder="English body (Markdown)" style="font-family:monospace; font-size:13px; line-height:1.7;">(p.content_md_en.clone())</textarea>
+                            </div>
+                        </details>
                         <div>
                             <label style="display:block; font-size:13px; font-weight:600; color:var(--muted); margin-bottom:8px;">"태그 (쉼표 구분)"</label>
                             <input type="text" name="tags" class="input" value=(p.tags.clone())>

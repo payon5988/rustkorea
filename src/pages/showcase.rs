@@ -31,6 +31,7 @@ fn product_gate(
 #[page("/vibecoding")]
 pub async fn showcase_index(cx: &Cx) -> Result<impl View + '_> {
     let db: &Db = topcoat::context::app_context(cx);
+    let loc = crate::services::i18n::locale(cx);
     let access = crate::auth::access::load_access(db, cx).await;
 
     let categories = sqlx::query_as::<_, ProductCategory>(
@@ -59,8 +60,8 @@ pub async fn showcase_index(cx: &Cx) -> Result<impl View + '_> {
         <div class="container" style="padding-top:60px; padding-bottom:80px;">
             <div style="margin-bottom:40px;">
                 <div style="font-size:11px; font-weight:700; color:#DE5B30; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:8px;">"VIBECODING"</div>
-                <h1 style="font-size:2rem; font-weight:800; letter-spacing:-0.03em; margin-bottom:8px;">"바이브코딩 프로젝트"</h1>
-                <p class="section-sub">"Rust로 만든 실제 프로덕트를 소개합니다."</p>
+                <h1 style="font-size:2rem; font-weight:800; letter-spacing:-0.03em; margin-bottom:8px;">(loc.pick("바이브코딩 프로젝트", "Vibe Coding Projects"))</h1>
+                <p class="section-sub">(loc.pick("Rust로 만든 실제 프로덕트를 소개합니다.", "Real products built with Rust."))</p>
             </div>
 
             if !categories.is_empty() {
@@ -73,7 +74,7 @@ pub async fn showcase_index(cx: &Cx) -> Result<impl View + '_> {
 
             if products.is_empty() {
                 <div class="card" style="padding:80px; text-align:center;">
-                    <p style="color:#6b7280;">"소개 중인 프로젝트가 곧 공개됩니다."</p>
+                    <p style="color:#6b7280;">(loc.pick("소개 중인 프로젝트가 곧 공개됩니다.", "Projects are coming soon."))</p>
                 </div>
             } else {
                 <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:20px;">
@@ -108,6 +109,7 @@ pub async fn showcase_index(cx: &Cx) -> Result<impl View + '_> {
 pub async fn showcase_detail(cx: &Cx) -> Result<impl View + '_> {
     let slug = path_param::<Slug>(cx);
     let db: &Db = topcoat::context::app_context(cx);
+    let loc = crate::services::i18n::locale(cx);
     let session_token = crate::auth::session::csrf_token(db, cx).await;
     let csrf_token = if session_token.is_empty() {
         crate::auth::session::issue_csrf_seed(cx)
@@ -209,7 +211,7 @@ pub async fn showcase_detail(cx: &Cx) -> Result<impl View + '_> {
             </script>
             if let Some(p) = product {
                 <a href="/vibecoding" style="font-size:13px; color:#6b7280; display:inline-flex; align-items:center; gap:6px; margin-bottom:24px;">
-                    "<- 프로젝트 목록"
+                    (loc.pick("<- 프로젝트 목록", "<- All projects"))
                 </a>
 
                 <div class="shop-layout">
@@ -224,7 +226,7 @@ pub async fn showcase_detail(cx: &Cx) -> Result<impl View + '_> {
                         if !images.is_empty() {
                             <div class="shot-strip">
                                 for img in &images {
-                                    <img src=(img.url.clone()) alt="프로젝트 화면" loading="lazy" onclick="showShot(this.src)">
+                                    <img src=(img.url.clone()) alt=(loc.pick("프로젝트 화면", "Project screenshot")) loading="lazy" onclick="showShot(this.src)">
                                 }
                             </div>
                         }
@@ -243,18 +245,18 @@ pub async fn showcase_detail(cx: &Cx) -> Result<impl View + '_> {
                         if let Some(price) = p.price_label() {
                             <div style="font-size:1.75rem; font-weight:800; color:#DE5B30; margin-bottom:16px;">(price)</div>
                         } else {
-                            <div style="font-size:1rem; font-weight:700; color:#374151; margin-bottom:16px;">"가격 협의"</div>
+                            <div style="font-size:1rem; font-weight:700; color:#374151; margin-bottom:16px;">(loc.pick("가격 협의", "Price on request"))</div>
                         }
                         <div style="display:flex; gap:10px; flex-wrap:wrap;">
                             if !p.preview_url.is_empty() {
-                                <a href=(p.preview_url.clone()) target="_blank" rel="noopener" class="btn-primary" style="flex:1; justify-content:center;">"미리보기"</a>
+                                <a href=(p.preview_url.clone()) target="_blank" rel="noopener" class="btn-primary" style="flex:1; justify-content:center;">(loc.pick("미리보기", "Preview"))</a>
                             }
-                            <a href="#inquiry" class="btn-secondary" style="flex:1; justify-content:center;">"도입 문의"</a>
+                            <a href="#inquiry" class="btn-secondary" style="flex:1; justify-content:center;">(loc.pick("도입 문의", "Inquire"))</a>
                         </div>
                     </div>
                 </div>
                 <div id="shot-lightbox" onclick="closeShot()">
-                    <img id="shot-lightbox-img" src="" alt="확대 보기">
+                    <img id="shot-lightbox-img" src="" alt=(loc.pick("확대 보기", "Enlarged view"))>
                 </div>
 
                 <div class="card" style="padding:40px 48px; margin-bottom:24px;">
@@ -265,28 +267,28 @@ pub async fn showcase_detail(cx: &Cx) -> Result<impl View + '_> {
 
                 if !p.video_id.is_empty() {
                     <div style="margin-bottom:24px;">
-                        <div class="youtube-embed"><iframe src=(format!("https://www.youtube-nocookie.com/embed/{}", p.video_id)) title="소개 영상" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen="true"></iframe></div>
+                        <div class="youtube-embed"><iframe src=(format!("https://www.youtube-nocookie.com/embed/{}", p.video_id)) title=(loc.pick("소개 영상", "Intro video")) loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen="true"></iframe></div>
                     </div>
                 }
 
                 <div class="card" id="inquiry" style="padding:32px; margin-top:8px; scroll-margin-top:80px;">
-                    <h2 style="font-size:1.1rem; font-weight:700; margin-bottom:4px;">"도입 문의"</h2>
-                    <p style="font-size:13px; color:#6b7280; margin-bottom:20px;">"연락처를 남겨주시면 확인 후 연락드립니다."</p>
+                    <h2 style="font-size:1.1rem; font-weight:700; margin-bottom:4px;">(loc.pick("도입 문의", "Inquire"))</h2>
+                    <p style="font-size:13px; color:#6b7280; margin-bottom:20px;">(loc.pick("연락처를 남겨주시면 확인 후 연락드립니다.", "Leave your contact details and we'll get back to you."))</p>
                     if sent {
-                        <div style="background:rgba(52,211,153,0.1); border:1px solid rgba(52,211,153,0.3); border-radius:8px; padding:12px 16px; font-size:13px; color:#059669; margin-bottom:20px;">"문의가 접수되었습니다. 확인 후 연락드리겠습니다."</div>
+                        <div style="background:rgba(52,211,153,0.1); border:1px solid rgba(52,211,153,0.3); border-radius:8px; padding:12px 16px; font-size:13px; color:#059669; margin-bottom:20px;">(loc.pick("문의가 접수되었습니다. 확인 후 연락드리겠습니다.", "Your inquiry has been received. We'll be in touch."))</div>
                     }
                     <form action=(format!("/vibecoding/{}/inquire", p.slug)) method="POST" style="display:flex; flex-direction:column; gap:12px; max-width:520px;">
                         <input type="hidden" name="csrf_token" value=(csrf_token.clone())>
-                        <input type="text" name="name" required="true" maxlength="40" placeholder="성함" class="input">
-                        <input type="text" name="contact" required="true" maxlength="80" placeholder="연락처 (이메일 또는 전화번호)" class="input">
-                        <textarea name="message" rows="4" maxlength="2000" placeholder="문의 내용" class="input"></textarea>
+                        <input type="text" name="name" required="true" maxlength="40" placeholder=(loc.pick("성함", "Name")) class="input">
+                        <input type="text" name="contact" required="true" maxlength="80" placeholder=(loc.pick("연락처 (이메일 또는 전화번호)", "Contact (email or phone)")) class="input">
+                        <textarea name="message" rows="4" maxlength="2000" placeholder=(loc.pick("문의 내용", "Your message")) class="input"></textarea>
                         <input type="text" name="company_site" style="display:none;" tabindex="-1" autocomplete="off">
-                        <button type="submit" class="btn-primary" style="justify-content:center;">"문의 보내기"</button>
+                        <button type="submit" class="btn-primary" style="justify-content:center;">(loc.pick("문의 보내기", "Send inquiry"))</button>
                     </form>
                 </div>
 
                 if !related.is_empty() {
-                    <h2 style="font-size:1.1rem; font-weight:700; margin:32px 0 12px;">"함께 보기"</h2>
+                    <h2 style="font-size:1.1rem; font-weight:700; margin:32px 0 12px;">(loc.pick("함께 보기", "More projects"))</h2>
                     <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:16px;">
                         for rel in &related {
                             <a href=(format!("/vibecoding/{}", rel.slug)) class="card" style="display:block; overflow:hidden;">
@@ -308,13 +310,13 @@ pub async fn showcase_detail(cx: &Cx) -> Result<impl View + '_> {
             } else {
                 <div style="text-align:center; padding:100px 0;">
                     if forbidden {
-                        <h1 style="font-size:1.25rem; font-weight:700; margin-bottom:8px;">"접근 권한이 없습니다"</h1>
-                        <p style="color:#6b7280; margin-bottom:24px;">"회원 전용 프로젝트입니다."</p>
+                        <h1 style="font-size:1.25rem; font-weight:700; margin-bottom:8px;">(loc.pick("접근 권한이 없습니다", "Access denied"))</h1>
+                        <p style="color:#6b7280; margin-bottom:24px;">(loc.pick("회원 전용 프로젝트입니다.", "This project is for members only."))</p>
                     } else {
-                        <h1 style="font-size:1.25rem; font-weight:700; margin-bottom:8px;">"프로젝트를 찾을 수 없습니다"</h1>
-                        <p style="color:#6b7280; margin-bottom:24px;">"요청하신 프로젝트가 존재하지 않습니다."</p>
+                        <h1 style="font-size:1.25rem; font-weight:700; margin-bottom:8px;">(loc.pick("프로젝트를 찾을 수 없습니다", "Project not found"))</h1>
+                        <p style="color:#6b7280; margin-bottom:24px;">(loc.pick("요청하신 프로젝트가 존재하지 않습니다.", "The project you requested does not exist."))</p>
                     }
-                    <a href="/vibecoding" class="btn-primary" style="display:inline-flex;">"목록으로"</a>
+                    <a href="/vibecoding" class="btn-primary" style="display:inline-flex;">(loc.pick("목록으로", "Back to list"))</a>
                 </div>
             }
         </div>

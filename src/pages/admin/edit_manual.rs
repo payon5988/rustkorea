@@ -25,6 +25,10 @@ pub struct EditManual {
     pub visibility: String,
     #[serde(default)]
     pub published_at: String,
+    #[serde(default)]
+    pub title_en: String,
+    #[serde(default)]
+    pub description_en: String,
 }
 
 #[route(POST "/admin/manuals/update")]
@@ -65,8 +69,8 @@ pub async fn update_manual(
     };
 
     sqlx::query(
-        "UPDATE manual_series SET slug = $1, title = $2, description = $3, difficulty = $4, estimated_minutes = $5, visibility = $6, published_at = $7, updated_at = NOW()::text
-         WHERE id = $8"
+        "UPDATE manual_series SET slug = $1, title = $2, description = $3, difficulty = $4, estimated_minutes = $5, visibility = $6, published_at = $7, title_en = $8, description_en = $9, updated_at = NOW()::text
+         WHERE id = $10"
     )
     .bind(&input.slug)
     .bind(&input.title)
@@ -75,6 +79,8 @@ pub async fn update_manual(
     .bind(input.estimated_minutes)
     .bind(&input.visibility)
     .bind(&published_at)
+    .bind(input.title_en.trim())
+    .bind(input.description_en.trim())
     .bind(&input.id)
     .execute(db)
     .await.ok();
@@ -171,6 +177,14 @@ pub async fn edit_manual(cx: &Cx) -> Result<impl View + '_> {
                                 <div style="margin-bottom:20px;">
                                     <label style="display:block; font-size:13px; font-weight:600; color:var(--muted); margin-bottom:8px;">"설명"</label>
                                     <textarea name="description" rows="3" class="input">(s.description.clone())</textarea>
+                                </div>
+                                <div style="margin-bottom:20px;">
+                                    <label style="display:block; font-size:13px; font-weight:600; color:var(--muted); margin-bottom:8px;">"영어 제목 (선택)"</label>
+                                    <input type="text" name="title_en" lang="en" class="input" value=(s.title_en.clone())>
+                                </div>
+                                <div style="margin-bottom:20px;">
+                                    <label style="display:block; font-size:13px; font-weight:600; color:var(--muted); margin-bottom:8px;">"영어 설명 (선택, 비우면 한국어 표시)"</label>
+                                    <textarea name="description_en" rows="3" lang="en" class="input">(s.description_en.clone())</textarea>
                                 </div>
                                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
                                     <div>

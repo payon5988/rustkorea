@@ -16,6 +16,7 @@ pub async fn series_detail(cx: &Cx) -> Result<impl View + '_> {
     let slug = path_param::<Slug>(cx);
     let db: &Db = topcoat::context::app_context(cx);
     let access = crate::auth::access::load_access(db, cx).await;
+    let loc = crate::services::i18n::locale(cx);
 
     let series = sqlx::query_as::<_, ManualSeries>(&format!(
         "SELECT * FROM manual_series WHERE slug = $1 AND {}",
@@ -78,7 +79,7 @@ pub async fn series_detail(cx: &Cx) -> Result<impl View + '_> {
         <div class="container" style="padding-top:40px; padding-bottom:80px;">
             if let Some(s) = series {
                 <a href="/manuals" style="font-size:13px; color:#6b7280; display:inline-flex; align-items:center; gap:6px; margin-bottom:24px;">
-                    "<- 매뉴얼 목록"
+                    (loc.pick("<- 매뉴얼 목록", "<- All manuals"))
                 </a>
 
                 <div style="margin-bottom:40px;">
@@ -89,22 +90,25 @@ pub async fn series_detail(cx: &Cx) -> Result<impl View + '_> {
                                 crate::models::difficulty::INTERMEDIATE => "background:#fffbeb; color:#d97706; border:1px solid #fde68a",
                                 _ => "background:#ecfdf5; color:#10b981; border:1px solid #a7f3d0",
                             }).to_string())>
-                            (crate::models::difficulty::label(s.difficulty.as_str()))
+                            (crate::models::difficulty::label_in(s.difficulty.as_str(), loc))
                         </span>
                         if s.visibility != "public" {
-                            <span class="badge" style="background:#eff6ff; color:#2563EB; border:1px solid #bfdbfe;">(format!("🔒 {}", crate::auth::access::visibility_label(&s.visibility)))</span>
+                            <span class="badge" style="background:#eff6ff; color:#2563EB; border:1px solid #bfdbfe;">(format!("🔒 {}", crate::auth::access::visibility_label_in(&s.visibility, loc)))</span>
                         }
                     </div>
-                    <h1 style="font-size:2rem; font-weight:800; letter-spacing:-0.03em; margin-bottom:8px;">(s.title.clone())</h1>
-                    <p class="section-sub" style="margin-bottom:16px;">(s.description.clone())</p>
+                    <h1 style="font-size:2rem; font-weight:800; letter-spacing:-0.03em; margin-bottom:8px;">(loc.text_owned(&s.title, &s.title_en))</h1>
+                    <p class="section-sub" style="margin-bottom:16px;">(loc.text_owned(&s.description, &s.description_en))</p>
                     <div style="display:flex; gap:20px; font-size:13px; color:#9ca3af;">
-                        <span>(format!("약 {}분", s.estimated_minutes))</span>
-                        <span>(format!("{}개 챕터", chapters.len()))</span>
+                        <span>(super::series::minutes_label(s.estimated_minutes, loc))</span>
+                        <span>(match loc {
+                            crate::services::i18n::Locale::Ko => format!("{}개 챕터", chapters.len()),
+                            crate::services::i18n::Locale::En => format!("{} chapters", chapters.len()),
+                        })</span>
                     </div>
                     if show_progress {
                         <div style="margin-top:12px; max-width:320px;">
                             <div style="display:flex; justify-content:space-between; font-size:12px; color:#6b7280; margin-bottom:6px;">
-                                <span>"내 진행률"</span>
+                                <span>(loc.pick("내 진행률", "My progress"))</span>
                                 <span>(format!("{done_count}/{total_count} ({progress_pct}%)"))</span>
                             </div>
                             <div style="height:8px; border-radius:4px; background:#f3f4f6; overflow:hidden;">
@@ -116,7 +120,7 @@ pub async fn series_detail(cx: &Cx) -> Result<impl View + '_> {
 
                 if chapters.is_empty() {
                     <div class="card" style="padding:60px; text-align:center;">
-                        <p style="color:#6b7280;">"챕터가 준비 중입니다."</p>
+                        <p style="color:#6b7280;">(loc.pick("챕터가 준비 중입니다.", "Chapters are in preparation."))</p>
                     </div>
                 } else {
                     <div style="display:flex; flex-direction:column; gap:8px;">
@@ -124,20 +128,20 @@ pub async fn series_detail(cx: &Cx) -> Result<impl View + '_> {
                             if chapter_gates[i] == crate::auth::access::Gate::Allow {
                                 <a href=(format!("/manuals/{}/{}", s.slug, chapter.slug)) class="card" style="display:flex; align-items:center; gap:16px; padding:16px 20px;">
                                     <span style="width:32px; height:32px; border-radius:8px; background:#f9fafb; border:1px solid #f3f4f6; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:600; color:#6b7280; flex-shrink:0;">(i + 1)</span>
-                                    <span style="font-size:14px; font-weight:600; flex:1;">(chapter.title.clone())</span>
+                                    <span style="font-size:14px; font-weight:600; flex:1;">(loc.text_owned(&chapter.title, &chapter.title_en))</span>
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
                                 </a>
                             } else if chapter_gates[i] == crate::auth::access::Gate::LoginRequired {
                                 <a href=(format!("/auth/login?redirect=/manuals/{}/{}", s.slug, chapter.slug)) class="card" style="display:flex; align-items:center; gap:16px; padding:16px 20px; background:#f8fafb;">
                                     <span style="width:32px; height:32px; border-radius:8px; background:#eef2ff; border:1px solid #bfdbfe; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:600; color:#2563EB; flex-shrink:0;">"🔒"</span>
-                                    <span style="font-size:14px; font-weight:600; flex:1;">(chapter.title.clone())</span>
-                                    <span style="font-size:11px; color:#2563EB; font-weight:600;">"로그인 필요"</span>
+                                    <span style="font-size:14px; font-weight:600; flex:1;">(loc.text_owned(&chapter.title, &chapter.title_en))</span>
+                                    <span style="font-size:11px; color:#2563EB; font-weight:600;">(loc.pick("로그인 필요", "Log in required"))</span>
                                 </a>
                             } else {
                                 <div class="card" style="display:flex; align-items:center; gap:16px; padding:16px 20px; background:#f8fafb; opacity:0.75;">
                                     <span style="width:32px; height:32px; border-radius:8px; background:#fef2f2; border:1px solid #fecaca; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:600; color:#ef4444; flex-shrink:0;">"🔒"</span>
-                                    <span style="font-size:14px; font-weight:600; flex:1;">(chapter.title.clone())</span>
-                                    <span style="font-size:11px; color:#6b7280; font-weight:600;">(crate::auth::access::visibility_label(&chapter.visibility))</span>
+                                    <span style="font-size:14px; font-weight:600; flex:1;">(loc.text_owned(&chapter.title, &chapter.title_en))</span>
+                                    <span style="font-size:11px; color:#6b7280; font-weight:600;">(crate::auth::access::visibility_label_in(&chapter.visibility, loc))</span>
                                 </div>
                             }
                         }
@@ -145,9 +149,9 @@ pub async fn series_detail(cx: &Cx) -> Result<impl View + '_> {
                 }
             } else {
                 <div style="text-align:center; padding:100px 0;">
-                    <h1 style="font-size:1.25rem; font-weight:700; margin-bottom:8px;">"시리즈를 찾을 수 없습니다"</h1>
-                    <p style="color:#6b7280; margin-bottom:24px;">"요청하신 매뉴얼이 존재하지 않습니다."</p>
-                    <a href="/manuals" class="btn-primary" style="display:inline-flex;">"매뉴얼 목록으로"</a>
+                    <h1 style="font-size:1.25rem; font-weight:700; margin-bottom:8px;">(loc.pick("시리즈를 찾을 수 없습니다", "Series not found"))</h1>
+                    <p style="color:#6b7280; margin-bottom:24px;">(loc.pick("요청하신 매뉴얼이 존재하지 않습니다.", "The manual you requested does not exist."))</p>
+                    <a href="/manuals" class="btn-primary" style="display:inline-flex;">(loc.pick("매뉴얼 목록으로", "Back to manuals"))</a>
                 </div>
             }
         </div>

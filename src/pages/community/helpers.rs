@@ -5,14 +5,6 @@ use crate::auth::access::Access;
 use crate::db::Db;
 use crate::models::{Category, User};
 
-pub const CATEGORIES: [(&str, &str); 5] = [
-    ("general", "일반 토론"),
-    ("qna", "질문과 답변"),
-    ("showcase", "프로젝트 쇼케이스"),
-    ("jobs", "구인구직"),
-    ("announce", "공지사항"),
-];
-
 /// Category slugs (single source; DB rows reference these).
 pub mod category_slug {
     pub const GENERAL: &str = "general";
@@ -95,12 +87,15 @@ pub async fn can_write_to_category(db: &Db, access: &Option<Access>, category: &
     }
 }
 
-pub fn category_label(category: &str) -> &'static str {
-    CATEGORIES
-        .iter()
-        .find(|(key, _)| *key == category)
-        .map(|(_, label)| *label)
-        .unwrap_or("일반 토론")
+/// Built-in category label in `loc` (DB categories carry their own `name_en`).
+pub fn category_label_in(category: &str, loc: crate::services::i18n::Locale) -> &'static str {
+    match category {
+        category_slug::QNA => loc.pick("질문과 답변", "Q&A"),
+        category_slug::SHOWCASE => loc.pick("프로젝트 쇼케이스", "Project Showcase"),
+        category_slug::JOBS => loc.pick("구인구직", "Jobs"),
+        category_slug::ANNOUNCE => loc.pick("공지사항", "Announcements"),
+        _ => loc.pick("일반 토론", "General Discussion"),
+    }
 }
 
 pub fn category_color(category: &str) -> &'static str {

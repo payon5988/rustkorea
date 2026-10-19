@@ -11,7 +11,7 @@ use crate::db::Db;
 use crate::models::{Bookmark, Post, PostLike};
 
 use super::helpers::{
-    can_edit_post, category_color, category_label, get_current_user, is_admin_user,
+    can_edit_post, category_color, category_label_in, get_current_user, is_admin_user,
 };
 
 topcoat::router::path_param!(id);
@@ -223,23 +223,24 @@ pub async fn post_detail(cx: &Cx) -> Result<impl View + '_> {
 
     let access = crate::auth::access::load_access(db, cx).await;
     let is_admin = is_admin_user(&access);
+    let loc = crate::services::i18n::locale(cx);
 
     Ok(view! {
         <div class="container" style="padding-top:40px; padding-bottom:80px; max-width:720px;">
             if let Some(p) = post {
                 <a href="/community" style="font-size:13px; color:#6b7280; display:inline-flex; align-items:center; gap:6px; margin-bottom:24px;">
-                    "<- 커뮤니티"
+                    (loc.pick("<- 커뮤니티", "<- Community"))
                 </a>
 
-                <script type="application/ld+json">{(topcoat::view::Unescaped::new_unchecked(article_json_ld(&crate::config::site_url(), &p.id, &p.title, &p.username, &p.created_at, category_label(&p.category))))}</script>
+                <script type="application/ld+json">{(topcoat::view::Unescaped::new_unchecked(article_json_ld(&crate::config::site_url(), &p.id, &p.title, &p.username, &p.created_at, category_label_in(&p.category, loc))))}</script>
 
                 if !crate::util::is_released(p.published_at.as_deref()) {
-                    <div style="background:rgba(251,191,36,0.1); border:1px solid rgba(251,191,36,0.3); border-radius:8px; padding:12px 16px; font-size:13px; color:#b45309; margin-bottom:24px;">"예약 발행 상태입니다. 본인에게만 보입니다."</div>
+                    <div style="background:rgba(251,191,36,0.1); border:1px solid rgba(251,191,36,0.3); border-radius:8px; padding:12px 16px; font-size:13px; color:#b45309; margin-bottom:24px;">(loc.pick("예약 발행 상태입니다. 본인에게만 보입니다.", "Scheduled post. Only you can see it."))</div>
                 }
 
                 <div style="margin-bottom:10px;">
                     <span style=(format!("font-size:11px; font-weight:600; padding:3px 9px; border-radius:9999px; color:{}; background:{}1a;", category_color(&p.category), category_color(&p.category)))>
-                        (category_label(&p.category))
+                        (category_label_in(&p.category, loc))
                     </span>
                 </div>
 
@@ -247,7 +248,7 @@ pub async fn post_detail(cx: &Cx) -> Result<impl View + '_> {
                 <div style="display:flex; gap:12px; font-size:12px; color:#9ca3af; margin-bottom:24px;">
                     <span>(p.username.clone())</span>
                     <span>(p.created_at.split(' ').next().unwrap_or(""))</span>
-                    <span>(format!("조회 {}", p.view_count))</span>
+                    <span>(format!("{} {}", loc.pick("조회", "Views"), p.view_count))</span>
                 </div>
 
                 let can_manage = can_edit_post(&access, &p.author_id);
@@ -271,7 +272,7 @@ pub async fn post_detail(cx: &Cx) -> Result<impl View + '_> {
                                 <svg width="15" height="15" viewBox="0 0 24 24" fill=(if bookmarked_by_me { "currentColor" } else { "none" }) stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16Z"/>
                                 </svg>
-                                (format!("북마크 ({bookmark_count})"))
+                                (format!("{} ({bookmark_count})", loc.pick("북마크", "Bookmark")))
                             </button>
                         </form>
                     } else {
@@ -284,10 +285,10 @@ pub async fn post_detail(cx: &Cx) -> Result<impl View + '_> {
                     }
                     <div style="flex:1;"></div>
                     if can_manage {
-                        <a href=(format!("/community/{}/edit", p.id)) style="display:inline-flex; align-items:center; padding:8px 14px; border-radius:8px; border:1px solid #E4E4E7; background:#fff; color:#374151; font-size:13px; font-weight:500;">"수정"</a>
-                        <form method="POST" action=(format!("/community/{}/delete", p.id)) style="display:inline;" onsubmit="return confirm('정말 삭제하시겠습니까?');">
+                        <a href=(format!("/community/{}/edit", p.id)) style="display:inline-flex; align-items:center; padding:8px 14px; border-radius:8px; border:1px solid #E4E4E7; background:#fff; color:#374151; font-size:13px; font-weight:500;">(loc.pick("수정", "Edit"))</a>
+                        <form method="POST" action=(format!("/community/{}/delete", p.id)) style="display:inline;" onsubmit=(loc.pick("return confirm('정말 삭제하시겠습니까?');", "return confirm('Delete this post?');"))>
                             <input type="hidden" name="csrf_token" value=(csrf_token.clone())>
-                            <button type="submit" style="display:inline-flex; align-items:center; padding:8px 14px; border-radius:8px; border:1px solid #FECACA; background:#FEF2F2; color:#DC2626; font-size:13px; font-weight:500; cursor:pointer;">"삭제"</button>
+                            <button type="submit" style="display:inline-flex; align-items:center; padding:8px 14px; border-radius:8px; border:1px solid #FECACA; background:#FEF2F2; color:#DC2626; font-size:13px; font-weight:500; cursor:pointer;">(loc.pick("삭제", "Delete"))</button>
                         </form>
                     }
                 </div>
@@ -306,28 +307,28 @@ pub async fn post_detail(cx: &Cx) -> Result<impl View + '_> {
 
                 <div>
                     <div style="display:flex; align-items:center; gap:8px; margin-bottom:16px;">
-                        <h2 style="font-size:15px; font-weight:700;">"댓글"</h2>
+                        <h2 style="font-size:15px; font-weight:700;">(loc.pick("댓글", "Comments"))</h2>
                         <span style="font-size:12px; color:#9ca3af;">(format!("({comment_count})"))</span>
                     </div>
 
                     if current_user.is_some() {
                         <form method="POST" action=(format!("/community/{}/comment", p.id)) style="margin-bottom:24px; background:#fff; border:1px solid #E4E4E7; border-radius:8px; padding:16px;">
                             <input type="hidden" name="csrf_token" value=(csrf_token.clone())>
-                            <textarea name="content" rows="3" required="true" placeholder="댓글을 입력하세요..." style="width:100%; border:none; outline:none; resize:vertical; font-size:14px; line-height:1.6; color:#16181d; font-family:inherit;"></textarea>
+                            <textarea name="content" rows="3" required="true" placeholder=(loc.pick("댓글을 입력하세요...", "Write a comment...")) style="width:100%; border:none; outline:none; resize:vertical; font-size:14px; line-height:1.6; color:#16181d; font-family:inherit;"></textarea>
                             <div style="display:flex; justify-content:flex-end; margin-top:12px;">
-                                <button type="submit" class="btn-primary" style="padding:8px 18px; font-size:13px;">"댓글 등록"</button>
+                                <button type="submit" class="btn-primary" style="padding:8px 18px; font-size:13px;">(loc.pick("댓글 등록", "Post comment"))</button>
                             </div>
                         </form>
                     } else {
                         <div class="card" style="padding:24px; text-align:center; margin-bottom:24px;">
-                            <p style="font-size:13px; color:#6b7280; margin-bottom:12px;">"댓글을 작성하려면 로그인이 필요합니다."</p>
-                            <a href=(crate::auth::session::login_link(&format!("/community/{}", p.id))) class="btn-primary" style="display:inline-flex; padding:8px 18px; font-size:13px;">"로그인"</a>
+                            <p style="font-size:13px; color:#6b7280; margin-bottom:12px;">(loc.pick("댓글을 작성하려면 로그인이 필요합니다.", "Log in to write a comment."))</p>
+                            <a href=(crate::auth::session::login_link(&format!("/community/{}", p.id))) class="btn-primary" style="display:inline-flex; padding:8px 18px; font-size:13px;">(loc.pick("로그인", "Log in"))</a>
                         </div>
                     }
 
                     if comment_count == 0 {
                         <div class="card" style="padding:40px; text-align:center;">
-                            <p style="font-size:13px; color:#9ca3af;">"아직 댓글이 없습니다."</p>
+                            <p style="font-size:13px; color:#9ca3af;">(loc.pick("아직 댓글이 없습니다.", "No comments yet."))</p>
                         </div>
                     } else {
                         <div style="display:flex; flex-direction:column; gap:8px;">
@@ -340,9 +341,9 @@ pub async fn post_detail(cx: &Cx) -> Result<impl View + '_> {
                                             <span style="font-size:11px; color:#9ca3af;">(comment.created_at.split(' ').next().unwrap_or(""))</span>
                                         </div>
                                         if can_delete_comment {
-                                            <form method="POST" action=(format!("/community/comment/{}/delete", comment.id)) onsubmit="return confirm('댓글을 삭제하시겠습니까?');">
+                                            <form method="POST" action=(format!("/community/comment/{}/delete", comment.id)) onsubmit=(loc.pick("return confirm('댓글을 삭제하시겠습니까?');", "return confirm('Delete this comment?');"))>
                                                 <input type="hidden" name="csrf_token" value=(csrf_token.clone())>
-                                                <button type="submit" style="background:none; border:none; font-size:11px; color:#9ca3af; cursor:pointer; padding:2px 4px;">"삭제"</button>
+                                                <button type="submit" style="background:none; border:none; font-size:11px; color:#9ca3af; cursor:pointer; padding:2px 4px;">(loc.pick("삭제", "Delete"))</button>
                                             </form>
                                         }
                                     </div>
@@ -354,9 +355,9 @@ pub async fn post_detail(cx: &Cx) -> Result<impl View + '_> {
                 </div>
             } else {
                 <div style="text-align:center; padding:100px 0;">
-                    <h1 style="font-size:1.25rem; font-weight:700; margin-bottom:8px;">"게시글을 찾을 수 없습니다"</h1>
-                    <p style="color:#6b7280; margin-bottom:24px;">"삭제되었거나 존재하지 않는 글입니다."</p>
-                    <a href="/community" class="btn-primary" style="display:inline-flex;">"커뮤니티로 돌아가기"</a>
+                    <h1 style="font-size:1.25rem; font-weight:700; margin-bottom:8px;">(loc.pick("게시글을 찾을 수 없습니다", "Post not found"))</h1>
+                    <p style="color:#6b7280; margin-bottom:24px;">(loc.pick("삭제되었거나 존재하지 않는 글입니다.", "This post was deleted or does not exist."))</p>
+                    <a href="/community" class="btn-primary" style="display:inline-flex;">(loc.pick("커뮤니티로 돌아가기", "Back to community"))</a>
                 </div>
             }
         </div>

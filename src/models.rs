@@ -38,19 +38,21 @@ pub struct ManualSeries {
     pub created_at: String,
     pub updated_at: String,
     pub published_at: Option<String>,
+    pub title_en: String,
+    pub description_en: String,
 }
 
-/// Manual difficulty keys + Korean labels (single source).
+/// Manual difficulty keys + labels (single source).
 pub mod difficulty {
     pub const ADVANCED: &str = "advanced";
     pub const INTERMEDIATE: &str = "intermediate";
     pub const BEGINNER: &str = "beginner";
 
-    pub fn label(d: &str) -> &'static str {
+    pub fn label_in(d: &str, loc: crate::services::i18n::Locale) -> &'static str {
         match d {
-            ADVANCED => "고급",
-            INTERMEDIATE => "중급",
-            _ => "초급",
+            ADVANCED => loc.pick("고급", "Advanced"),
+            INTERMEDIATE => loc.pick("중급", "Intermediate"),
+            _ => loc.pick("초급", "Beginner"),
         }
     }
 
@@ -73,6 +75,9 @@ pub struct ManualChapter {
     pub created_at: String,
     pub updated_at: String,
     pub published_at: Option<String>,
+    pub title_en: String,
+    pub content_md_en: String,
+    pub content_html_en: String,
 }
 
 #[allow(dead_code)]
@@ -182,6 +187,7 @@ pub struct NavItem {
     pub required_permission: String,
     pub created_at: String,
     pub updated_at: String,
+    pub label_en: String,
 }
 
 #[allow(dead_code)]
@@ -226,6 +232,8 @@ pub struct Category {
     pub visible: i64,
     pub write_permission: String,
     pub created_at: String,
+    pub name_en: String,
+    pub description_en: String,
 }
 
 #[allow(dead_code)]
@@ -473,6 +481,10 @@ pub struct BlogPost {
     pub published_at: Option<String>,
     pub created_at: String,
     pub updated_at: String,
+    pub title_en: String,
+    pub summary_en: String,
+    pub content_md_en: String,
+    pub content_html_en: String,
 }
 
 impl BlogPost {

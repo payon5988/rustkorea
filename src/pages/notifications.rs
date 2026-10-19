@@ -63,6 +63,7 @@ pub async fn notifications_page(cx: &Cx) -> Result<impl View + '_> {
     };
     let db: &Db = topcoat::context::app_context(cx);
     let csrf_token = crate::auth::session::csrf_token(db, cx).await;
+    let loc = crate::services::i18n::locale(cx);
 
     let notifications: Vec<NotiWithFrom> = sqlx::query_as::<_, NotiWithFrom>(
         "SELECT n.id, n.noti_type, n.from_user_id, n.post_id, n.message, n.is_read, n.created_at,
@@ -85,15 +86,18 @@ pub async fn notifications_page(cx: &Cx) -> Result<impl View + '_> {
         <div class="container" style="padding-top:40px; padding-bottom:80px; max-width:640px;">
             <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:32px;">
                 <div>
-                    <h1 style="font-size:1.5rem; font-weight:800; letter-spacing:-0.02em;">"알림"</h1>
+                    <h1 style="font-size:1.5rem; font-weight:800; letter-spacing:-0.02em;">(loc.pick("알림", "Notifications"))</h1>
                     if unread_count > 0 {
-                        <p style="font-size:13px; color:#6b7280; margin-top:4px;">(format!("읽지 않은 알림 {}개", unread_count))</p>
+                        <p style="font-size:13px; color:#6b7280; margin-top:4px;">(match loc {
+                            crate::services::i18n::Locale::Ko => format!("읽지 않은 알림 {unread_count}개"),
+                            crate::services::i18n::Locale::En => format!("{unread_count} unread"),
+                        })</p>
                     }
                 </div>
                 if unread_count > 0 {
                     <form method="POST" action="/notifications/read-all">
                         <input type="hidden" name="csrf_token" value=(csrf_token.clone())>
-                        <button type="submit" style="font-size:13px; color:#2563EB; font-weight:500; background:none; border:none; cursor:pointer;">"모두 읽음"</button>
+                        <button type="submit" style="font-size:13px; color:#2563EB; font-weight:500; background:none; border:none; cursor:pointer;">(loc.pick("모두 읽음", "Mark all as read"))</button>
                     </form>
                 }
             </div>
@@ -104,7 +108,7 @@ pub async fn notifications_page(cx: &Cx) -> Result<impl View + '_> {
                         <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
                         <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
                     </svg>
-                    <p style="color:#6b7280;">"아직 알림이 없습니다."</p>
+                    <p style="color:#6b7280;">(loc.pick("아직 알림이 없습니다.", "No notifications yet."))</p>
                 </div>
             } else {
                 <div style="display:flex; flex-direction:column; gap:2px; background:#e5e7eb; border-radius:12px; overflow:hidden;">

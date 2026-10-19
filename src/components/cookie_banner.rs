@@ -12,21 +12,25 @@ pub async fn CookieBanner(cx: &Cx) -> Result<impl View + '_> {
         .get("cookie_consent")
         .map(|c| c.value() == "1")
         .unwrap_or(false);
+    let loc = crate::services::i18n::locale(cx);
 
     Ok(view! {
         if !has_consent {
             <div id="cookie-banner" style="position:fixed; bottom:0; left:0; right:0; z-index:100; background:#1a1d27; border-top:1px solid #2a2d3a; padding:16px 24px; display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; box-shadow:0 -4px 20px rgba(0,0,0,0.15);">
                 <p style="font-size:13px; color:#d1d5db; line-height:1.6; flex:1; min-width:280px; margin:0;">
-                    "이 사이트는 서비스 개선과 광고 게재를 위해 쿠키를 사용합니다. 계속 사용하시면 쿠키 사용에 동의하시는 것으로 간주됩니다. 자세한 내용은 "
-                    <a href="/privacy" style="color:#60a5fa; text-decoration:underline;">"개인정보처리방침"</a>
-                    "을 참조하세요."
+                    (loc.pick(
+                        "이 사이트는 서비스 개선과 광고 게재를 위해 쿠키를 사용합니다. 계속 사용하시면 쿠키 사용에 동의하시는 것으로 간주됩니다. 자세한 내용은 ",
+                        "This site uses cookies to improve the service and serve ads. By continuing to use it, you agree to the use of cookies. See our ",
+                    ))
+                    <a href="/privacy" style="color:#60a5fa; text-decoration:underline;">(loc.pick("개인정보처리방침", "Privacy Policy"))</a>
+                    (loc.pick("을 참조하세요.", " for details."))
                 </p>
                 <div style="display:flex; gap:8px; flex-shrink:0;">
                     <button onclick="acceptCookies()" style="background:#2563EB; color:#fff; padding:8px 20px; border-radius:8px; font-size:13px; font-weight:600; border:none; cursor:pointer; transition:background 0.15s;">
-                        "동의"
+                        (loc.pick("동의", "Accept"))
                     </button>
                     <button onclick="document.getElementById('cookie-banner').style.display='none'" style="background:transparent; color:#9ca3af; padding:8px 16px; border-radius:8px; font-size:13px; font-weight:500; border:1px solid #3a3d4a; cursor:pointer; transition:color 0.15s;">
-                        "닫기"
+                        (loc.pick("닫기", "Close"))
                     </button>
                 </div>
             </div>

@@ -20,6 +20,10 @@ pub struct CategoryForm {
     pub color: String,
     pub description: String,
     pub write_permission: Option<String>,
+    #[serde(default)]
+    pub name_en: String,
+    #[serde(default)]
+    pub description_en: String,
 }
 
 #[route(POST "/admin/categories/create")]
@@ -58,9 +62,10 @@ pub async fn create_category(
         .unwrap_or_else(|| crate::pages::community::helpers::write_perm::EVERYONE.to_string());
 
     sqlx::query(
-        "INSERT INTO categories (id, slug, name, color, description, position, visible, write_permission, created_at) VALUES ($1, $2, $3, $4, $5, $6, 1, $7, NOW()::text)"
+        "INSERT INTO categories (id, slug, name, color, description, position, visible, write_permission, created_at, name_en, description_en) VALUES ($1, $2, $3, $4, $5, $6, 1, $7, NOW()::text, $8, $9)"
     )
     .bind(&slug).bind(&slug).bind(&input.name).bind(&input.color).bind(&input.description).bind(max_pos + 1).bind(&write_perm)
+    .bind(input.name_en.trim()).bind(input.description_en.trim())
     .execute(db).await.ok();
 
     Ok(topcoat::router::error::see_other("/admin/categories"))
@@ -74,6 +79,10 @@ pub struct CategoryUpdateForm {
     pub color: String,
     pub description: String,
     pub write_permission: Option<String>,
+    #[serde(default)]
+    pub name_en: String,
+    #[serde(default)]
+    pub description_en: String,
 }
 
 #[route(POST "/admin/categories/update")]
@@ -105,8 +114,9 @@ pub async fn update_category(
     let write_perm = input
         .write_permission
         .unwrap_or_else(|| crate::pages::community::helpers::write_perm::EVERYONE.to_string());
-    sqlx::query("UPDATE categories SET name = $1, color = $2, description = $3, write_permission = $4 WHERE id = $5")
-        .bind(&input.name).bind(&input.color).bind(&input.description).bind(&write_perm).bind(&input.id)
+    sqlx::query("UPDATE categories SET name = $1, color = $2, description = $3, write_permission = $4, name_en = $5, description_en = $6 WHERE id = $7")
+        .bind(&input.name).bind(&input.color).bind(&input.description).bind(&write_perm)
+        .bind(input.name_en.trim()).bind(input.description_en.trim()).bind(&input.id)
         .execute(db).await.ok();
     Ok(topcoat::router::error::see_other("/admin/categories"))
 }
@@ -422,7 +432,7 @@ pub async fn admin_categories(cx: &Cx) -> Result<impl View + '_> {
                                                     <input type="hidden" name="csrf_token" value=(csrf_token.clone())>
                                                     <button type="submit" style="font-size:11px; color:var(--muted2); background:none; border:none; cursor:pointer; padding:2px 4px;" title="아래로">"▼"</button>
                                                 </form>
-                                                <button type="button" onclick="fillCatEdit(this)" data-id=(cat.id.clone()) data-name=(cat.name.clone()) data-color=(cat.color.clone()) data-desc=(cat.description.clone()) data-perm=(cat.write_permission.clone()) style="font-size:12px; color:var(--blue); background:none; border:none; cursor:pointer; font-weight:600;">"수정"</button>
+                                                <button type="button" onclick="fillCatEdit(this)" data-id=(cat.id.clone()) data-name=(cat.name.clone()) data-name-en=(cat.name_en.clone()) data-color=(cat.color.clone()) data-desc=(cat.description.clone()) data-desc-en=(cat.description_en.clone()) data-perm=(cat.write_permission.clone()) style="font-size:12px; color:var(--blue); background:none; border:none; cursor:pointer; font-weight:600;">"수정"</button>
                                                 <form action=(format!("/admin/categories/{}/toggle", cat.id)) method="POST" style="display:inline;">
                                                     <input type="hidden" name="csrf_token" value=(csrf_token.clone())>
                                                     <button type="submit" style=(format!("font-size:12px; color:{}; background:none; border:none; cursor:pointer; font-weight:600;", toggle_color))>
@@ -457,6 +467,10 @@ pub async fn admin_categories(cx: &Cx) -> Result<impl View + '_> {
                                     <input type="text" name="name" required="true" placeholder="예: Rust 팁" style=(input_style)>
                                 </div>
                                 <div>
+                                    <label style="display:block; font-size:12px; font-weight:600; color:var(--muted); margin-bottom:6px;">"영어 이름 (선택)"</label>
+                                    <input type="text" name="name_en" placeholder="e.g. Rust Tips" style=(input_style)>
+                                </div>
+                                <div>
                                     <label style="display:block; font-size:12px; font-weight:600; color:var(--muted); margin-bottom:6px;">"색상 (HEX)"</label>
                                     <div style="display:flex; gap:8px; align-items:center;">
                                         <input type="color" id="color-picker" value="var(--muted2)" style="width:40px; height:36px; border:none; cursor:pointer; background:transparent;" oninput="document.getElementById('color-hex').value=this.value">
@@ -466,6 +480,10 @@ pub async fn admin_categories(cx: &Cx) -> Result<impl View + '_> {
                                 <div>
                                     <label style="display:block; font-size:12px; font-weight:600; color:var(--muted); margin-bottom:6px;">"설명"</label>
                                     <input type="text" name="description" placeholder="카테고리 설명" style=(input_style)>
+                                </div>
+                                <div>
+                                    <label style="display:block; font-size:12px; font-weight:600; color:var(--muted); margin-bottom:6px;">"영어 설명 (선택)"</label>
+                                    <input type="text" name="description_en" placeholder="English description" style=(input_style)>
                                 </div>
                                 <div>
                                     <label style="display:block; font-size:12px; font-weight:600; color:var(--muted); margin-bottom:6px;">"쓰기 권한"</label>
@@ -484,7 +502,7 @@ pub async fn admin_categories(cx: &Cx) -> Result<impl View + '_> {
 
             <div id="edit-modal" style="display:none; position:fixed; inset:0; z-index:100; background:rgba(0,0,0,0.6); align-items:center; justify-content:center;" onclick="if(event.target===this)this.style.display='none'">
                 <script>
-                    {r#"function fillCatEdit(btn){var d=btn.dataset;document.getElementById('edit-id').value=d.id;document.getElementById('edit-name').value=d.name;document.getElementById('edit-color').value=d.color;document.getElementById('edit-color-pick').value=d.color;document.getElementById('edit-desc').value=d.desc;document.getElementById('edit-perm').value=d.perm;document.getElementById('edit-modal').style.display='flex'}"#}
+                    {r#"function fillCatEdit(btn){var d=btn.dataset;document.getElementById('edit-id').value=d.id;document.getElementById('edit-name').value=d.name;document.getElementById('edit-name-en').value=d.nameEn||'';document.getElementById('edit-desc-en').value=d.descEn||'';document.getElementById('edit-color').value=d.color;document.getElementById('edit-color-pick').value=d.color;document.getElementById('edit-desc').value=d.desc;document.getElementById('edit-perm').value=d.perm;document.getElementById('edit-modal').style.display='flex'}"#}
                 </script>
                 <div style="background:var(--card); border:1px solid var(--border); border-radius:12px; padding:28px; width:420px; max-width:90vw;">
                     <h3 style="font-size:16px; font-weight:700; color:var(--text); margin-bottom:20px;">"카테고리 수정"</h3>
@@ -496,6 +514,10 @@ pub async fn admin_categories(cx: &Cx) -> Result<impl View + '_> {
                             <input type="text" id="edit-name" name="name" required="true" style=(input_style)>
                         </div>
                         <div>
+                            <label style="display:block; font-size:12px; font-weight:600; color:var(--muted); margin-bottom:6px;">"영어 이름 (비우면 한국어 표시)"</label>
+                            <input type="text" id="edit-name-en" name="name_en" style=(input_style)>
+                        </div>
+                        <div>
                             <label style="display:block; font-size:12px; font-weight:600; color:var(--muted); margin-bottom:6px;">"색상"</label>
                             <div style="display:flex; gap:8px; align-items:center;">
                                 <input type="color" id="edit-color-pick" value="var(--muted2)" style="width:40px; height:36px; border:none; cursor:pointer; background:transparent;" oninput="document.getElementById('edit-color').value=this.value">
@@ -505,6 +527,10 @@ pub async fn admin_categories(cx: &Cx) -> Result<impl View + '_> {
                         <div>
                             <label style="display:block; font-size:12px; font-weight:600; color:var(--muted); margin-bottom:6px;">"설명"</label>
                             <input type="text" id="edit-desc" name="description" style=(input_style)>
+                        </div>
+                        <div>
+                            <label style="display:block; font-size:12px; font-weight:600; color:var(--muted); margin-bottom:6px;">"영어 설명"</label>
+                            <input type="text" id="edit-desc-en" name="description_en" style=(input_style)>
                         </div>
                         <div>
                             <label style="display:block; font-size:12px; font-weight:600; color:var(--muted); margin-bottom:6px;">"쓰기 권한"</label>

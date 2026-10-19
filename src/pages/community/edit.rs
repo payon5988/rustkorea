@@ -72,49 +72,50 @@ pub async fn edit_post_page(cx: &Cx) -> Result<impl View + '_> {
             }
         })
         .collect();
+    let loc = crate::services::i18n::locale(cx);
 
     Ok(view! {
         <div style="min-height:calc(100vh - 64px); display:flex; align-items:center; justify-content:center; padding:40px 24px; background:#f8f9fa;">
             <div style="width:100%; max-width:640px;">
                 <div style="text-align:center; margin-bottom:32px;">
-                    <h1 style="font-size:1.5rem; font-weight:800; letter-spacing:-0.02em; color:#16181d;">"글 수정"</h1>
-                    <p style="font-size:14px; color:#6b7280; margin-top:6px;">"마크다운 문법을 지원합니다."</p>
+                    <h1 style="font-size:1.5rem; font-weight:800; letter-spacing:-0.02em; color:#16181d;">(loc.pick("글 수정", "Edit post"))</h1>
+                    <p style="font-size:14px; color:#6b7280; margin-top:6px;">(loc.pick("마크다운 문법을 지원합니다.", "Markdown is supported."))</p>
                 </div>
 
                 <div style="background:#fff; border:1px solid #e5e7eb; border-radius:8px; padding:32px; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
                     <form action=(format!("/community/{}/update", post.id)) method="POST" style="display:flex; flex-direction:column; gap:20px;">
                         <input type="hidden" name="csrf_token" value=(csrf_token.clone())>
                         <div>
-                            <label style="display:block; font-size:13px; font-weight:600; color:#374151; margin-bottom:8px;">"카테고리"</label>
+                            <label style="display:block; font-size:13px; font-weight:600; color:#374151; margin-bottom:8px;">(loc.pick("카테고리", "Category"))</label>
                             <select name="category" class="input">
                                 for cat in &categories {
-                                    <option value=(cat.slug.clone()) selected=(post.category == cat.slug)>(cat.name.clone())</option>
+                                    <option value=(cat.slug.clone()) selected=(post.category == cat.slug)>(loc.text_owned(&cat.name, &cat.name_en))</option>
                                 }
                             </select>
                         </div>
                         <div>
-                            <label style="display:block; font-size:13px; font-weight:600; color:#374151; margin-bottom:8px;">"제목"</label>
+                            <label style="display:block; font-size:13px; font-weight:600; color:#374151; margin-bottom:8px;">(loc.pick("제목", "Title"))</label>
                             <input type="text" name="title" required="true" class="input" value=(post.title.clone())>
                         </div>
                         <div>
-                            <label style="display:block; font-size:13px; font-weight:600; color:#374151; margin-bottom:8px;">"내용 (Markdown)"</label>
+                            <label style="display:block; font-size:13px; font-weight:600; color:#374151; margin-bottom:8px;">(loc.pick("내용 (Markdown)", "Content (Markdown)"))</label>
                             <div style="margin-bottom:12px; display:flex; align-items:center; gap:10px;">
-                                <label for="md-file" style="font-size:13px; color:#6b7280; cursor:pointer; border:1px dashed #d1d5db; border-radius:6px; padding:8px 14px;">".md 파일 불러오기"</label>
+                                <label for="md-file" style="font-size:13px; color:#6b7280; cursor:pointer; border:1px dashed #d1d5db; border-radius:6px; padding:8px 14px;">(loc.pick(".md 파일 불러오기", "Load a .md file"))</label>
                                 <input type="file" id="md-file" accept=".md,.markdown,.txt" style="display:none;">
-                                <span style="font-size:12px; color:#9ca3af;">"또는 :::youtube[영상ID] 로 영상 삽입"</span>
+                                <span style="font-size:12px; color:#9ca3af;">(loc.pick("또는 :::youtube[영상ID] 로 영상 삽입", "or embed a video with :::youtube[VIDEO_ID]"))</span>
                             </div>
                             <textarea id="editor" name="content_md" rows="16" required="true" class="input">(post.content_md.clone())</textarea>
                         </div>
                         <div>
-                            <label style="display:block; font-size:13px; font-weight:600; color:#374151; margin-bottom:8px;">"예약 발행 (비워두면 즉시 발행)"</label>
+                            <label style="display:block; font-size:13px; font-weight:600; color:#374151; margin-bottom:8px;">(loc.pick("예약 발행 (비워두면 즉시 발행)", "Schedule (leave empty to publish now)"))</label>
                             <input type="datetime-local" name="published_at" class="input" value=(crate::util::format_schedule_kst(post.published_at.as_deref()))>
-                            <p style="font-size:12px; color:#9ca3af; margin-top:4px;">"한국 시간 기준. 비우면 예약이 해제됩니다."</p>
+                            <p style="font-size:12px; color:#9ca3af; margin-top:4px;">(loc.pick("한국 시간 기준. 비우면 예약이 해제됩니다.", "Korea Standard Time (KST). Clear it to cancel the schedule."))</p>
                         </div>
-                        <button type="submit" class="btn-primary" style="width:100%; justify-content:center; padding:14px;">"수정 완료"</button>
+                        <button type="submit" class="btn-primary" style="width:100%; justify-content:center; padding:14px;">(loc.pick("수정 완료", "Save changes"))</button>
                     </form>
 
                     <div style="margin-top:24px; text-align:center; font-size:13px; color:#6b7280;">
-                        <a href=(format!("/community/{}", post.id)) style="color:#2563EB; font-weight:500;">"<- 글로 돌아가기"</a>
+                        <a href=(format!("/community/{}", post.id)) style="color:#2563EB; font-weight:500;">(loc.pick("<- 글로 돌아가기", "<- Back to post"))</a>
                     </div>
                 </div>
             </div>

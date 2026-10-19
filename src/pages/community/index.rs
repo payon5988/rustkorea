@@ -15,7 +15,8 @@ pub const PAGE_WINDOW: i64 = 2;
 pub const POST_PREVIEW_LEN: usize = 80;
 
 use super::helpers::{
-    category_color, category_label, get_current_user, load_categories, query_param, valid_category,
+    category_color, category_label_in, get_current_user, load_categories, query_param,
+    valid_category,
 };
 
 enum PageItem {
@@ -77,6 +78,7 @@ fn badge_style(color: &str) -> String {
 #[page("/community")]
 pub async fn community_index(cx: &Cx) -> Result<impl View + '_> {
     let db: &Db = topcoat::context::app_context(cx);
+    let loc = crate::services::i18n::locale(cx);
     let current_user = get_current_user(cx).await;
     let can_write = super::helpers::can_write_post(&current_user);
 
@@ -150,11 +152,19 @@ pub async fn community_index(cx: &Cx) -> Result<impl View + '_> {
     let categories = load_categories(db).await;
 
     let tabs: Vec<(String, String)> = {
-        let mut t = vec![("all".to_string(), "전체".to_string())];
+        let mut t = vec![("all".to_string(), loc.pick("전체", "All").to_string())];
         for cat in &categories {
-            t.push((cat.slug.clone(), cat.name.clone()));
+            t.push((cat.slug.clone(), loc.text_owned(&cat.name, &cat.name_en)));
         }
         t
+    };
+    // Badge text: the DB category's localized name, else the built-in label.
+    let category_name = move |slug: &str| -> String {
+        categories
+            .iter()
+            .find(|c| c.slug == slug)
+            .map(|c| loc.text_owned(&c.name, &c.name_en))
+            .unwrap_or_else(|| category_label_in(slug, loc).to_string())
     };
 
     Ok(view! {
@@ -162,14 +172,14 @@ pub async fn community_index(cx: &Cx) -> Result<impl View + '_> {
             <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:32px;">
                 <div>
                     <div style="font-size:11px; font-weight:700; color:#2563EB; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:8px;">"COMMUNITY"</div>
-                    <h1 style="font-size:2rem; font-weight:800; letter-spacing:-0.03em;">"커뮤니티"</h1>
+                    <h1 style="font-size:2rem; font-weight:800; letter-spacing:-0.03em;">(loc.pick("커뮤니티", "Community"))</h1>
                 </div>
                 if current_user.is_some() {
                     if can_write {
-                        <a href="/community/new" class="btn-primary">"글쓰기"</a>
+                        <a href="/community/new" class="btn-primary">(loc.pick("글쓰기", "New post"))</a>
                     }
                 } else {
-                    <a href="/auth/login?redirect=/community" class="btn-secondary">"로그인"</a>
+                    <a href="/auth/login?redirect=/community" class="btn-secondary">(loc.pick("로그인", "Log in"))</a>
                 }
             </div>
 
@@ -190,18 +200,18 @@ pub async fn community_index(cx: &Cx) -> Result<impl View + '_> {
 
             if posts.is_empty() {
                 <div class="card" style="padding:80px; text-align:center;">
-                    <p style="color:#6b7280; margin-bottom:16px;">"아직 게시글이 없습니다."</p>
+                    <p style="color:#6b7280; margin-bottom:16px;">(loc.pick("아직 게시글이 없습니다.", "No posts yet."))</p>
                     if can_write {
-                        <a href="/community/new" class="btn-primary" style="display:inline-flex;">"첫 글 쓰기"</a>
+                        <a href="/community/new" class="btn-primary" style="display:inline-flex;">(loc.pick("첫 글 쓰기", "Write the first post"))</a>
                     } else if current_user.is_none() {
-                        <a href="/auth/login?redirect=/community/new" class="btn-primary" style="display:inline-flex;">"로그인하고 첫 글 쓰기"</a>
+                        <a href="/auth/login?redirect=/community/new" class="btn-primary" style="display:inline-flex;">(loc.pick("로그인하고 첫 글 쓰기", "Log in to write the first post"))</a>
                     }
                 </div>
             } else {
                 <div class="card" style="display:flex; flex-direction:column; gap:1px; background:#e5e7eb; border-radius:12px; overflow:hidden;">
                     for post in posts {
                         let badge_color = category_color(&post.category);
-                        let badge_label = category_label(&post.category);
+                        let badge_label = category_name(&post.category);
                         let preview: String = post.content_md.replace('\n', " ").chars().take(POST_PREVIEW_LEN).collect();
                         <a href=(format!("/community/{}", post.id)) style="display:flex; align-items:center; padding:16px 20px; background:#fff;">
                             <span style=(badge_style(badge_color))>(badge_label)</span>
@@ -228,7 +238,7 @@ pub async fn community_index(cx: &Cx) -> Result<impl View + '_> {
                 if total_pages > 1 {
                     <div style="display:flex; align-items:center; justify-content:center; gap:6px; margin-top:32px;">
                         if has_prev {
-                            <a href=(page_url(&cat_filter, page_num - 1)) style="height:32px; padding:0 14px; display:inline-flex; align-items:center; border-radius:8px; border:1px solid #E4E4E7; background:#fff; color:#374151; font-size:13px; font-weight:500;">"이전"</a>
+                            <a href=(page_url(&cat_filter, page_num - 1)) style="height:32px; padding:0 14px; display:inline-flex; align-items:center; border-radius:8px; border:1px solid #E4E4E7; background:#fff; color:#374151; font-size:13px; font-weight:500;">(loc.pick("이전", "Previous"))</a>
                         }
                         for item in page_items {
                             match item {
@@ -241,7 +251,7 @@ pub async fn community_index(cx: &Cx) -> Result<impl View + '_> {
                             }
                         }
                         if has_next {
-                            <a href=(page_url(&cat_filter, page_num + 1)) style="height:32px; padding:0 14px; display:inline-flex; align-items:center; border-radius:8px; border:1px solid #E4E4E7; background:#fff; color:#374151; font-size:13px; font-weight:500;">"다음"</a>
+                            <a href=(page_url(&cat_filter, page_num + 1)) style="height:32px; padding:0 14px; display:inline-flex; align-items:center; border-radius:8px; border:1px solid #E4E4E7; background:#fff; color:#374151; font-size:13px; font-weight:500;">(loc.pick("다음", "Next"))</a>
                         }
                     </div>
                 }

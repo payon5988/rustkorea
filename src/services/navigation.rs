@@ -11,6 +11,15 @@ pub const FOOTER_GROUPS: [(&str, &str); 3] = [
     ("participate", "참여"),
 ];
 
+/// Public footer heading for a group in `loc` (admin uses `FOOTER_GROUPS`).
+pub fn footer_group_label(group: &str, loc: crate::services::i18n::Locale) -> &'static str {
+    match group {
+        "links" => loc.pick("링크", "Links"),
+        "participate" => loc.pick("참여", "Get Involved"),
+        _ => loc.pick("서비스", "Service"),
+    }
+}
+
 /// Only same-site absolute paths and explicit HTTP(S) links are navigable.
 pub fn valid_href(href: &str) -> bool {
     if href.is_empty()

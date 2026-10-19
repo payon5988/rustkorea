@@ -35,33 +35,37 @@ pub async fn search_results(cx: &Cx, query: String) -> Result<impl View> {
     let db: Db = topcoat::context::app_context::<Db>(cx).clone();
     let truncated: String = query.chars().take(SEARCH_QUERY_MAX).collect();
     let pattern = format!("%{}%", crate::auth::session::escape_like(&truncated));
+    let loc = crate::services::i18n::locale(cx);
 
     let mut results: Vec<SearchResult> = vec![];
 
     if !query.is_empty() {
-        // Manuals
-        let manuals: Vec<(String, String, String, String)> = sqlx::query_as(
-            &format!("SELECT slug, title, description, difficulty FROM manual_series WHERE (title LIKE $1 ESCAPE '\\' OR description LIKE $1 ESCAPE '\\') AND {} LIMIT $2",
+        // Manuals (Korean and English fields)
+        let manuals: Vec<(String, String, String, String, String, String)> = sqlx::query_as(
+            &format!("SELECT slug, title, description, difficulty, title_en, description_en FROM manual_series
+             WHERE (title LIKE $1 ESCAPE '\\' OR description LIKE $1 ESCAPE '\\'
+                    OR title_en LIKE $1 ESCAPE '\\' OR description_en LIKE $1 ESCAPE '\\') AND {} LIMIT $2",
                 crate::util::published_clause(""))
         ).bind(&pattern).bind(SEARCH_LIMIT_MANUALS).fetch_all(&db).await.unwrap_or_default();
-        for (slug, title, desc, diff) in manuals {
+        for (slug, title, desc, diff, title_en, desc_en) in manuals {
             results.push(SearchResult {
                 id: slug.clone(),
-                title,
-                description: desc,
-                result_type: "매뉴얼".into(),
+                title: loc.text_owned(&title, &title_en),
+                description: loc.text_owned(&desc, &desc_en),
+                result_type: loc.pick("매뉴얼", "Manual").into(),
                 url: format!("/manuals/{slug}"),
-                badge: diff,
+                badge: crate::models::difficulty::label_in(&diff, loc).into(),
                 badge_color: "#059669".into(),
                 badge_bg: "#0596691a".into(),
             });
         }
 
         // Manual chapters
-        let chapters: Vec<(String, String, String, String)> = sqlx::query_as(
-            &format!("SELECT ms.slug, mc.title, mc.content_md, ms.title AS series_title
+        let chapters: Vec<(String, String, String, String, String)> = sqlx::query_as(
+            &format!("SELECT ms.slug, mc.title, ms.title AS series_title, mc.title_en, ms.title_en
              FROM manual_chapters mc JOIN manual_series ms ON ms.id = mc.series_id
-             WHERE (mc.title LIKE $1 ESCAPE '\\' OR mc.content_md LIKE $1 ESCAPE '\\') AND {} AND {} LIMIT $2",
+             WHERE (mc.title LIKE $1 ESCAPE '\\' OR mc.content_md LIKE $1 ESCAPE '\\'
+                    OR mc.title_en LIKE $1 ESCAPE '\\' OR mc.content_md_en LIKE $1 ESCAPE '\\') AND {} AND {} LIMIT $2",
                 crate::util::published_clause("mc"), crate::util::published_clause("ms")),
         )
         .bind(&pattern)
@@ -69,14 +73,16 @@ pub async fn search_results(cx: &Cx, query: String) -> Result<impl View> {
         .fetch_all(&db)
         .await
         .unwrap_or_default();
-        for (series_slug, title, _content, series_title) in chapters {
+        for (series_slug, title, series_title, title_en, series_title_en) in chapters {
+            let title = loc.text_owned(&title, &title_en);
+            let series_title = loc.text_owned(&series_title, &series_title_en);
             results.push(SearchResult {
                 id: title.clone(),
                 title: format!("{title} ({series_title})"),
                 description: "".into(),
-                result_type: "매뉴얼 챕터".into(),
+                result_type: loc.pick("매뉴얼 챕터", "Manual chapter").into(),
                 url: format!("/manuals/{series_slug}"),
-                badge: "챕터".into(),
+                badge: loc.pick("챕터", "Chapter").into(),
                 badge_color: "#2563EB".into(),
                 badge_bg: "#2563EB1a".into(),
             });
@@ -91,7 +97,7 @@ pub async fn search_results(cx: &Cx, query: String) -> Result<impl View> {
                 id: vid.clone(),
                 title,
                 description: desc,
-                result_type: "영상".into(),
+                result_type: loc.pick("영상", "Video").into(),
                 url: crate::util::youtube_watch_url(&vid),
                 badge: pub_at.split('T').next().unwrap_or("").to_string(),
                 badge_color: "#DC2626".into(),
@@ -114,7 +120,7 @@ pub async fn search_results(cx: &Cx, query: String) -> Result<impl View> {
                 id: id.clone(),
                 title,
                 description: snippet,
-                result_type: "게시글".into(),
+                result_type: loc.pick("게시글", "Post").into(),
                 url: format!("/community/{id}"),
                 badge: category,
                 badge_color: "#7C3AED".into(),
@@ -136,9 +142,9 @@ pub async fn search_results(cx: &Cx, query: String) -> Result<impl View> {
                 id: id.clone(),
                 title: label,
                 description: "".into(),
-                result_type: "사용자".into(),
+                result_type: loc.pick("사용자", "User").into(),
                 url: format!("/users/{username}"),
-                badge: "사용자".into(),
+                badge: loc.pick("사용자", "User").into(),
                 badge_color: "#0891B2".into(),
                 badge_bg: "#0891B21a".into(),
             });
@@ -151,7 +157,10 @@ pub async fn search_results(cx: &Cx, query: String) -> Result<impl View> {
 
     Ok(view! {
         if has_query && has_results {
-            <div style="font-size:13px; color:#9ca3af; margin-bottom:16px;">(format!("{total}개의 결과"))</div>
+            <div style="font-size:13px; color:#9ca3af; margin-bottom:16px;">(match loc {
+                crate::services::i18n::Locale::Ko => format!("{total}개의 결과"),
+                crate::services::i18n::Locale::En => format!("{total} results"),
+            })</div>
         }
 
         <div style="display:flex; flex-direction:column; gap:12px;">
@@ -183,8 +192,8 @@ pub async fn search_results(cx: &Cx, query: String) -> Result<impl View> {
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="1.5" stroke-linecap="round" style="margin:0 auto 16px;">
                     <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
                 </svg>
-                <p style="font-size:15px; color:#9ca3af; font-weight:500;">"검색 결과가 없습니다"</p>
-                <p style="font-size:13px; color:#d1d5db; margin-top:4px;">"다른 검색어를 시도해보세요."</p>
+                <p style="font-size:15px; color:#9ca3af; font-weight:500;">(loc.pick("검색 결과가 없습니다", "No results"))</p>
+                <p style="font-size:13px; color:#d1d5db; margin-top:4px;">(loc.pick("다른 검색어를 시도해보세요.", "Try a different search term."))</p>
             </div>
         }
     })

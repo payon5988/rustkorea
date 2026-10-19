@@ -6,6 +6,8 @@ pub mod community;
 pub mod events;
 pub mod feed;
 pub mod home;
+#[cfg(test)]
+mod i18n_tests;
 pub mod legal;
 pub mod manuals;
 pub mod messages;

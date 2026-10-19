@@ -358,6 +358,11 @@ async fn migration_preserves_existing_menus_and_tied_order_can_move(pool: Db) {
         .execute(&pool)
         .await
         .unwrap();
+    // 018 only adds English columns; NavItem reads them.
+    sqlx::raw_sql(include_str!("../../migrations/018_english_content.sql"))
+        .execute(&pool)
+        .await
+        .unwrap();
     let footer = sqlx::query_as::<_, NavItem>("SELECT * FROM nav_items WHERE section='footer'")
         .fetch_all(&pool)
         .await

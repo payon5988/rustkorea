@@ -17,6 +17,7 @@ pub const HOME_POSTS: i64 = 5;
 #[page("/")]
 pub async fn home(cx: &Cx) -> Result<impl View + '_> {
     let db: &Db = topcoat::context::app_context(cx);
+    let loc = crate::services::i18n::locale(cx);
 
     let manuals = sqlx::query_as::<_, ManualSeries>(&format!(
         "SELECT * FROM manual_series WHERE {} ORDER BY created_at DESC LIMIT $1",
@@ -76,10 +77,11 @@ pub async fn home(cx: &Cx) -> Result<impl View + '_> {
     let banner_enabled =
         crate::services::site_settings::get_setting(db, "banner_enabled").await == "true";
     let banner_until = crate::services::site_settings::get_setting(db, "banner_until").await;
-    let banner_kicker = crate::services::site_settings::get_setting(db, "banner_kicker").await;
-    let banner_title = crate::services::site_settings::get_setting(db, "banner_title").await;
-    let banner_text = crate::services::site_settings::get_setting(db, "banner_text").await;
-    let banner_cta = crate::services::site_settings::get_setting(db, "banner_cta").await;
+    let setting = |key: &'static str| crate::services::site_settings::get_localized(db, key, loc);
+    let banner_kicker = setting("banner_kicker").await;
+    let banner_title = setting("banner_title").await;
+    let banner_text = setting("banner_text").await;
+    let banner_cta = setting("banner_cta").await;
     let banner_post: Option<String> = sqlx::query_scalar(&format!(
         "SELECT id FROM posts WHERE category = 'announce' AND {} ORDER BY created_at DESC LIMIT 1",
         crate::util::published_clause("")
@@ -102,15 +104,16 @@ pub async fn home(cx: &Cx) -> Result<impl View + '_> {
                             "Rust Korea Community"
                         </div>
                         <h1 class="section-heading fade-up delay-1" style="margin-bottom:20px;">
-                            "한국 Rust 생태계의 "
-                            <span style="color:#2563EB; font-style:italic;">"허브"</span>
+                            (loc.pick("한국 Rust 생태계의 ", "The "))
+                            <span style="color:#2563EB; font-style:italic;">(loc.pick("허브", "hub"))</span>
+                            (loc.pick("", " of the Korean Rust ecosystem"))
                         </h1>
                         <p class="section-sub fade-up delay-2" style="margin-bottom:32px; max-width:480px;">
-                            "매뉴얼, 영상, 커뮤니티 - Rust를 배우고 나누는 공간."
+                            (loc.pick("매뉴얼, 영상, 커뮤니티 - Rust를 배우고 나누는 공간.", "Manuals, videos and community — a place to learn and share Rust."))
                         </p>
                         <div class="fade-up delay-3" style="display:flex; gap:12px;">
-                            <a href="/manuals" class="btn-primary">"매뉴얼 시작하기"</a>
-                            <a href="/community" class="btn-secondary">"커뮤니티 참여"</a>
+                            <a href="/manuals" class="btn-primary">(loc.pick("매뉴얼 시작하기", "Start the manuals"))</a>
+                            <a href="/community" class="btn-secondary">(loc.pick("커뮤니티 참여", "Join the community"))</a>
                         </div>
                     </div>
                 </div>
@@ -129,9 +132,9 @@ pub async fn home(cx: &Cx) -> Result<impl View + '_> {
                                 <div style="display:flex; align-items:center; gap:1rem; min-width:0;">
                                     <span style="background:#45a29e; color:#fff; padding:0.2rem 0.6rem; font-size:0.8rem; font-weight:bold; border-radius:4px; text-transform:uppercase; letter-spacing:1px; white-space:nowrap;">(banner_kicker.clone())</span>
                                     <p style="color:#fff; margin:0; font-size:1.05rem; font-weight:500; line-height:1.4;">
-                                        "신간 "
+                                        (loc.pick("신간 ", "New release: "))
                                         <strong style="color:#e5c158;">(banner_title.clone())</strong>
-                                        " 출시 — "
+                                        (loc.pick(" 출시 — ", " — "))
                                         (banner_text.clone())
                                     </p>
                                 </div>
@@ -143,7 +146,7 @@ pub async fn home(cx: &Cx) -> Result<impl View + '_> {
                         </div>
                     </a>
                     <div style="text-align:right; margin-top:4px;">
-                        <button type="button" onclick="dismissBookBanner()" style="background:none; border:none; font-size:11px; color:#9ca3af; cursor:pointer;">"닫기"</button>
+                        <button type="button" onclick="dismissBookBanner()" style="background:none; border:none; font-size:11px; color:#9ca3af; cursor:pointer;">(loc.pick("닫기", "Dismiss"))</button>
                     </div>
                 </div>
                 <script>
@@ -155,24 +158,27 @@ pub async fn home(cx: &Cx) -> Result<impl View + '_> {
                 <div class="grid-3" style="display:grid; grid-template-columns:repeat(3,1fr); gap:24px;">
                     <div class="card" style="padding:24px; text-align:center;">
                         <div style="font-size:2rem; font-weight:800; color:#16181d; letter-spacing:-0.02em;">(series_count)</div>
-                        <div style="font-size:13px; color:#6b7280; margin-top:4px;">"매뉴얼 시리즈"</div>
-                        <div style="font-size:12px; color:#9ca3af; margin-top:2px;">(format!("총 {chapter_count}개 챕터"))</div>
+                        <div style="font-size:13px; color:#6b7280; margin-top:4px;">(loc.pick("매뉴얼 시리즈", "Manual series"))</div>
+                        <div style="font-size:12px; color:#9ca3af; margin-top:2px;">(match loc {
+                            crate::services::i18n::Locale::Ko => format!("총 {chapter_count}개 챕터"),
+                            crate::services::i18n::Locale::En => format!("{chapter_count} chapters in total"),
+                        })</div>
                     </div>
                     <div class="card" style="padding:24px; text-align:center;">
                         <div style="font-size:2rem; font-weight:800; color:#16181d; letter-spacing:-0.02em;">(video_count)</div>
-                        <div style="font-size:13px; color:#6b7280; margin-top:4px;">"기술 영상"</div>
+                        <div style="font-size:13px; color:#6b7280; margin-top:4px;">(loc.pick("기술 영상", "Tech videos"))</div>
                     </div>
                     <div class="card" style="padding:24px; text-align:center;">
                         <div style="font-size:2rem; font-weight:800; color:#16181d; letter-spacing:-0.02em;">(post_count)</div>
-                        <div style="font-size:13px; color:#6b7280; margin-top:4px;">"게시글"</div>
+                        <div style="font-size:13px; color:#6b7280; margin-top:4px;">(loc.pick("게시글", "Posts"))</div>
                     </div>
                 </div>
             </section>
 
             <section class="container" style="margin-bottom:60px;">
                 <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:24px;">
-                    <h2 style="font-size:1.25rem; font-weight:700; letter-spacing:-0.01em;">"매뉴얼"</h2>
-                    <a href="/manuals" style="font-size:14px; color:#2563EB; font-weight:500; transition:color 0.15s;">"전체 보기"</a>
+                    <h2 style="font-size:1.25rem; font-weight:700; letter-spacing:-0.01em;">(loc.pick("매뉴얼", "Manuals"))</h2>
+                    <a href="/manuals" style="font-size:14px; color:#2563EB; font-weight:500; transition:color 0.15s;">(loc.pick("전체 보기", "View all"))</a>
                 </div>
                 if !manuals.is_empty() {
                     <div class="grid-3" style="display:grid; grid-template-columns:repeat(3,1fr); gap:16px;">
@@ -185,25 +191,25 @@ pub async fn home(cx: &Cx) -> Result<impl View + '_> {
                                             crate::models::difficulty::INTERMEDIATE => "background:#fffbeb; color:#d97706;",
                                             _ => "background:#f0fdf4; color:#16a34a;",
                                         }).to_string())>
-                                        (crate::models::difficulty::label(item.difficulty.as_str()))
+                                        (crate::models::difficulty::label_in(item.difficulty.as_str(), loc))
                                     </span>
                                 </div>
-                                <h3 style="font-size:15px; font-weight:700; margin-bottom:6px; letter-spacing:-0.01em; color:#16181d;">(item.title.clone())</h3>
-                                <p style="font-size:13px; color:#6b7280; line-height:1.5; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">(item.description.clone())</p>
+                                <h3 style="font-size:15px; font-weight:700; margin-bottom:6px; letter-spacing:-0.01em; color:#16181d;">(loc.text_owned(&item.title, &item.title_en))</h3>
+                                <p style="font-size:13px; color:#6b7280; line-height:1.5; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">(loc.text_owned(&item.description, &item.description_en))</p>
                             </a>
                         }
                     </div>
                 } else {
                     <div class="card" style="padding:60px; text-align:center;">
-                        <p style="color:#6b7280;">"등록된 매뉴얼이 없습니다"</p>
+                        <p style="color:#6b7280;">(loc.pick("등록된 매뉴얼이 없습니다", "No manuals yet"))</p>
                     </div>
                 }
             </section>
 
             <section class="container" style="margin-bottom:60px;">
                 <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:24px;">
-                    <h2 style="font-size:1.25rem; font-weight:700; letter-spacing:-0.01em;">"영상"</h2>
-                    <a href="/youtube" style="font-size:14px; color:#2563EB; font-weight:500; transition:color 0.15s;">"전체 보기"</a>
+                    <h2 style="font-size:1.25rem; font-weight:700; letter-spacing:-0.01em;">(loc.pick("영상", "Videos"))</h2>
+                    <a href="/youtube" style="font-size:14px; color:#2563EB; font-weight:500; transition:color 0.15s;">(loc.pick("전체 보기", "View all"))</a>
                 </div>
                 if !videos.is_empty() {
                     <div class="grid-4" style="display:grid; grid-template-columns:repeat(4,1fr); gap:16px;">
@@ -213,7 +219,7 @@ pub async fn home(cx: &Cx) -> Result<impl View + '_> {
                     </div>
                 } else {
                     <div class="card" style="padding:60px; text-align:center;">
-                        <p style="color:#6b7280;">"등록된 영상이 없습니다"</p>
+                        <p style="color:#6b7280;">(loc.pick("등록된 영상이 없습니다", "No videos yet"))</p>
                     </div>
                 }
             </section>
@@ -222,8 +228,8 @@ pub async fn home(cx: &Cx) -> Result<impl View + '_> {
 
             <section class="container" style="margin-bottom:60px;">
                 <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:24px;">
-                    <h2 style="font-size:1.25rem; font-weight:700; letter-spacing:-0.01em;">"커뮤니티"</h2>
-                    <a href="/community" style="font-size:14px; color:#2563EB; font-weight:500; transition:color 0.15s;">"전체 보기"</a>
+                    <h2 style="font-size:1.25rem; font-weight:700; letter-spacing:-0.01em;">(loc.pick("커뮤니티", "Community"))</h2>
+                    <a href="/community" style="font-size:14px; color:#2563EB; font-weight:500; transition:color 0.15s;">(loc.pick("전체 보기", "View all"))</a>
                 </div>
                 if !posts.is_empty() {
                     <div class="card" style="overflow:hidden;">
@@ -241,8 +247,8 @@ pub async fn home(cx: &Cx) -> Result<impl View + '_> {
                     </div>
                 } else {
                     <div class="card" style="padding:60px; text-align:center;">
-                        <p style="color:#6b7280; margin-bottom:12px;">"아직 게시글이 없습니다"</p>
-                        <a href="/community/new" class="btn-primary" style="display:inline-flex;">"첫 글 쓰기"</a>
+                        <p style="color:#6b7280; margin-bottom:12px;">(loc.pick("아직 게시글이 없습니다", "No posts yet"))</p>
+                        <a href="/community/new" class="btn-primary" style="display:inline-flex;">(loc.pick("첫 글 쓰기", "Write the first post"))</a>
                     </div>
                 }
             </section>
@@ -250,12 +256,12 @@ pub async fn home(cx: &Cx) -> Result<impl View + '_> {
             <section class="container" style="padding-bottom:80px;">
                 <div class="card" style="padding:60px; text-align:center; background:#f8f9fa;">
                     <h2 style="font-size:1.5rem; font-weight:800; letter-spacing:-0.02em; margin-bottom:12px;">
-                        "Rust를 함께 배우실 분?"
+                        (loc.pick("Rust를 함께 배우실 분?", "Want to learn Rust together?"))
                     </h2>
                     <p style="font-size:14px; color:#6b7280; margin-bottom:28px; max-width:400px; margin-left:auto; margin-right:auto;">
-                        "한국 Rust 커뮤니티에서 함께 성장하세요."
+                        (loc.pick("한국 Rust 커뮤니티에서 함께 성장하세요.", "Grow with the Korean Rust community."))
                     </p>
-                    <a href="/community/new" class="btn-primary">"글쓰기 시작하기"</a>
+                    <a href="/community/new" class="btn-primary">(loc.pick("글쓰기 시작하기", "Start writing"))</a>
                 </div>
             </section>
 

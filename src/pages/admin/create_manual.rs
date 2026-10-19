@@ -22,6 +22,10 @@ pub struct NewManual {
     pub visibility: String,
     #[serde(default)]
     pub published_at: String,
+    #[serde(default)]
+    pub title_en: String,
+    #[serde(default)]
+    pub description_en: String,
 }
 
 #[route(POST "/admin/manuals/create")]
@@ -68,8 +72,8 @@ pub async fn create_manual(
     };
 
     sqlx::query(
-        "INSERT INTO manual_series (slug, title, description, difficulty, estimated_minutes, visibility, published_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)"
+        "INSERT INTO manual_series (slug, title, description, difficulty, estimated_minutes, visibility, published_at, title_en, description_en)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"
     )
     .bind(&input.slug)
     .bind(&input.title)
@@ -78,6 +82,8 @@ pub async fn create_manual(
     .bind(input.estimated_minutes)
     .bind(&input.visibility)
     .bind(&published_at)
+    .bind(input.title_en.trim())
+    .bind(input.description_en.trim())
     .execute(db)
     .await.ok();
     let actor = crate::auth::access::load_access(db, cx)
@@ -149,6 +155,14 @@ pub async fn new_manual(cx: &Cx) -> Result<impl View + '_> {
                         <div style="margin-bottom:20px;">
                             <label style="display:block; font-size:13px; font-weight:600; color:var(--muted); margin-bottom:8px;">"설명"</label>
                             <textarea name="description" rows="3" class="input"></textarea>
+                        </div>
+                        <div style="margin-bottom:20px;">
+                            <label style="display:block; font-size:13px; font-weight:600; color:var(--muted); margin-bottom:8px;">"영어 제목 (선택)"</label>
+                            <input type="text" name="title_en" lang="en" class="input">
+                        </div>
+                        <div style="margin-bottom:20px;">
+                            <label style="display:block; font-size:13px; font-weight:600; color:var(--muted); margin-bottom:8px;">"영어 설명 (선택, 비우면 한국어 표시)"</label>
+                            <textarea name="description_en" rows="3" lang="en" class="input"></textarea>
                         </div>
                         <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
                             <div>

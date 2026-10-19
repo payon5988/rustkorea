@@ -2,13 +2,11 @@ use std::future::Future;
 use topcoat::{
     Result,
     context::Cx,
-    cookie::{Cookies, cookies},
     view::{View, component, view},
 };
 
 use crate::db::Db;
 use crate::models::User;
-use crate::services::i18n::{Locale, detect_locale};
 
 async fn get_user(cx: &Cx) -> Option<User> {
     let db: &Db = topcoat::context::app_context(cx);
@@ -54,10 +52,11 @@ pub async fn Header(cx: &Cx) -> Result<impl View + '_> {
     } else {
         0
     };
-    let locale_cookie = cookies(cx).get("locale").map(|c| c.value().to_string());
-    let locale = detect_locale(locale_cookie.as_deref(), None);
-    let locale_label = if locale == Locale::Ko { "EN" } else { "KO" };
-    let next_locale = if locale == Locale::Ko { "en" } else { "ko" };
+    let loc = crate::services::i18n::locale(cx);
+    let locale_label = loc.pick("EN", "KO");
+    let locale_title = loc.pick("Switch to English", "한국어로 보기");
+    let switch_href = crate::services::i18n::switch_href(cx, loc.other());
+    let label = move |item: &crate::models::NavItem| loc.text_owned(&item.label, &item.label_en);
     let notif_badge = if notif_count > 0 {
         "position:absolute; top:-4px; right:-4px; min-width:16px; height:16px; border-radius:8px; background:#DC2626; color:#fff; font-size:10px; font-weight:700; display:flex; align-items:center; justify-content:center; padding:0 4px;".to_string()
     } else {
@@ -97,19 +96,19 @@ pub async fn Header(cx: &Cx) -> Result<impl View + '_> {
                     <span>(site_title_val)</span>
                 </a>
 
-                <nav aria-label="상단 메뉴" class="desktop-nav" style="display:flex; align-items:center; gap:4px;">
+                <nav aria-label=(loc.pick("상단 메뉴", "Main menu")) class="desktop-nav" style="display:flex; align-items:center; gap:4px;">
                     for item in &nav_items {
-                        <a href=(item.href.clone()) aria-current=(if crate::services::navigation::is_active(&item.href, &current_path) { "page" } else { "false" }) style="padding:8px 16px; font-size:15px; color:#374151; font-weight:400; border-bottom:2px solid transparent;">(item.label.clone())</a>
+                        <a href=(item.href.clone()) aria-current=(if crate::services::navigation::is_active(&item.href, &current_path) { "page" } else { "false" }) style="padding:8px 16px; font-size:15px; color:#374151; font-weight:400; border-bottom:2px solid transparent;">(label(item))</a>
                     }
                 </nav>
 
                 <div class="desktop-actions" style="display:flex; align-items:center; gap:10px;">
-                    <button onclick="toggleTheme()" style="background:none; border:1px solid #E4E4E7; border-radius:8px; padding:6px 8px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:border-color 0.15s; color:#6b7280;" title="테마 전환">
+                    <button onclick="toggleTheme()" style="background:none; border:1px solid #E4E4E7; border-radius:8px; padding:6px 8px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:border-color 0.15s; color:#6b7280;" title=(loc.pick("테마 전환", "Toggle theme"))>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
                     </button>
-                    <a href="#" onclick=(format!("document.cookie='locale={next_locale};path=/;SameSite=Lax'+(location.protocol==='https:'?';Secure':'');location.reload();return false;")) style="font-size:12px; font-weight:600; color:#6b7280; border:1px solid #E4E4E7; border-radius:8px; padding:5px 10px; cursor:pointer; transition:color 0.15s;">(locale_label)</a>
+                    <a href=(switch_href.clone()) hreflang=(loc.other().as_str()) title=(locale_title) style="font-size:12px; font-weight:600; color:#6b7280; border:1px solid #E4E4E7; border-radius:8px; padding:5px 10px; cursor:pointer; transition:color 0.15s;">(locale_label)</a>
                     if is_admin {
-                        <a href="/admin" style="font-size:13px; color:#6b7280; font-weight:500; transition:color 0.15s;">"관리자"</a>
+                        <a href="/admin" style="font-size:13px; color:#6b7280; font-weight:500; transition:color 0.15s;">(loc.pick("관리자", "Admin"))</a>
                     }
                     if let Some(u) = &user {
                         <a href="/notifications" style="position:relative; display:flex; align-items:center; padding:6px; color:#6b7280; border-radius:8px; transition:color 0.15s;">
@@ -124,22 +123,22 @@ pub async fn Header(cx: &Cx) -> Result<impl View + '_> {
                         </a>
                         <form action="/auth/logout" method="POST" style="margin:0; display:flex;">
                             <input type="hidden" name="csrf_token" value=(logout_csrf.clone())>
-                            <button type="submit" style="background:none; border:none; padding:0; font:inherit; font-size:13px; color:#6b7280; cursor:pointer; transition:color 0.15s;">"로그아웃"</button>
+                            <button type="submit" style="background:none; border:none; padding:0; font:inherit; font-size:13px; color:#6b7280; cursor:pointer; transition:color 0.15s;">(loc.pick("로그아웃", "Log out"))</button>
                         </form>
                     } else {
-                        <a href="/auth/login" style="font-size:14px; color:#6b7280; font-weight:500; transition:color 0.15s;">"로그인"</a>
-                        <a href="/auth/register" style="background:#2563EB; color:#fff; padding:8px 16px; border-radius:8px; font-size:14px; font-weight:600; transition:background 0.15s;">"회원가입"</a>
+                        <a href="/auth/login" style="font-size:14px; color:#6b7280; font-weight:500; transition:color 0.15s;">(loc.pick("로그인", "Log in"))</a>
+                        <a href="/auth/register" style="background:#2563EB; color:#fff; padding:8px 16px; border-radius:8px; font-size:14px; font-weight:600; transition:background 0.15s;">(loc.pick("회원가입", "Sign up"))</a>
                     }
                 </div>
 
                 <div class="mobile-actions">
-                    <button type="button" aria-label="전체 메뉴 열기" aria-haspopup="dialog" aria-controls="mobile-menu" onclick="document.getElementById('mobile-menu').showModal()" style="background:none; border:1px solid #E4E4E7; border-radius:8px; padding:6px; color:#6b7280; cursor:pointer;">
+                    <button type="button" aria-label=(loc.pick("전체 메뉴 열기", "Open menu")) aria-haspopup="dialog" aria-controls="mobile-menu" onclick="document.getElementById('mobile-menu').showModal()" style="background:none; border:1px solid #E4E4E7; border-radius:8px; padding:6px; color:#6b7280; cursor:pointer;">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
                     </button>
                     <a href="/search" style="display:flex; align-items:center; padding:6px; color:#6b7280;">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
                     </a>
-                    <button onclick="toggleTheme()" style="background:none; border:1px solid #E4E4E7; border-radius:8px; padding:5px 7px; cursor:pointer; display:flex; align-items:center; justify-content:center; color:#6b7280;" title="테마 전환">
+                    <button onclick="toggleTheme()" style="background:none; border:1px solid #E4E4E7; border-radius:8px; padding:5px 7px; cursor:pointer; display:flex; align-items:center; justify-content:center; color:#6b7280;" title=(loc.pick("테마 전환", "Toggle theme"))>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
                     </button>
                     if is_logged_in {
@@ -152,19 +151,20 @@ pub async fn Header(cx: &Cx) -> Result<impl View + '_> {
             </div>
         </header>
 
-        <dialog id="mobile-menu" class="mobile-menu-dialog" aria-label="전체 메뉴" onclick="if(event.target===this){const r=this.getBoundingClientRect();if(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom)this.close()}">
+        <dialog id="mobile-menu" class="mobile-menu-dialog" aria-label=(loc.pick("전체 메뉴", "Menu")) onclick="if(event.target===this){const r=this.getBoundingClientRect();if(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom)this.close()}">
             <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
-                <strong>"전체 메뉴"</strong>
-                <button type="button" autofocus="true" aria-label="전체 메뉴 닫기" onclick="document.getElementById('mobile-menu').close()">"닫기"</button>
+                <strong>(loc.pick("전체 메뉴", "Menu"))</strong>
+                <button type="button" autofocus="true" aria-label=(loc.pick("전체 메뉴 닫기", "Close menu")) onclick="document.getElementById('mobile-menu').close()">(loc.pick("닫기", "Close"))</button>
             </div>
-            <nav aria-label="모바일 전체 메뉴" style="display:flex; flex-direction:column;">
+            <nav aria-label=(loc.pick("모바일 전체 메뉴", "Mobile menu")) style="display:flex; flex-direction:column;">
                 for item in &nav_items {
-                    <a href=(item.href.clone()) aria-current=(if crate::services::navigation::is_active(&item.href, &current_path) { "page" } else { "false" }) onclick="document.getElementById('mobile-menu').close()">(item.label.clone())</a>
+                    <a href=(item.href.clone()) aria-current=(if crate::services::navigation::is_active(&item.href, &current_path) { "page" } else { "false" }) onclick="document.getElementById('mobile-menu').close()">(label(item))</a>
                 }
+                <a href=(switch_href.clone()) hreflang=(loc.other().as_str()) style="border-top:1px solid #e5e7eb; margin-top:8px;">(loc.pick("English", "한국어"))</a>
             </nav>
         </dialog>
 
-        <nav class="bottom-tab-bar" aria-label="모바일 하단 탭">
+        <nav class="bottom-tab-bar" aria-label=(loc.pick("모바일 하단 탭", "Mobile tabs"))>
             <div class="bottom-tab-scroll">
                 for item in &mobile_items {
                     let active = crate::services::navigation::is_active(&item.href, &current_path);
@@ -177,7 +177,7 @@ pub async fn Header(cx: &Cx) -> Result<impl View + '_> {
                     };
                     <a href=(item.href.clone()) class="bottom-tab" aria-current=(if active { "page" } else { "false" }) style=(if active { tab_active_style } else { tab_inactive_style })>
                         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d=(icon)/></svg>
-                        <span>(item.label.clone())</span>
+                        <span>(label(item))</span>
                     </a>
                 }
             </div>
@@ -188,7 +188,7 @@ pub async fn Header(cx: &Cx) -> Result<impl View + '_> {
                     } else {
                         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                     }
-                    <span>"프로필"</span>
+                    <span>(loc.pick("프로필", "Profile"))</span>
                     if notif_count > 0 {
                         <span style=(tab_notif_style)>(format!("{notif_count}"))</span>
                     }
@@ -196,7 +196,7 @@ pub async fn Header(cx: &Cx) -> Result<impl View + '_> {
             } else {
                 <a href="/auth/login" class="bottom-tab account-tab" style=(if tab_profile_active { tab_active_style } else { tab_inactive_style })>
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
-                    <span>"로그인"</span>
+                    <span>(loc.pick("로그인", "Log in"))</span>
                 </a>
             }
         </nav>

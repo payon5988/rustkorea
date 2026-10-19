@@ -7,25 +7,19 @@ use topcoat::{
 
 #[component]
 pub async fn ManualCard(cx: &topcoat::context::Cx, series: ManualSeries) -> Result<impl View + '_> {
-    let _ = cx;
+    let loc = crate::services::i18n::locale(cx);
     let slug = series.slug.clone();
     let emoji = series.thumbnail_url.clone().unwrap_or_default();
-    let title = series.title.clone();
-    let description = series.description.clone();
+    let title = loc.text_owned(&series.title, &series.title_en);
+    let description = loc.text_owned(&series.description, &series.description_en);
 
-    let (level_text, level_class) = match series.difficulty.as_str() {
-        crate::models::difficulty::ADVANCED => (
-            crate::models::difficulty::label(crate::models::difficulty::ADVANCED),
-            "text-[#F87171] bg-[#F87171]/10 border-[#F87171]/20",
-        ),
-        crate::models::difficulty::INTERMEDIATE => (
-            crate::models::difficulty::label(crate::models::difficulty::INTERMEDIATE),
-            "text-[#FBBF24] bg-[#FBBF24]/10 border-[#FBBF24]/20",
-        ),
-        _ => (
-            crate::models::difficulty::label(""),
-            "text-[#34D399] bg-[#34D399]/10 border-[#34D399]/20",
-        ),
+    let level_text = crate::models::difficulty::label_in(&series.difficulty, loc);
+    let level_class = match series.difficulty.as_str() {
+        crate::models::difficulty::ADVANCED => "text-[#F87171] bg-[#F87171]/10 border-[#F87171]/20",
+        crate::models::difficulty::INTERMEDIATE => {
+            "text-[#FBBF24] bg-[#FBBF24]/10 border-[#FBBF24]/20"
+        }
+        _ => "text-[#34D399] bg-[#34D399]/10 border-[#34D399]/20",
     };
 
     let display_emoji = if emoji.is_empty() {

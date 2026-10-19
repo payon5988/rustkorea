@@ -198,15 +198,18 @@ pub async fn user_profile(cx: &Cx) -> Result<impl View + '_> {
             _ => "#2563EB",
         }
     };
-    let category_label = |cat: &str| -> &'static str {
+    let loc = crate::services::i18n::locale(cx);
+    let category_label = move |cat: &str| -> &'static str {
         match cat {
-            category_slug::QNA => "질문",
-            category_slug::SHOWCASE => "쇼케이스",
-            category_slug::JOBS => "구인",
-            category_slug::ANNOUNCE => "공지",
-            _ => "일반",
+            category_slug::QNA => loc.pick("질문", "Q&A"),
+            category_slug::SHOWCASE => loc.pick("쇼케이스", "Showcase"),
+            category_slug::JOBS => loc.pick("구인", "Jobs"),
+            category_slug::ANNOUNCE => loc.pick("공지", "Notice"),
+            _ => loc.pick("일반", "General"),
         }
     };
+    let n_of = move |n: i64, ko: &str, en: &str| format!("{n} {}", loc.pick(ko, en));
+    let tab_of = move |n: i64, ko: &str, en: &str| format!("{} ({n})", loc.pick(ko, en));
 
     Ok(view! {
         <div class="container" style="padding-top:40px; padding-bottom:80px; max-width:720px;">
@@ -226,9 +229,9 @@ pub async fn user_profile(cx: &Cx) -> Result<impl View + '_> {
                         }
                         <div style="display:flex; gap:12px; font-size:13px; color:#6b7280;">
                             <span style="font-weight:600; color:#DE5B30;">(format!("{}P", u.points))</span>
-                            <span>(format!("{} 게시글", post_count))</span>
-                            <span>(format!("{} 댓글", comment_count))</span>
-                            <span>(format!("{} 좋아요", like_count))</span>
+                            <span>(n_of(post_count, "게시글", "posts"))</span>
+                            <span>(n_of(comment_count, "댓글", "comments"))</span>
+                            <span>(n_of(like_count, "좋아요", "likes"))</span>
                         </div>
                         <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;">
                             for b in &badges {
@@ -239,15 +242,15 @@ pub async fn user_profile(cx: &Cx) -> Result<impl View + '_> {
                 </div>
 
                 <div style="display:flex; gap:4px; border-bottom:1px solid #E4E4E7; margin-bottom:24px; overflow-x:auto;">
-                    <a href=(format!("/users/{}?tab=posts", u.username)) style=(tab_style("posts", &tab))>(format!("작성글 ({})", post_count))</a>
-                    <a href=(format!("/users/{}?tab=comments", u.username)) style=(tab_style("comments", &tab))>(format!("댓글 ({})", comment_count))</a>
-                    <a href=(format!("/users/{}?tab=likes", u.username)) style=(tab_style("likes", &tab))>(format!("좋아요 ({})", like_count))</a>
-                    <a href=(format!("/users/{}?tab=bookmarks", u.username)) style=(tab_style("bookmarks", &tab))>(format!("북마크 ({})", bookmark_count_q))</a>
+                    <a href=(format!("/users/{}?tab=posts", u.username)) style=(tab_style("posts", &tab))>(tab_of(post_count, "작성글", "Posts"))</a>
+                    <a href=(format!("/users/{}?tab=comments", u.username)) style=(tab_style("comments", &tab))>(tab_of(comment_count, "댓글", "Comments"))</a>
+                    <a href=(format!("/users/{}?tab=likes", u.username)) style=(tab_style("likes", &tab))>(tab_of(like_count, "좋아요", "Likes"))</a>
+                    <a href=(format!("/users/{}?tab=bookmarks", u.username)) style=(tab_style("bookmarks", &tab))>(tab_of(bookmark_count_q, "북마크", "Bookmarks"))</a>
                 </div>
 
                 if tab == "posts" {
                     if posts.is_empty() {
-                        <div class="card" style="padding:60px; text-align:center;"><p style="color:#6b7280;">"작성한 글이 없습니다."</p></div>
+                        <div class="card" style="padding:60px; text-align:center;"><p style="color:#6b7280;">(loc.pick("작성한 글이 없습니다.", "No posts yet."))</p></div>
                     } else {
                         <div style="display:flex; flex-direction:column; gap:2px; background:#e5e7eb; border-radius:12px; overflow:hidden;">
                             for p in &posts {
@@ -257,7 +260,7 @@ pub async fn user_profile(cx: &Cx) -> Result<impl View + '_> {
                                     <span style=(format!("font-size:11px; font-weight:600; padding:3px 9px; border-radius:9999px; color:{bc}; background:{bc}1a; flex-shrink:0;"))>(bl)</span>
                                     <span style="font-size:14px; font-weight:600; flex:1; color:#16181d;">(p.title.clone())</span>
                                     if !crate::util::is_released(p.published_at.as_deref()) {
-                                        <span style="font-size:11px; font-weight:600; color:#b45309; background:rgba(251,191,36,0.12); padding:3px 9px; border-radius:9999px; white-space:nowrap;">"예약됨"</span>
+                                        <span style="font-size:11px; font-weight:600; color:#b45309; background:rgba(251,191,36,0.12); padding:3px 9px; border-radius:9999px; white-space:nowrap;">(loc.pick("예약됨", "Scheduled"))</span>
                                     }
                                     <span style="font-size:12px; color:#9ca3af;">(p.created_at.split(' ').next().unwrap_or(""))</span>
                                 </a>
@@ -266,7 +269,7 @@ pub async fn user_profile(cx: &Cx) -> Result<impl View + '_> {
                     }
                 } else if tab == "comments" {
                     if comments.is_empty() {
-                        <div class="card" style="padding:60px; text-align:center;"><p style="color:#6b7280;">"작성한 댓글이 없습니다."</p></div>
+                        <div class="card" style="padding:60px; text-align:center;"><p style="color:#6b7280;">(loc.pick("작성한 댓글이 없습니다.", "No comments yet."))</p></div>
                     } else {
                         <div style="display:flex; flex-direction:column; gap:8px;">
                             for c in &comments {
@@ -280,7 +283,7 @@ pub async fn user_profile(cx: &Cx) -> Result<impl View + '_> {
                     }
                 } else if tab == "bookmarks" {
                     if bookmarks.is_empty() {
-                        <div class="card" style="padding:60px; text-align:center;"><p style="color:#6b7280;">"북마크한 글이 없습니다."</p></div>
+                        <div class="card" style="padding:60px; text-align:center;"><p style="color:#6b7280;">(loc.pick("북마크한 글이 없습니다.", "No bookmarks yet."))</p></div>
                     } else {
                         <div style="display:flex; flex-direction:column; gap:2px; background:#e5e7eb; border-radius:12px; overflow:hidden;">
                             for p in &bookmarks {
@@ -295,12 +298,12 @@ pub async fn user_profile(cx: &Cx) -> Result<impl View + '_> {
                         </div>
                     }
                 } else if tab == "likes" {
-                    <div class="card" style="padding:60px; text-align:center;"><p style="color:#6b7280;">"좋아요한 글 목록은 공개 설정에 따라 표시됩니다."</p></div>
+                    <div class="card" style="padding:60px; text-align:center;"><p style="color:#6b7280;">(loc.pick("좋아요한 글 목록은 공개 설정에 따라 표시됩니다.", "Liked posts are shown according to privacy settings."))</p></div>
                 }
             } else {
                 <div style="text-align:center; padding:80px 0;">
-                    <h1 style="font-size:1.25rem; font-weight:700; margin-bottom:8px;">"사용자를 찾을 수 없습니다"</h1>
-                    <p style="color:#6b7280;">"존재하지 않는 사용자입니다."</p>
+                    <h1 style="font-size:1.25rem; font-weight:700; margin-bottom:8px;">(loc.pick("사용자를 찾을 수 없습니다", "User not found"))</h1>
+                    <p style="color:#6b7280;">(loc.pick("존재하지 않는 사용자입니다.", "This user does not exist."))</p>
                 </div>
             }
         </div>

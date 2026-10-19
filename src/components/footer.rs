@@ -8,20 +8,25 @@ use topcoat::{
 #[component]
 pub async fn Footer(cx: &Cx) -> Result<impl View + '_> {
     let db: &crate::db::Db = topcoat::context::app_context(cx);
-    let site_title = crate::services::site_settings::get_setting(db, "site_title").await;
+    let loc = crate::services::i18n::locale(cx);
+    let site_title = crate::services::site_settings::get_localized(db, "site_title", loc).await;
     let site_title = if site_title.is_empty() {
         "Rust Korea Hub".to_string()
     } else {
         site_title
     };
     let site_description =
-        crate::services::site_settings::get_setting(db, "site_description").await;
+        crate::services::site_settings::get_localized(db, "site_description", loc).await;
     let site_description = if site_description.is_empty() {
-        "Rust 몰라도 10분 만에 끝내는 고성능 풀스택 앱 개발 — Rust Korea".to_string()
+        loc.pick(
+            "Rust 몰라도 10분 만에 끝내는 고성능 풀스택 앱 개발 — Rust Korea",
+            "Build high-performance full-stack apps in 10 minutes, even without knowing Rust — Rust Korea",
+        )
+        .to_string()
     } else {
         site_description
     };
-    let footer_text = crate::services::site_settings::get_setting(db, "footer_text").await;
+    let footer_text = crate::services::site_settings::get_localized(db, "footer_text", loc).await;
     let footer_text = if footer_text.is_empty() {
         "2026 Rust Korea. Built with Rust and Topcoat.".to_string()
     } else {
@@ -47,13 +52,14 @@ pub async fn Footer(cx: &Cx) -> Result<impl View + '_> {
                         </div>
                         <p style="font-size:13px; color:#6b7280; line-height:1.6;">(site_description.clone())</p>
                     </div>
-                    for (group, label) in crate::services::navigation::FOOTER_GROUPS {
+                    for (group, _) in crate::services::navigation::FOOTER_GROUPS {
                         if items.iter().any(|item| item.footer_group == group) {
-                            <nav aria-label=(format!("푸터 {label}"))>
+                            let label = crate::services::navigation::footer_group_label(group, loc);
+                            <nav aria-label=(format!("{} {label}", loc.pick("푸터", "Footer")))>
                                 <h4 style="font-size:12px; font-weight:600; color:#9ca3af; margin-bottom:14px;">(label)</h4>
                                 <ul style="list-style:none; display:flex; flex-direction:column; gap:10px;">
                                     for item in items.iter().filter(|item| item.footer_group == group) {
-                                        <li><a href=(item.href.clone()) style="font-size:14px; color:#6b7280;" target=(if item.href.starts_with('/') { "_self" } else { "_blank" }) rel="noopener noreferrer">(item.label.clone())</a></li>
+                                        <li><a href=(item.href.clone()) style="font-size:14px; color:#6b7280;" target=(if item.href.starts_with('/') { "_self" } else { "_blank" }) rel="noopener noreferrer">(loc.text_owned(&item.label, &item.label_en))</a></li>
                                     }
                                 </ul>
                             </nav>
@@ -66,10 +72,10 @@ pub async fn Footer(cx: &Cx) -> Result<impl View + '_> {
         </footer>
 
         <footer class="mobile-footer" style="display:none; border-top:1px solid #e5e7eb; margin-top:24px; padding:24px 16px 16px; background:#f8f9fa;">
-            <nav aria-label="모바일 푸터" style="display:flex; flex-wrap:wrap; gap:16px 24px; margin-bottom:16px;">
+            <nav aria-label=(loc.pick("모바일 푸터", "Mobile footer")) style="display:flex; flex-wrap:wrap; gap:16px 24px; margin-bottom:16px;">
                 for (group, _label) in crate::services::navigation::FOOTER_GROUPS {
                     for item in items.iter().filter(|item| item.footer_group == group) {
-                        <a href=(item.href.clone()) style="font-size:13px; color:#6b7280; text-decoration:none;" target=(if item.href.starts_with('/') { "_self" } else { "_blank" }) rel="noopener noreferrer">(item.label.clone())</a>
+                        <a href=(item.href.clone()) style="font-size:13px; color:#6b7280; text-decoration:none;" target=(if item.href.starts_with('/') { "_self" } else { "_blank" }) rel="noopener noreferrer">(loc.text_owned(&item.label, &item.label_en))</a>
                     }
                 }
             </nav>

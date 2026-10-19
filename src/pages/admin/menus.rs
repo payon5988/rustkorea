@@ -18,6 +18,9 @@ use topcoat::{
 pub struct NavItemForm {
     pub csrf_token: String,
     pub label: String,
+    /// English label for the public site (empty = show `label`).
+    #[serde(default)]
+    pub label_en: String,
     pub href: String,
     pub position: Option<i32>,
     pub section: String,
@@ -35,6 +38,8 @@ pub struct UpdateNavItemForm {
     pub csrf_token: String,
     pub item_id: String,
     pub label: String,
+    #[serde(default)]
+    pub label_en: String,
     pub href: String,
     #[serde(default = "default_group")]
     pub footer_group: String,
@@ -140,9 +145,9 @@ pub async fn admin_menu_add(cx: &Cx, Form(input): Form<NavItemForm>) -> Result<S
     if duplicate(db, input.href.trim(), &input.section, "").await? {
         return Ok(error("exists"));
     }
-    let result = sqlx::query("INSERT INTO nav_items (label, href, position, section, required_permission, footer_group) VALUES ($1,$2,$3,$4,$5,$6)")
+    let result = sqlx::query("INSERT INTO nav_items (label, href, position, section, required_permission, footer_group, label_en) VALUES ($1,$2,$3,$4,$5,$6,$7)")
         .bind(input.label.trim()).bind(input.href.trim()).bind(input.position.unwrap_or(0))
-        .bind(&input.section).bind(perm).bind(&input.footer_group).execute(db).await;
+        .bind(&input.section).bind(perm).bind(&input.footer_group).bind(input.label_en.trim()).execute(db).await;
     Ok(saved(result, "added"))
 }
 
@@ -165,8 +170,8 @@ pub async fn admin_menu_update(cx: &Cx, Form(input): Form<UpdateNavItemForm>) ->
     if duplicate(db, input.href.trim(), &section, &input.item_id).await? {
         return Ok(error("exists"));
     }
-    let result = sqlx::query("UPDATE nav_items SET label=$1, href=$2, footer_group=$3, updated_at=NOW()::text WHERE id=$4")
-        .bind(input.label.trim()).bind(input.href.trim()).bind(&input.footer_group).bind(&input.item_id).execute(db).await;
+    let result = sqlx::query("UPDATE nav_items SET label=$1, href=$2, footer_group=$3, label_en=$4, updated_at=NOW()::text WHERE id=$5")
+        .bind(input.label.trim()).bind(input.href.trim()).bind(&input.footer_group).bind(input.label_en.trim()).bind(&input.item_id).execute(db).await;
     Ok(saved(result, "updated"))
 }
 
@@ -336,7 +341,8 @@ pub async fn admin_menus_page(cx: &Cx) -> Result<impl View + '_> {
                                             <form action="/admin/menus/update" method="POST" style="flex:1; min-width:0; display:flex; gap:6px; align-items:center;">
                                                 <input type="hidden" name="csrf_token" value=(csrf_token.clone())>
                                                 <input type="hidden" name="item_id" value=(item.id.clone())>
-                                                <input type="text" name="label" required="true" value=(item.label.clone()) style="width:130px; background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:6px 8px; font-size:12px; font-weight:600; color:var(--text3); outline:none;">
+                                                <input type="text" name="label" required="true" value=(item.label.clone()) aria-label="한국어 라벨" style="width:120px; background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:6px 8px; font-size:12px; font-weight:600; color:var(--text3); outline:none;">
+                                                <input type="text" name="label_en" value=(item.label_en.clone()) placeholder="English" aria-label="영어 라벨" title="영어 라벨 (비우면 한국어 표시)" style="width:110px; background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:6px 8px; font-size:12px; color:var(--text3); outline:none;">
                                                 <input type="text" name="href" required="true" value=(item.href.clone()) style="flex:1; min-width:0; background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:6px 8px; font-size:11px; font-family:monospace; color:var(--dim); outline:none;">
                                                 if section == "footer" {
                                                     <select name="footer_group" aria-label="푸터 그룹">
@@ -414,6 +420,10 @@ pub async fn admin_menus_page(cx: &Cx) -> Result<impl View + '_> {
                             <div>
                                 <label style="display:block; font-size:12px; font-weight:600; color:var(--muted); margin-bottom:6px;">"라벨"</label>
                                 <input type="text" name="label" required="true" placeholder="메뉴 이름" style="width:100%; background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:10px 14px; font-size:14px; color:var(--text2); outline:none;">
+                            </div>
+                            <div>
+                                <label style="display:block; font-size:12px; font-weight:600; color:var(--muted); margin-bottom:6px;">"영어 라벨 (선택)"</label>
+                                <input type="text" name="label_en" placeholder="English label" style="width:100%; background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:10px 14px; font-size:14px; color:var(--text2); outline:none;">
                             </div>
                             <div>
                                 <label style="display:block; font-size:12px; font-weight:600; color:var(--muted); margin-bottom:6px;">"경로"</label>

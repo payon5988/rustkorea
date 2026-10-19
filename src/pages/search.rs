@@ -11,12 +11,13 @@ use crate::pages::search_shard::search_results;
 
 #[page("/search")]
 pub async fn search_page(cx: &Cx) -> Result<impl View + '_> {
+    let loc = crate::services::i18n::locale(cx);
     Ok(view! {
         <div class="container" style="padding-top:60px; padding-bottom:80px; max-width:720px;">
             <div style="margin-bottom:32px;">
                 <div style="font-size:11px; font-weight:700; color:#2563EB; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:8px;">"SEARCH"</div>
-                <h1 style="font-size:2rem; font-weight:800; letter-spacing:-0.03em; margin-bottom:8px; color:#16181d;">"검색"</h1>
-                <p class="section-sub">"매뉴얼, 영상, 게시글을 검색하세요."</p>
+                <h1 style="font-size:2rem; font-weight:800; letter-spacing:-0.03em; margin-bottom:8px; color:#16181d;">(loc.pick("검색", "Search"))</h1>
+                <p class="section-sub">(loc.pick("매뉴얼, 영상, 게시글을 검색하세요.", "Search manuals, videos and posts."))</p>
             </div>
 
             let query = signal(cx, String::new);
@@ -24,7 +25,7 @@ pub async fn search_page(cx: &Cx) -> Result<impl View + '_> {
             <div style="position:relative; margin-bottom:32px;">
                 <input
                     type="text"
-                    placeholder="검색어를 입력하세요..."
+                    placeholder=(loc.pick("검색어를 입력하세요...", "Type to search..."))
                     class="input"
                     style="padding-left:44px; padding-top:14px; padding-bottom:14px; font-size:16px; border-radius:12px;"
                     :value=$(query.get())

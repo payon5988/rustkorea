@@ -37,7 +37,33 @@ pub struct SettingsForm {
     pub banner_title: String,
     pub banner_text: String,
     pub banner_cta: String,
+    /// English (public site) overrides; empty = show the Korean value.
+    #[serde(default)]
+    pub site_title_en: String,
+    #[serde(default)]
+    pub site_description_en: String,
+    #[serde(default)]
+    pub footer_text_en: String,
+    #[serde(default)]
+    pub banner_kicker_en: String,
+    #[serde(default)]
+    pub banner_title_en: String,
+    #[serde(default)]
+    pub banner_text_en: String,
+    #[serde(default)]
+    pub banner_cta_en: String,
 }
+
+/// English setting keys edited in the "English version" section.
+const EN_KEYS: [(&str, &str); 7] = [
+    ("site_title_en", "사이트 제목"),
+    ("site_description_en", "사이트 설명"),
+    ("footer_text_en", "푸터 문구"),
+    ("banner_kicker_en", "배너 뱃지 문구"),
+    ("banner_title_en", "배너 제목"),
+    ("banner_text_en", "배너 설명 문구"),
+    ("banner_cta_en", "배너 버튼 문구"),
+];
 
 async fn get_setting(db: &Db, key: &str) -> String {
     sqlx::query_scalar::<_, String>("SELECT value FROM site_settings WHERE key = $1")
@@ -119,6 +145,10 @@ pub async fn admin_settings_page(cx: &Cx) -> Result<impl View + '_> {
     let banner_title = get_setting(db, "banner_title").await;
     let banner_text = get_setting(db, "banner_text").await;
     let banner_cta = get_setting(db, "banner_cta").await;
+    let mut en_values: Vec<(&str, &str, String)> = Vec::new();
+    for (key, label) in EN_KEYS {
+        en_values.push((key, label, get_setting(db, key).await));
+    }
     let youtube_visibility = get_setting(db, "youtube_visibility").await;
     let youtube_visibility = if youtube_visibility.is_empty() {
         "public".to_string()
@@ -345,6 +375,19 @@ pub async fn admin_settings_page(cx: &Cx) -> Result<impl View + '_> {
                     </div>
 
                     <div style="background:var(--card); border:1px solid var(--border); border-radius:10px; padding:24px; margin-bottom:20px;">
+                        <h2 style="font-size:15px; font-weight:700; color:var(--text); margin-bottom:4px;">"영어 버전 (English)"</h2>
+                        <p style="font-size:12px; color:var(--muted2); margin-bottom:20px;">"공개 사이트를 영어(?lang=en)로 볼 때 쓰이는 문구입니다. 비워두면 한국어 값이 표시됩니다."</p>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                            for (key, label, value) in &en_values {
+                                <div style=(if *key == "site_description_en" || *key == "banner_text_en" { "grid-column:1 / -1;" } else { "" })>
+                                    <label for=(*key) style=(FIELD_LABEL_STYLE)>(*label)</label>
+                                    <input type="text" id=(*key) name=(*key) value=(value.clone()) lang="en" style=(input_style)>
+                                </div>
+                            }
+                        </div>
+                    </div>
+
+                    <div style="background:var(--card); border:1px solid var(--border); border-radius:10px; padding:24px; margin-bottom:20px;">
                         <h2 style="font-size:15px; font-weight:700; color:var(--text); margin-bottom:4px;">"OAuth 로그인"</h2>
                         <p style="font-size:12px; color:var(--muted2); margin-bottom:20px;">"소셜 로그인 제공자를 활성화 또는 비활성화합니다."</p>
 
@@ -526,6 +569,17 @@ pub async fn admin_save_settings(
     save_setting(db, "banner_title", input.banner_title.trim()).await;
     save_setting(db, "banner_text", input.banner_text.trim()).await;
     save_setting(db, "banner_cta", input.banner_cta.trim()).await;
+    for (key, value) in [
+        ("site_title_en", &input.site_title_en),
+        ("site_description_en", &input.site_description_en),
+        ("footer_text_en", &input.footer_text_en),
+        ("banner_kicker_en", &input.banner_kicker_en),
+        ("banner_title_en", &input.banner_title_en),
+        ("banner_text_en", &input.banner_text_en),
+        ("banner_cta_en", &input.banner_cta_en),
+    ] {
+        save_setting(db, key, value.trim()).await;
+    }
 
     let actor = crate::auth::access::load_access(db, cx)
         .await

@@ -44,6 +44,7 @@ pub async fn messages_page(cx: &Cx) -> Result<impl View + '_> {
     };
     let db: &Db = topcoat::context::app_context(cx);
     let csrf_token = crate::auth::session::csrf_token(db, cx).await;
+    let loc = crate::services::i18n::locale(cx);
 
     let tab = topcoat::router::request::uri(cx)
         .query()
@@ -99,21 +100,24 @@ pub async fn messages_page(cx: &Cx) -> Result<impl View + '_> {
     Ok(view! {
         <div class="container" style="padding-top:40px; padding-bottom:80px; max-width:640px;">
             <div style="margin-bottom:24px;">
-                <h1 style="font-size:1.5rem; font-weight:800; letter-spacing:-0.02em;">"쪽지"</h1>
+                <h1 style="font-size:1.5rem; font-weight:800; letter-spacing:-0.02em;">(loc.pick("쪽지", "Messages"))</h1>
                 if unread > 0 {
-                    <p style="font-size:13px; color:#6b7280; margin-top:4px;">(format!("읽지 않은 쪽지 {}개", unread))</p>
+                    <p style="font-size:13px; color:#6b7280; margin-top:4px;">(match loc {
+                        crate::services::i18n::Locale::Ko => format!("읽지 않은 쪽지 {unread}개"),
+                        crate::services::i18n::Locale::En => format!("{unread} unread"),
+                    })</p>
                 }
             </div>
 
             <div style="display:flex; gap:4px; border-bottom:1px solid #E4E4E7; margin-bottom:24px;">
-                <a href="/messages?tab=inbox" style=(inbox_style)>"받은 쪽지"</a>
-                <a href="/messages?tab=sent" style=(sent_style)>"보낸 쪽지"</a>
-                <a href="/messages?tab=compose" style=(compose_style)>"새 쪽지"</a>
+                <a href="/messages?tab=inbox" style=(inbox_style)>(loc.pick("받은 쪽지", "Inbox"))</a>
+                <a href="/messages?tab=sent" style=(sent_style)>(loc.pick("보낸 쪽지", "Sent"))</a>
+                <a href="/messages?tab=compose" style=(compose_style)>(loc.pick("새 쪽지", "New message"))</a>
             </div>
 
             if tab == "inbox" {
                 if inbox.is_empty() {
-                    <div class="card" style="padding:60px; text-align:center;"><p style="color:#6b7280;">"받은 쪽지가 없습니다."</p></div>
+                    <div class="card" style="padding:60px; text-align:center;"><p style="color:#6b7280;">(loc.pick("받은 쪽지가 없습니다.", "Your inbox is empty."))</p></div>
                 } else {
                     <div style="display:flex; flex-direction:column; gap:2px; background:#e5e7eb; border-radius:12px; overflow:hidden;">
                         for m in &inbox {
@@ -133,7 +137,7 @@ pub async fn messages_page(cx: &Cx) -> Result<impl View + '_> {
                 }
             } else if tab == "sent" {
                 if sent.is_empty() {
-                    <div class="card" style="padding:60px; text-align:center;"><p style="color:#6b7280;">"보낸 쪽지가 없습니다."</p></div>
+                    <div class="card" style="padding:60px; text-align:center;"><p style="color:#6b7280;">(loc.pick("보낸 쪽지가 없습니다.", "No sent messages."))</p></div>
                 } else {
                     <div style="display:flex; flex-direction:column; gap:2px; background:#e5e7eb; border-radius:12px; overflow:hidden;">
                         for m in &sent {
@@ -152,18 +156,18 @@ pub async fn messages_page(cx: &Cx) -> Result<impl View + '_> {
                 <form method="POST" action="/messages/send" style="background:#fff; border:1px solid #E4E4E7; border-radius:8px; padding:24px; display:flex; flex-direction:column; gap:16px;">
                     <input type="hidden" name="csrf_token" value=(csrf_token.clone())>
                     <div>
-                        <label style="display:block; font-size:13px; font-weight:600; color:#374151; margin-bottom:6px;">"받는 사람"</label>
-                        <input type="text" name="to_username" required="true" placeholder="사용자 이름" class="input">
+                        <label style="display:block; font-size:13px; font-weight:600; color:#374151; margin-bottom:6px;">(loc.pick("받는 사람", "To"))</label>
+                        <input type="text" name="to_username" required="true" placeholder=(loc.pick("사용자 이름", "Username")) class="input">
                     </div>
                     <div>
-                        <label style="display:block; font-size:13px; font-weight:600; color:#374151; margin-bottom:6px;">"제목"</label>
-                        <input type="text" name="subject" required="true" placeholder="쪽지 제목" class="input">
+                        <label style="display:block; font-size:13px; font-weight:600; color:#374151; margin-bottom:6px;">(loc.pick("제목", "Subject"))</label>
+                        <input type="text" name="subject" required="true" placeholder=(loc.pick("쪽지 제목", "Subject")) class="input">
                     </div>
                     <div>
-                        <label style="display:block; font-size:13px; font-weight:600; color:#374151; margin-bottom:6px;">"내용"</label>
-                        <textarea name="content" rows="8" required="true" placeholder="쪽지 내용을 입력하세요..." class="input"></textarea>
+                        <label style="display:block; font-size:13px; font-weight:600; color:#374151; margin-bottom:6px;">(loc.pick("내용", "Message"))</label>
+                        <textarea name="content" rows="8" required="true" placeholder=(loc.pick("쪽지 내용을 입력하세요...", "Write your message...")) class="input"></textarea>
                     </div>
-                    <button type="submit" class="btn-primary" style="align-self:flex-start;">"쪽지 보내기"</button>
+                    <button type="submit" class="btn-primary" style="align-self:flex-start;">(loc.pick("쪽지 보내기", "Send"))</button>
                 </form>
             }
         </div>
@@ -177,6 +181,7 @@ pub async fn message_detail(cx: &Cx) -> Result<impl View + '_> {
     let Some(user) = get_current_user(cx).await else {
         return Err(login_redirect(cx, "/messages").await);
     };
+    let loc = crate::services::i18n::locale(cx);
 
     let msg: Option<MessageWithUser> = sqlx::query_as::<_, MessageWithUser>(
         "SELECT m.id, m.from_user_id, m.to_user_id, m.subject, m.content, m.is_read, m.created_at,
@@ -203,7 +208,7 @@ pub async fn message_detail(cx: &Cx) -> Result<impl View + '_> {
 
     Ok(view! {
         <div class="container" style="padding-top:40px; padding-bottom:80px; max-width:640px;">
-            <a href="/messages" style="font-size:13px; color:#6b7280; display:inline-flex; align-items:center; gap:6px; margin-bottom:24px;">"<- 쪽지함"</a>
+            <a href="/messages" style="font-size:13px; color:#6b7280; display:inline-flex; align-items:center; gap:6px; margin-bottom:24px;">(loc.pick("<- 쪽지함", "<- Messages"))</a>
             if let Some(m) = msg {
                 <div class="card" style="padding:24px;">
                     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; padding-bottom:16px; border-bottom:1px solid #f3f4f6;">
@@ -211,12 +216,12 @@ pub async fn message_detail(cx: &Cx) -> Result<impl View + '_> {
                             <h1 style="font-size:16px; font-weight:700;">(m.subject.clone())</h1>
                             <p style="font-size:12px; color:#9ca3af; margin-top:4px;">(format!("{} | {}", other_name, m.created_at))</p>
                         </div>
-                        <a href=("/messages?tab=compose".to_string()) style="font-size:13px; color:#2563EB; font-weight:500;">"답장"</a>
+                        <a href=("/messages?tab=compose".to_string()) style="font-size:13px; color:#2563EB; font-weight:500;">(loc.pick("답장", "Reply"))</a>
                     </div>
                     <div style="font-size:14px; line-height:1.8; white-space:pre-wrap;">(m.content.clone())</div>
                 </div>
             } else {
-                <div style="text-align:center; padding:80px 0;"><p style="color:#6b7280;">"쪽지를 찾을 수 없습니다."</p></div>
+                <div style="text-align:center; padding:80px 0;"><p style="color:#6b7280;">(loc.pick("쪽지를 찾을 수 없습니다.", "Message not found."))</p></div>
             }
         </div>
     })

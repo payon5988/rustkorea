@@ -25,16 +25,22 @@ pub async fn root_layout(
     let bare = BARE_PREFIXES.iter().any(|p| path.starts_with(p));
 
     let db: &crate::db::Db = topcoat::context::app_context(cx);
-    let site_title = crate::services::site_settings::get_setting(db, "site_title").await;
+    let loc = crate::services::i18n::locale(cx);
+    crate::services::i18n::remember_locale(cx);
+    let site_title = crate::services::site_settings::get_localized(db, "site_title", loc).await;
     let site_title = if site_title.is_empty() {
         "Rust Korea Hub".to_string()
     } else {
         site_title
     };
     let site_description =
-        crate::services::site_settings::get_setting(db, "site_description").await;
+        crate::services::site_settings::get_localized(db, "site_description", loc).await;
     let site_description = if site_description.is_empty() {
-        "Rust 몰라도 10분 만에 끝내는 고성능 풀스택 앱 개발 — Rust Korea".to_string()
+        loc.pick(
+            "Rust 몰라도 10분 만에 끝내는 고성능 풀스택 앱 개발 — Rust Korea",
+            "Build high-performance full-stack apps in 10 minutes, even without knowing Rust — Rust Korea",
+        )
+        .to_string()
     } else {
         site_description
     };
@@ -48,19 +54,25 @@ pub async fn root_layout(
 
     let theme_color = "#2563EB";
     let apple_meta_name = "apple-mobile-web-app-capable";
-    let canonical = format!("{}{}", crate::config::site_url(), path);
+    // Korean lives at the bare URL, English at `?lang=en` (hreflang pair).
+    let href_ko = format!("{}{}", crate::config::site_url(), path);
+    let href_en = format!("{href_ko}?lang=en");
+    let canonical = match loc {
+        crate::services::i18n::Locale::Ko => href_ko.clone(),
+        crate::services::i18n::Locale::En => href_en.clone(),
+    };
     let robots_content = if bare { ROBOTS_NOINDEX } else { ROBOTS_INDEX };
 
     // Per-URL Open Graph: community posts and manual chapters expose their
     // own title/summary so shares match the content (KakaoTalk etc.).
     // Falls back to the site defaults on any failure.
     let (og_title, og_description, og_kind) =
-        resolve_page_og(db, path, &site_title, &site_description).await;
+        resolve_page_og(db, path, &site_title, &site_description, loc).await;
     let og_image = format!("{}/og-image.png", crate::config::site_url());
 
     Ok(view! {
         <!DOCTYPE html>
-        <html lang="ko">
+        <html lang=(loc.as_str())>
             <head>
                 <meta charset="utf-8" />
                 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -72,7 +84,8 @@ pub async fn root_layout(
                 <meta property="og:url" content=(canonical.clone()) />
                 <meta property="og:image" content=(og_image.clone()) />
                 <meta property="og:site_name" content=(site_title.clone()) />
-                <meta property="og:locale" content="ko_KR" />
+                <meta property="og:locale" content=(loc.og()) />
+                <meta property="og:locale:alternate" content=(loc.other().og()) />
                 <meta name="twitter:card" content="summary_large_image" />
                 <meta name="twitter:image" content=(og_image.clone()) />
                 <meta name="robots" content=(robots_content) />
@@ -84,6 +97,11 @@ pub async fn root_layout(
                 }
                 <meta name="keywords" content=(site_keywords.clone()) />
                 <link rel="canonical" href=(canonical.clone()) />
+                if !bare {
+                    <link rel="alternate" hreflang="ko" href=(href_ko.clone()) />
+                    <link rel="alternate" hreflang="en" href=(href_en.clone()) />
+                    <link rel="alternate" hreflang="x-default" href=(href_ko.clone()) />
+                }
                 <link rel="alternate" type="application/rss+xml" title="Rust Korea Hub" href="/feed.xml" />
                 <link rel="preconnect" href="https://fonts.googleapis.com" />
                 <link rel="stylesheet" href=(tailwind::stylesheet!()) />
@@ -233,7 +251,17 @@ async fn resolve_page_og(
     path: &str,
     site_title: &str,
     site_description: &str,
+    loc: crate::services::i18n::Locale,
 ) -> (String, String, String) {
+    // English fields fall back to Korean when empty.
+    let en = loc == crate::services::i18n::Locale::En;
+    let col = |table: &str, name: &str| {
+        if en {
+            format!("COALESCE(NULLIF({table}{name}_en, ''), {table}{name})")
+        } else {
+            format!("{table}{name}")
+        }
+    };
     fn summary(md: &str) -> String {
         let one_line: String = md
             .split_whitespace()
@@ -270,7 +298,9 @@ async fn resolve_page_og(
         }
         ["blog", slug] => {
             let row: Option<(String, String)> = sqlx::query_as(&format!(
-                "SELECT title, content_md FROM blog_posts WHERE slug = $1 AND {}",
+                "SELECT {}, {} FROM blog_posts WHERE slug = $1 AND {}",
+                col("", "title"),
+                col("", "content_md"),
                 crate::util::published_clause("")
             ))
             .bind(*slug)
@@ -289,9 +319,12 @@ async fn resolve_page_og(
         }
         ["manuals", series, chapter] => {
             let row: Option<(String, String, String)> = sqlx::query_as(&format!(
-                "SELECT mc.title, mc.content_md, ms.title FROM manual_chapters mc
+                "SELECT {}, {}, {} FROM manual_chapters mc
                  JOIN manual_series ms ON ms.id = mc.series_id
                  WHERE ms.slug = $1 AND mc.slug = $2 AND {} AND {}",
+                col("mc.", "title"),
+                col("mc.", "content_md"),
+                col("ms.", "title"),
                 crate::util::published_clause("mc"),
                 crate::util::published_clause("ms"),
             ))

@@ -142,20 +142,21 @@ pub async fn new_post_page(cx: &Cx) -> Result<impl View + '_> {
         .collect();
 
     let select_style = "width:100%; background:#fff; border:1px solid #d1d5db; border-radius:6px; padding:10px 12px; font-size:16px; color:#111827; outline:none;";
+    let loc = crate::services::i18n::locale(cx);
 
     Ok(view! {
         <div style="min-height:calc(100vh - 64px); display:flex; align-items:center; justify-content:center; padding:40px 24px; background:#f8f9fa;">
             <div style="width:100%; max-width:640px;">
                 <div style="text-align:center; margin-bottom:32px;">
-                    <h1 style="font-size:1.5rem; font-weight:800; letter-spacing:-0.02em; color:#16181d;">"새 글쓰기"</h1>
-                    <p style="font-size:14px; color:#6b7280; margin-top:6px;">"마크다운 문법을 지원합니다."</p>
+                    <h1 style="font-size:1.5rem; font-weight:800; letter-spacing:-0.02em; color:#16181d;">(loc.pick("새 글쓰기", "New post"))</h1>
+                    <p style="font-size:14px; color:#6b7280; margin-top:6px;">(loc.pick("마크다운 문법을 지원합니다.", "Markdown is supported."))</p>
                 </div>
 
                 <div style="background:#fff; border:1px solid #e5e7eb; border-radius:8px; padding:32px; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
                     <form action="/community/create" method="POST" style="display:flex; flex-direction:column; gap:20px;">
                         <input type="hidden" name="csrf_token" value=(csrf_token.clone())>
                         <div>
-                            <label style="display:block; font-size:13px; font-weight:600; color:#374151; margin-bottom:8px;">"작성자"</label>
+                            <label style="display:block; font-size:13px; font-weight:600; color:#374151; margin-bottom:8px;">(loc.pick("작성자", "Author"))</label>
                             <div style="display:flex; align-items:center; gap:10px; padding:10px 12px; background:#f9fafb; border:1px solid #E4E4E7; border-radius:6px;">
                                 if let Some(avatar) = &user.avatar_url {
                                     <img src=(avatar.clone()) alt="" style="width:24px; height:24px; border-radius:50%;">
@@ -164,41 +165,41 @@ pub async fn new_post_page(cx: &Cx) -> Result<impl View + '_> {
                             </div>
                         </div>
                         <div>
-                            <label style="display:block; font-size:13px; font-weight:600; color:#374151; margin-bottom:8px;">"카테고리"</label>
+                            <label style="display:block; font-size:13px; font-weight:600; color:#374151; margin-bottom:8px;">(loc.pick("카테고리", "Category"))</label>
                             <select name="category" style=(select_style)>
                                 for cat in &categories {
-                                    <option value=(cat.slug.clone())>{(cat.name.clone())}</option>
+                                    <option value=(cat.slug.clone())>{(loc.text_owned(&cat.name, &cat.name_en))}</option>
                                 }
                             </select>
                         </div>
                         <div>
-                            <label style="display:block; font-size:13px; font-weight:600; color:#374151; margin-bottom:8px;">"제목"</label>
-                            <input type="text" name="title" required="true" placeholder="글 제목을 입력하세요" class="input">
+                            <label style="display:block; font-size:13px; font-weight:600; color:#374151; margin-bottom:8px;">(loc.pick("제목", "Title"))</label>
+                            <input type="text" name="title" required="true" placeholder=(loc.pick("글 제목을 입력하세요", "Enter a title")) class="input">
                         </div>
                         <div>
-                            <label style="display:block; font-size:13px; font-weight:600; color:#374151; margin-bottom:8px;">"태그 (쉼표 구분, 최대 5개)"</label>
-                            <input type="text" name="tags" placeholder="예: rust, async, tokio" class="input">
-                            <p style="font-size:12px; color:#9ca3af; margin-top:4px;">"검색에 활용됩니다."</p>
+                            <label style="display:block; font-size:13px; font-weight:600; color:#374151; margin-bottom:8px;">(loc.pick("태그 (쉼표 구분, 최대 5개)", "Tags (comma-separated, up to 5)"))</label>
+                            <input type="text" name="tags" placeholder=(loc.pick("예: rust, async, tokio", "e.g. rust, async, tokio")) class="input">
+                            <p style="font-size:12px; color:#9ca3af; margin-top:4px;">(loc.pick("검색에 활용됩니다.", "Used for search."))</p>
                         </div>
                         <div>
-                            <label style="display:block; font-size:13px; font-weight:600; color:#374151; margin-bottom:8px;">"예약 발행 (비워두면 즉시 발행)"</label>
+                            <label style="display:block; font-size:13px; font-weight:600; color:#374151; margin-bottom:8px;">(loc.pick("예약 발행 (비워두면 즉시 발행)", "Schedule (leave empty to publish now)"))</label>
                             <input type="datetime-local" name="published_at" class="input">
-                            <p style="font-size:12px; color:#9ca3af; margin-top:4px;">"한국 시간 기준. 예약된 글은 시간이 되면 자동 공개됩니다."</p>
+                            <p style="font-size:12px; color:#9ca3af; margin-top:4px;">(loc.pick("한국 시간 기준. 예약된 글은 시간이 되면 자동 공개됩니다.", "Korea Standard Time (KST). Scheduled posts go public automatically."))</p>
                         </div>
                         <div>
-                            <label style="display:block; font-size:13px; font-weight:600; color:#374151; margin-bottom:8px;">"내용 (Markdown)"</label>
+                            <label style="display:block; font-size:13px; font-weight:600; color:#374151; margin-bottom:8px;">(loc.pick("내용 (Markdown)", "Content (Markdown)"))</label>
                             <div style="margin-bottom:12px; display:flex; align-items:center; gap:10px;">
-                                <label for="md-file" style="font-size:13px; color:#6b7280; cursor:pointer; border:1px dashed #d1d5db; border-radius:6px; padding:8px 14px;">".md 파일 불러오기"</label>
+                                <label for="md-file" style="font-size:13px; color:#6b7280; cursor:pointer; border:1px dashed #d1d5db; border-radius:6px; padding:8px 14px;">(loc.pick(".md 파일 불러오기", "Load a .md file"))</label>
                                 <input type="file" id="md-file" accept=".md,.markdown,.txt" style="display:none;">
-                                <span style="font-size:12px; color:#9ca3af;">"또는 :::youtube[영상ID] 로 영상 삽입"</span>
+                                <span style="font-size:12px; color:#9ca3af;">(loc.pick("또는 :::youtube[영상ID] 로 영상 삽입", "or embed a video with :::youtube[VIDEO_ID]"))</span>
                             </div>
-                            <textarea id="editor" name="content_md" rows="16" required="true" placeholder="글 내용을 마크다운으로 작성하세요..." class="input"></textarea>
+                            <textarea id="editor" name="content_md" rows="16" required="true" placeholder=(loc.pick("글 내용을 마크다운으로 작성하세요...", "Write your post in Markdown...")) class="input"></textarea>
                         </div>
-                        <button type="submit" class="btn-primary" style="width:100%; justify-content:center; padding:14px;">"글 등록"</button>
+                        <button type="submit" class="btn-primary" style="width:100%; justify-content:center; padding:14px;">(loc.pick("글 등록", "Publish"))</button>
                     </form>
 
                     <div style="margin-top:24px; text-align:center; font-size:13px; color:#6b7280;">
-                        <a href="/community" style="color:#2563EB; font-weight:500;">"<- 커뮤니티로 돌아가기"</a>
+                        <a href="/community" style="color:#2563EB; font-weight:500;">(loc.pick("<- 커뮤니티로 돌아가기", "<- Back to community"))</a>
                     </div>
                 </div>
                 <link rel="stylesheet" href=(crate::admin_ui::TOAST_CSS_URL)>

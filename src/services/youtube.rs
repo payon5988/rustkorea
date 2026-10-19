@@ -43,15 +43,19 @@ pub async fn fetch_channel_videos(channel_id: &str) -> Result<Vec<VideoMetadata>
 }
 
 fn parse_rss_feed(xml: &str, channel_id: &str) -> Vec<VideoMetadata> {
+    use quick_xml::XmlVersion;
+    use quick_xml::escape::resolve_predefined_entity;
     use quick_xml::events::Event;
     use quick_xml::reader::Reader;
 
     let mut videos = Vec::new();
+    // No trim_text: text around entity references arrives as separate
+    // events, so values are trimmed once when the element ends.
     let mut reader = Reader::from_str(xml);
-    reader.config_mut().trim_text(true);
 
     let mut buf = Vec::new();
     let mut current_field = String::new();
+    let mut text = String::new();
     let mut title = String::new();
     let mut video_id = String::new();
     let mut published = String::new();
@@ -95,54 +99,51 @@ fn parse_rss_feed(xml: &str, channel_id: &str) -> Vec<VideoMetadata> {
 
     loop {
         match reader.read_event_into(&mut buf) {
-            Ok(Event::Start(e)) => match e.name().as_ref() {
-                b"entry" => {
-                    in_entry = true;
-                    title.clear();
-                    video_id.clear();
-                    published.clear();
-                    description.clear();
-                    thumbnail.clear();
+            Ok(Event::Start(e)) => {
+                text.clear();
+                match e.name().as_ref() {
+                    b"entry" => {
+                        in_entry = true;
+                        title.clear();
+                        video_id.clear();
+                        published.clear();
+                        description.clear();
+                        thumbnail.clear();
+                    }
+                    _ => {
+                        current_field = String::from_utf8_lossy(e.name().as_ref()).into_owned();
+                    }
                 }
-                _ => {
-                    current_field = String::from_utf8_lossy(e.name().as_ref()).into_owned();
-                }
-            },
+            }
             Ok(Event::Empty(e)) => {
                 if in_entry && e.name().as_ref() == b"media:thumbnail" {
                     for attr in e.attributes().flatten() {
                         if attr.key.as_ref() == b"url" {
-                            if let Ok(url) = attr.unescape_value() {
+                            if let Ok(url) = attr.normalized_value(XmlVersion::Implicit1_0) {
                                 thumbnail = url.into_owned();
                             }
                         }
                     }
                 }
             }
-            Ok(Event::Text(e)) => {
-                if !in_entry {
-                    continue;
-                }
-                let text = e.unescape().unwrap_or_default().into_owned();
-                match current_field.as_str() {
-                    "title" if title.is_empty() => title = text,
-                    "yt:videoId" => video_id = text,
-                    "published" => published = text,
-                    "media:description" => description = text,
-                    _ => {}
+            // Element text arrives in pieces: plain text, entity references
+            // (`&amp;`, `&#38;`) and CDATA. Collect them and assign on End.
+            Ok(Event::Text(e)) if in_entry => {
+                text.push_str(&e.decode().unwrap_or_default());
+            }
+            Ok(Event::GeneralRef(e)) if in_entry => {
+                if let Ok(Some(ch)) = e.resolve_char_ref() {
+                    text.push(ch);
+                } else if let Some(s) = e
+                    .decode()
+                    .ok()
+                    .and_then(|name| resolve_predefined_entity(&name))
+                {
+                    text.push_str(s);
                 }
             }
-            Ok(Event::CData(e)) => {
-                if !in_entry {
-                    continue;
-                }
-                let raw = e.into_inner();
-                let text = String::from_utf8_lossy(&raw).into_owned();
-                match current_field.as_str() {
-                    "title" if title.is_empty() => title = text,
-                    "media:description" => description = text,
-                    _ => {}
-                }
+            Ok(Event::CData(e)) if in_entry => {
+                text.push_str(&String::from_utf8_lossy(&e.into_inner()));
             }
             Ok(Event::End(e)) if e.name().as_ref() == b"entry" => {
                 in_entry = false;
@@ -156,7 +157,18 @@ fn parse_rss_feed(xml: &str, channel_id: &str) -> Vec<VideoMetadata> {
                 );
             }
             Ok(Event::End(_)) => {
+                if in_entry {
+                    let value = text.trim().to_string();
+                    match current_field.as_str() {
+                        "title" if title.is_empty() => title = value,
+                        "yt:videoId" => video_id = value,
+                        "published" => published = value,
+                        "media:description" => description = value,
+                        _ => {}
+                    }
+                }
                 current_field.clear();
+                text.clear();
             }
             Ok(Event::Eof) => break,
             Err(_) => break,
@@ -186,5 +198,36 @@ mod tests {
         assert_eq!(videos[0].title, "Hello & World");
         assert!(videos[0].thumbnail_url.starts_with("https://i.ytimg.com/"));
         assert!(videos[1].thumbnail_url.is_empty());
+    }
+
+    /// Real feeds are indented and nest media fields in `media:group`;
+    /// entity/char references and CDATA must join into one value.
+    #[test]
+    fn joins_text_pieces_in_nested_indented_feed() {
+        let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns:yt="http://www.youtube.com/xml/schemas/2015" xmlns:media="http://search.yahoo.com/mrss/">
+ <title>Channel</title>
+ <entry>
+  <yt:videoId>vid_1</yt:videoId>
+  <title>Rust &#39;async&#39; &lt;tips&gt; &amp; tricks</title>
+  <published>2026-02-03T04:05:06+00:00</published>
+  <media:group>
+   <media:title>ignored</media:title>
+   <media:thumbnail url="https://i.ytimg.com/vi/vid_1/hq.jpg?a=1&amp;b=2" width="480"/>
+   <media:description><![CDATA[line <b>one</b>]]> &amp; two</media:description>
+  </media:group>
+ </entry>
+</feed>"#;
+        let videos = parse_rss_feed(xml, "UCtest");
+        assert_eq!(videos.len(), 1);
+        let v = &videos[0];
+        assert_eq!(v.video_id, "vid_1");
+        assert_eq!(v.title, "Rust 'async' <tips> & tricks");
+        assert_eq!(v.description, "line <b>one</b> & two");
+        assert_eq!(
+            v.thumbnail_url,
+            "https://i.ytimg.com/vi/vid_1/hq.jpg?a=1&b=2"
+        );
+        assert_eq!(v.published_at, "2026-02-03T04:05:06+00:00");
     }
 }

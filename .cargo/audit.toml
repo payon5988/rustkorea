@@ -1,0 +1,8 @@
+# cargo audit 예외 목록. 항목마다 근거를 남기고, 근거가 사라지면 삭제한다.
+[advisories]
+ignore = [
+    # rsa (Marvin Attack): sqlx-mysql 경유로 Cargo.lock에만 존재한다.
+    # sqlx는 postgres 기능만 켜서 빌드 그래프에 없다(`cargo tree -i rsa --target all` 결과 없음).
+    # 수정 버전도 없음. MySQL 기능을 켜면 이 예외를 재검토할 것.
+    "RUSTSEC-2023-0071",
+]

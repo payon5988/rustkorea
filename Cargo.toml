@@ -29,9 +29,9 @@ argon2 = { version = "0.5" }
 getrandom = { version = "0.2" }
 rand = "0.8"
 form_urlencoded = { version = "1" }
-quick-xml = { version = "0.37", features = ["serialize"] }
+quick-xml = { version = "0.41", features = ["serialize"] }
 totp-rs = { version = "5", features = ["gen_secret", "otpauth", "qr"] }
-pdf-extract = { version = "0.8" }
+pdf-extract = { version = "0.12" }
 
 [build-dependencies]
 topcoat = { version = "0.10", features = ["tailwind"] }

@@ -23,7 +23,9 @@ fn router(pool: &Db) -> Router {
         .join("assets");
     Router::builder()
         .app_context(pool.clone())
-        .assets(AssetBundle::load_dir(assets_dir).expect("run cargo build and topcoat asset bundle"))
+        .assets(
+            AssetBundle::load_dir(assets_dir).expect("run cargo build and topcoat asset bundle"),
+        )
         .cookies()
         .sessions(
             topcoat::session::SessionConfig::builder()
@@ -85,8 +87,12 @@ async fn count(pool: &Db, sql: &str) -> i64 {
 #[ignore = "requires PostgreSQL DATABASE_URL and bundled assets; creates an isolated test database"]
 async fn members_cannot_run_admin_mutations(pool: Db) {
     let member = user_with_session(&pool, "authz-member", "member").await;
-    sqlx::query("INSERT INTO posts (id, author_id, title) VALUES ('authz-post', 'authz-member', 'keep')")
-        .execute(&pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO posts (id, author_id, title) VALUES ('authz-post', 'authz-member', 'keep')",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
     sqlx::query("INSERT INTO events (id, creator_id, title, event_date) VALUES ('authz-event', 'authz-member', 'keep', '2099-01-01')")
         .execute(&pool).await.unwrap();
     sqlx::query("INSERT INTO reports (id, reporter_id, target_type, target_id, reason) VALUES ('authz-report', 'authz-member', 'post', 'authz-post', 'spam')")
@@ -143,34 +149,63 @@ async fn members_cannot_run_admin_mutations(pool: Db) {
         ("/admin/manuals/authz-series/chapters/create", chapter("")),
         ("/admin/manuals/chapters/update", chapter("authz-chapter")),
     ] {
-        assert_eq!(post(&router, &member, path, body).await, "/admin/login", "{path}");
+        assert_eq!(
+            post(&router, &member, path, body).await,
+            "/admin/login",
+            "{path}"
+        );
     }
 
     assert_eq!(count(&pool, "SELECT COUNT(*) FROM posts").await, 1);
     assert_eq!(count(&pool, "SELECT COUNT(*) FROM events").await, 1);
     assert_eq!(
-        count(&pool, "SELECT COUNT(*) FROM reports WHERE status = 'pending'").await,
+        count(
+            &pool,
+            "SELECT COUNT(*) FROM reports WHERE status = 'pending'"
+        )
+        .await,
         1
     );
     assert_eq!(
-        count(&pool, "SELECT COUNT(*) FROM manual_series WHERE title = 'keep'").await,
+        count(
+            &pool,
+            "SELECT COUNT(*) FROM manual_series WHERE title = 'keep'"
+        )
+        .await,
         1
     );
     assert_eq!(count(&pool, "SELECT COUNT(*) FROM manual_series").await, 1);
     assert_eq!(
-        count(&pool, "SELECT COUNT(*) FROM manual_chapters WHERE title = 'keep'").await,
+        count(
+            &pool,
+            "SELECT COUNT(*) FROM manual_chapters WHERE title = 'keep'"
+        )
+        .await,
         1
     );
-    assert_eq!(count(&pool, "SELECT COUNT(*) FROM manual_chapters").await, 1);
+    assert_eq!(
+        count(&pool, "SELECT COUNT(*) FROM manual_chapters").await,
+        1
+    );
 
     // Control: the same request still works for an administrator.
     let admin = user_with_session(&pool, "authz-admin", "admin").await;
     assert_eq!(
-        post(&router, &admin, "/admin/reports/authz-report/resolve", form(&csrf)).await,
+        post(
+            &router,
+            &admin,
+            "/admin/reports/authz-report/resolve",
+            form(&csrf)
+        )
+        .await,
         "/admin/reports"
     );
     assert_eq!(
-        count(&pool, "SELECT COUNT(*) FROM reports WHERE status = 'resolved'").await,
+        count(
+            &pool,
+            "SELECT COUNT(*) FROM reports WHERE status = 'resolved'"
+        )
+        .await,
         1
     );
 }
@@ -198,11 +233,19 @@ async fn public_login_enforces_totp(pool: Db) {
         crate::auth::session::TWOFA_ROUTE
     );
     assert_eq!(
-        count(&pool, "SELECT COUNT(*) FROM sessions WHERE user_id = 'authz-totp' AND pending_2fa = 1").await,
+        count(
+            &pool,
+            "SELECT COUNT(*) FROM sessions WHERE user_id = 'authz-totp' AND pending_2fa = 1"
+        )
+        .await,
         1
     );
     assert_eq!(
-        count(&pool, "SELECT COUNT(*) FROM sessions WHERE user_id = 'authz-totp' AND pending_2fa = 0").await,
+        count(
+            &pool,
+            "SELECT COUNT(*) FROM sessions WHERE user_id = 'authz-totp' AND pending_2fa = 0"
+        )
+        .await,
         0
     );
 }

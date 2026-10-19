@@ -49,8 +49,16 @@ jobs:
         env:
           DATABASE_URL: postgres://postgres:postgres@localhost:5432/rustkorea_test
 
-      - name: Run tests
-        run: cargo test
+      - name: Install Topcoat CLI
+        run: cargo install topcoat-cli --version 0.10.0 --locked
+
+      # DB regression tests (#[ignore]) render real pages, so they need the
+      # debug asset bundle; sqlx::test creates an isolated DB per test.
+      - name: Run tests (including DB regressions)
+        run: |
+          cargo build
+          topcoat asset bundle
+          cargo test -- --include-ignored
         env:
           DATABASE_URL: postgres://postgres:postgres@localhost:5432/rustkorea_test
 
@@ -58,9 +66,7 @@ jobs:
         run: cargo build --release
 
       - name: Bundle assets
-        run: |
-          cargo install topcoat-cli --version 0.10.0 --locked
-          topcoat asset bundle --release
+        run: topcoat asset bundle --release
 
       - name: Smoke test endpoints
         run: |

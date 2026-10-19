@@ -111,9 +111,7 @@ pub async fn login_submit(
                         }
                         Ok(sessions::LoginStep::NeedsTotp) => {
                             sessions::clear_login_attempts(db, cx, &input.email).await;
-                            return Ok(topcoat::router::error::see_other(
-                                sessions::TWOFA_ROUTE,
-                            ));
+                            return Ok(topcoat::router::error::see_other(sessions::TWOFA_ROUTE));
                         }
                         Err(_) => {}
                     },

@@ -53,6 +53,10 @@ async fn main() {
         )
         .assets(topcoat::asset::AssetBundle::load().expect("asset bundle not found"))
         .layer(security::SecurityHeaders::new())
+        .layer(
+            topcoat::router::BodyLimit::max(services::uploads::MAX_UPLOAD_REQUEST_BYTES)
+                .at("/admin/products/upload"),
+        )
         .runtime()
         .discover()
         .build();

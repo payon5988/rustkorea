@@ -9,6 +9,22 @@ use std::io::Write;
 /// Max accepted upload size (5MB).
 pub const MAX_UPLOAD_BYTES: usize = 5 * 1024 * 1024;
 
+/// Allow multipart headers and text fields in addition to a 5MiB image.
+pub const MAX_UPLOAD_REQUEST_BYTES: usize = MAX_UPLOAD_BYTES + 1024 * 1024;
+
+/// Public upload filenames accepted by both image forms and the file route.
+pub fn valid_upload_name(name: &str) -> bool {
+    !name.is_empty()
+        && name.len() <= 64
+        && name
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == '.')
+        && !name.contains("..")
+        && ["png", "jpg", "jpeg", "webp", "gif"]
+            .iter()
+            .any(|ext| name.to_lowercase().ends_with(&format!(".{ext}")))
+}
+
 /// Allowed image types (extension + magic bytes + content-type).
 pub const ALLOWED_TYPES: [(&str, &str); 4] = [
     ("png", "image/png"),

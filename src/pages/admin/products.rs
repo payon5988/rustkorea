@@ -35,6 +35,60 @@ fn clean_url(raw: &str) -> String {
     }
 }
 
+fn clean_image_url(raw: &str) -> String {
+    let trimmed = raw.trim();
+    if let Some(name) = trimmed.strip_prefix("/uploads/") {
+        if crate::services::uploads::valid_upload_name(name) {
+            return trimmed.to_string();
+        }
+        return String::new();
+    }
+    clean_url(trimmed)
+}
+
+#[cfg(test)]
+#[path = "products_tests.rs"]
+mod tests;
+
+fn product_error_message(code: &str) -> &'static str {
+    match code {
+        "size" => "이미지 파일은 비어 있지 않은 5MiB 이하 파일이어야 합니다.",
+        "filetype" => "PNG, JPG, WebP 이미지 파일만 업로드할 수 있습니다.",
+        "io" => "이미지 파일을 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.",
+        "save" => "상품 정보를 저장하지 못했습니다. 입력 내용을 확인하고 다시 시도해 주세요.",
+        "upload_save" => "이미지 정보를 저장하지 못했습니다. 다시 업로드해 주세요.",
+        "missing" => "상품을 찾을 수 없습니다. 상품 목록을 확인해 주세요.",
+        "invalid" => "입력 내용을 확인해 주세요.",
+        "upload" => {
+            "이미지를 업로드하지 못했습니다. 파일 또는 이미지 URL을 확인하고 다시 시도해 주세요."
+        }
+        _ => "",
+    }
+}
+
+fn product_error_redirect(product_id: &str, code: &str) -> topcoat::router::error::SeeOther {
+    let query = form_urlencoded::Serializer::new(String::new())
+        .append_pair("id", product_id)
+        .append_pair("error", code)
+        .finish();
+    let path = if product_id.is_empty() {
+        "/admin/products"
+    } else {
+        "/admin/products/edit"
+    };
+    topcoat::router::error::see_other(format!("{path}?{query}"))
+}
+
+fn multipart_failure(product_id: &str, error: topcoat::Error) -> topcoat::router::error::SeeOther {
+    eprintln!("[product upload] multipart failed: {error}");
+    let code = if error.is::<topcoat::router::error::ContentTooLargeError>() {
+        "size"
+    } else {
+        "upload"
+    };
+    product_error_redirect(product_id, code)
+}
+
 fn clean_video_id(raw: &str) -> String {
     let t = raw.trim().to_string();
     if t.len() == 11
@@ -141,7 +195,7 @@ pub async fn create_product(
         crate::services::markdown::html_to_markdown(&input.description_html_import)
     };
     let description_html = render_markdown(&description_md);
-    sqlx::query(
+    let saved = sqlx::query(
         "INSERT INTO products (category_id, slug, title, summary, description_md, description_html,
          price, price_visible, preview_url, video_id, techs, thumbnail_url, main_image_url,
          visibility, published_at)
@@ -158,13 +212,18 @@ pub async fn create_product(
     .bind(&preview_url)
     .bind(&video_id)
     .bind(input.techs.trim())
-    .bind(clean_url(&input.thumbnail_url))
-    .bind(clean_url(&input.main_image_url))
+    .bind(clean_image_url(&input.thumbnail_url))
+    .bind(clean_image_url(&input.main_image_url))
     .bind(&input.visibility)
     .bind(&published_at)
     .execute(db)
-    .await
-    .ok();
+    .await;
+    if let Err(error) = saved {
+        eprintln!("[product create] save failed: {error}");
+        return Ok(topcoat::router::error::see_other(
+            "/admin/products/new?error=save",
+        ));
+    }
     Ok(topcoat::router::error::see_other("/admin/products"))
 }
 
@@ -235,7 +294,7 @@ pub async fn update_product(
         crate::services::markdown::html_to_markdown(&input.description_html_import)
     };
     let description_html = render_markdown(&description_md);
-    sqlx::query(
+    let saved = sqlx::query(
         "UPDATE products SET category_id = $1, slug = $2, title = $3, summary = $4,
          description_md = $5, description_html = $6, price = $7, price_visible = $8,
          preview_url = $9, video_id = $10, techs = $11, thumbnail_url = $12,
@@ -253,14 +312,21 @@ pub async fn update_product(
     .bind(clean_url(&input.preview_url))
     .bind(clean_video_id(&input.video_id))
     .bind(input.techs.trim())
-    .bind(clean_url(&input.thumbnail_url))
-    .bind(clean_url(&input.main_image_url))
+    .bind(clean_image_url(&input.thumbnail_url))
+    .bind(clean_image_url(&input.main_image_url))
     .bind(&input.visibility)
     .bind(&published_at)
     .bind(&input.id)
     .execute(db)
-    .await
-    .ok();
+    .await;
+    match saved {
+        Ok(result) if result.rows_affected() > 0 => {}
+        Ok(_) => return Ok(product_error_redirect("", "missing")),
+        Err(error) => {
+            eprintln!("[product update] save failed: {error}");
+            return Ok(product_error_redirect(&input.id, "save"));
+        }
+    }
     Ok(topcoat::router::error::see_other(format!(
         "/admin/products/edit?id={}",
         input.id
@@ -302,7 +368,9 @@ pub async fn upload_product_image(
     mut mp: Multipart,
 ) -> Result<topcoat::router::error::SeeOther> {
     let db: &Db = topcoat::context::app_context(cx);
-    let fail = || topcoat::router::error::see_other("/admin/products?error=upload");
+    if require_products(cx).await {
+        return Ok(topcoat::router::error::see_other("/admin/login"));
+    }
     let mut csrf = String::new();
     let mut product_id = String::new();
     let mut target = String::new();
@@ -313,20 +381,29 @@ pub async fn upload_product_image(
     loop {
         let field = match mp.next_field().await {
             Ok(f) => f,
-            Err(_) => return Ok(fail()),
+            Err(error) => return Ok(multipart_failure(&product_id, error)),
         };
         let Some(field) = field else { break };
-        match field.name().unwrap_or("") {
-            "csrf_token" => csrf = field.text().await.unwrap_or_default(),
-            "product_id" => product_id = field.text().await.unwrap_or_default(),
-            "target" => target = field.text().await.unwrap_or_default(),
-            "url" => url = field.text().await.unwrap_or_default(),
+        let field_name = field.name().unwrap_or("").to_string();
+        match field_name.as_str() {
+            "csrf_token" | "product_id" | "target" | "url" => {
+                let value = match field.text().await {
+                    Ok(value) => value,
+                    Err(error) => return Ok(multipart_failure(&product_id, error)),
+                };
+                match field_name.as_str() {
+                    "csrf_token" => csrf = value,
+                    "product_id" => product_id = value,
+                    "target" => target = value,
+                    _ => url = value,
+                }
+            }
             "file" => {
                 filename = field.file_name().unwrap_or("").to_string();
                 ctype = field.content_type().unwrap_or("").to_string();
                 match field.bytes().await {
                     Ok(b) => bytes = b.to_vec(),
-                    Err(_) => return Ok(fail()),
+                    Err(error) => return Ok(multipart_failure(&product_id, error)),
                 }
             }
             _ => {}
@@ -335,42 +412,44 @@ pub async fn upload_product_image(
     if !crate::auth::session::verify_csrf_logged(db, cx, &csrf, "admin.products.upload").await {
         return Ok(topcoat::router::error::see_other("/admin/login"));
     }
-    if require_products(cx).await {
-        return Ok(topcoat::router::error::see_other("/admin/login"));
+    if !matches!(target.as_str(), "thumbnail" | "main" | "gallery") {
+        return Ok(product_error_redirect(&product_id, "upload"));
     }
-    let exists: bool = sqlx::query_scalar("SELECT COUNT(*) > 0 FROM products WHERE id = $1")
+    let exists = sqlx::query_scalar::<_, bool>("SELECT COUNT(*) > 0 FROM products WHERE id = $1")
         .bind(&product_id)
         .fetch_one(db)
         .await
-        .unwrap_or(false);
+        .map_err(|error| eprintln!("[product upload] product lookup failed: {error}"));
+    let exists = match exists {
+        Ok(exists) => exists,
+        Err(()) => return Ok(product_error_redirect(&product_id, "upload_save")),
+    };
     if !exists {
-        return Ok(fail());
+        return Ok(product_error_redirect("", "missing"));
     }
     // Either an uploaded file or an external URL.
-    let stored = if !bytes.is_empty() {
+    let stored = if !filename.is_empty() || !bytes.is_empty() {
         match crate::services::uploads::store_image(&filename, &ctype, &bytes) {
             Ok(u) => u,
             Err(code) => {
-                return Ok(topcoat::router::error::see_other(format!(
-                    "/admin/products/edit?id={product_id}&error={code}"
-                )));
+                eprintln!("[product upload] image rejected: {code}");
+                return Ok(product_error_redirect(&product_id, code));
             }
         }
     } else {
-        let u = clean_url(&url);
+        let u = clean_image_url(&url);
         if u.is_empty() {
-            return Ok(fail());
+            return Ok(product_error_redirect(&product_id, "upload"));
         }
         u
     };
-    match target.as_str() {
+    let saved = match target.as_str() {
         "thumbnail" => {
             sqlx::query("UPDATE products SET thumbnail_url = $1 WHERE id = $2")
                 .bind(&stored)
                 .bind(&product_id)
                 .execute(db)
                 .await
-                .ok();
         }
         "main" => {
             sqlx::query("UPDATE products SET main_image_url = $1 WHERE id = $2")
@@ -378,16 +457,21 @@ pub async fn upload_product_image(
                 .bind(&product_id)
                 .execute(db)
                 .await
-                .ok();
         }
         _ => {
-            let max_pos: i64 = sqlx::query_scalar(
+            let max_pos: Result<i64, sqlx::Error> = sqlx::query_scalar(
                 "SELECT COALESCE(MAX(position), -1) FROM product_images WHERE product_id = $1",
             )
             .bind(&product_id)
             .fetch_one(db)
-            .await
-            .unwrap_or(-1);
+            .await;
+            let max_pos = match max_pos {
+                Ok(position) => position,
+                Err(error) => {
+                    eprintln!("[product upload] gallery lookup failed: {error}");
+                    return Ok(product_error_redirect(&product_id, "upload_save"));
+                }
+            };
             sqlx::query(
                 "INSERT INTO product_images (product_id, url, position) VALUES ($1, $2, $3)",
             )
@@ -396,7 +480,14 @@ pub async fn upload_product_image(
             .bind(max_pos + 1)
             .execute(db)
             .await
-            .ok();
+        }
+    };
+    match saved {
+        Ok(result) if result.rows_affected() > 0 => {}
+        Ok(_) => return Ok(product_error_redirect("", "missing")),
+        Err(error) => {
+            eprintln!("[product upload] image save failed: {error}");
+            return Ok(product_error_redirect(&product_id, "upload_save"));
         }
     }
     Ok(topcoat::router::error::see_other(format!(
@@ -528,6 +619,7 @@ pub async fn admin_products(cx: &Cx) -> Result<impl View + '_> {
     }
     let db: &Db = topcoat::context::app_context(cx);
     let csrf_token = crate::auth::session::csrf_token(db, cx).await;
+    let error_message = product_error_message(query_param(cx, "error").as_deref().unwrap_or(""));
     let products = sqlx::query_as::<_, Product>("SELECT * FROM products ORDER BY created_at DESC")
         .fetch_all(db)
         .await
@@ -570,6 +662,9 @@ pub async fn admin_products(cx: &Cx) -> Result<impl View + '_> {
                     </div>
                 </div>
 
+                if !error_message.is_empty() {
+                    <p role="alert" style="color:#dc2626; margin-bottom:16px;">(error_message)</p>
+                }
                 <div style="background:var(--card); border:1px solid var(--border); border-radius:10px; overflow:hidden; margin-bottom:20px;">
                     <table style="width:100%; font-size:13px; border-collapse:collapse;">
                         <thead>
@@ -652,6 +747,7 @@ pub async fn new_product(cx: &Cx) -> Result<impl View + '_> {
     }
     let db: &Db = topcoat::context::app_context(cx);
     let csrf_token = crate::auth::session::csrf_token(db, cx).await;
+    let error_message = product_error_message(query_param(cx, "error").as_deref().unwrap_or(""));
     let categories = sqlx::query_as::<_, ProductCategory>(
         "SELECT * FROM product_categories ORDER BY position ASC",
     )
@@ -678,6 +774,9 @@ pub async fn new_product(cx: &Cx) -> Result<impl View + '_> {
                     <a href="/admin/products" style="font-size:12px; color:var(--muted2); display:inline-flex; align-items:center; gap:6px; margin-bottom:12px;">"← 상품 목록"</a>
                     <h1 style="font-size:1.25rem; font-weight:700;">"새 상품"</h1>
                 </div>
+                if !error_message.is_empty() {
+                    <p role="alert" style="color:#dc2626; margin-bottom:16px;">(error_message)</p>
+                }
                 <form action="/admin/products/create" method="POST" style="max-width:760px;">
                     <input type="hidden" name="csrf_token" value=(csrf_token.clone())>
                     <div style="background:var(--card); border:1px solid var(--border); border-radius:10px; padding:24px; margin-bottom:16px; display:grid; grid-template-columns:1fr 1fr; gap:16px;">
@@ -784,6 +883,7 @@ pub async fn edit_product(cx: &Cx) -> Result<impl View + '_> {
     }
     let db: &Db = topcoat::context::app_context(cx);
     let csrf_token = crate::auth::session::csrf_token(db, cx).await;
+    let error_message = product_error_message(query_param(cx, "error").as_deref().unwrap_or(""));
     let product: Option<Product> =
         sqlx::query_as::<_, Product>("SELECT * FROM products WHERE id = $1")
             .bind(&id)
@@ -827,6 +927,9 @@ pub async fn edit_product(cx: &Cx) -> Result<impl View + '_> {
                             <a href="/admin/products" style="font-size:12px; color:var(--muted2); display:inline-flex; align-items:center; gap:6px; margin-bottom:12px;">"← 상품 목록"</a>
                             <h1 style="font-size:1.25rem; font-weight:700;">"상품 수정"</h1>
                         </div>
+                        if !error_message.is_empty() {
+                            <p role="alert" style="color:#dc2626; margin-bottom:16px;">(error_message)</p>
+                        }
                         <form action="/admin/products/update" method="POST" style="max-width:760px;">
                             <input type="hidden" name="csrf_token" value=(csrf_token.clone())>
                             <input type="hidden" name="id" value=(p.id.clone())>
@@ -885,10 +988,16 @@ pub async fn edit_product(cx: &Cx) -> Result<impl View + '_> {
                                 <div>
                                     <label style="display:block; font-size:13px; font-weight:600; color:var(--muted); margin-bottom:8px;">"썸네일 URL"</label>
                                     <input type="text" name="thumbnail_url" class="input" value=(p.thumbnail_url.clone())>
+                                    if !p.thumbnail_url.is_empty() {
+                                        <img src=(p.thumbnail_url.clone()) alt="현재 썸네일" onclick="openShot(this.src)" style="display:block; max-width:100%; height:120px; object-fit:contain; margin-top:8px; cursor:zoom-in;">
+                                    }
                                 </div>
                                 <div>
                                     <label style="display:block; font-size:13px; font-weight:600; color:var(--muted); margin-bottom:8px;">"메인 이미지 URL"</label>
                                     <input type="text" name="main_image_url" class="input" value=(p.main_image_url.clone())>
+                                    if !p.main_image_url.is_empty() {
+                                        <img src=(p.main_image_url.clone()) alt="현재 메인 이미지" onclick="openShot(this.src)" style="display:block; max-width:100%; height:120px; object-fit:contain; margin-top:8px; cursor:zoom-in;">
+                                    }
                                 </div>
                                 <div>
                                     <label style="display:block; font-size:13px; font-weight:600; color:var(--muted); margin-bottom:8px;">"공개 범위"</label>
@@ -922,7 +1031,7 @@ pub async fn edit_product(cx: &Cx) -> Result<impl View + '_> {
                         </form>
 
                         <div style="max-width:760px; background:var(--card); border:1px solid var(--border); border-radius:10px; padding:24px; margin-top:16px;">
-                            <h2 style="font-size:15px; font-weight:700; color:var(--text); margin-bottom:4px;">"이미지 업로드 (5MB 이하)"</h2>
+                            <h2 style="font-size:15px; font-weight:700; color:var(--text); margin-bottom:4px;">"이미지 업로드 (5MiB 이하)"</h2>
                             <p style="font-size:12px; color:var(--muted2); margin-bottom:16px;">"PNG/JPG/WebP. 썸네일·메인은 기존 URL을 덮어씁니다."</p>
                             <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px;">
                                 for target in ["thumbnail", "main", "gallery"] {

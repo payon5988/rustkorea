@@ -33,6 +33,27 @@ domain `rustkorea.kr` + alias `www.rustkorea.kr` → target
 `http://127.0.0.1:3005`, SSL(Let's Encrypt) + Force HTTPS ON.
 이후 `curl -sf https://rustkorea.kr/healthz` 확인.
 
+### 상품 이미지 업로드 확인
+
+- CloudPanel의 rustkorea.kr nginx vhost에 `client_max_body_size 6m;` 이상을 설정한다.
+  앱은 파일 5MiB, multipart 요청 전체 6MiB까지 허용한다.
+- 앱 컨테이너 사용자 `appuser`가 `/app/data/uploads`에 쓸 수 있어야 하며,
+  `uploads_data` 볼륨을 배포·재시작 시 유지한다.
+- 썸네일과 메인 이미지를 각각 업로드한 뒤 `변경 사항 저장`을 누르고 새로고침한다.
+  `/uploads/...` URL과 미리보기가 유지되고 공개 상품 화면에서 표시되는지 확인한다.
+- 이미 지워진 이미지 URL은 수정 배포 후 재업로드한다.
+
+DB까지 포함하는 회귀 테스트는 운영 DB 대신 개발 PostgreSQL을 사용한다.
+SQLx가 별도 테스트 DB를 생성하고 성공 시 삭제하므로 DB 생성 권한이 필요하다.
+
+```bash
+cargo build
+topcoat asset bundle
+DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5435/rustkorea \
+  UPLOAD_DIR=/tmp/rustkorea-product-upload-regression \
+  cargo test uploaded_product_images_survive_save_and_are_served -- --ignored
+```
+
 ## 배포 (Caddy 직접 종단 — CloudPanel 미사용 호스트 전용)
 
 ```bash

@@ -196,16 +196,7 @@ topcoat::router::path_param!(upload_name);
 #[route(GET "/uploads/{upload_name}")]
 pub async fn uploaded_file(cx: &Cx) -> Result<FileBody> {
     let name = path_param::<UploadName>(cx);
-    let valid = !name.is_empty()
-        && name.len() <= 64
-        && name
-            .chars()
-            .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == '.')
-        && !name.contains("..")
-        && ["png", "jpg", "jpeg", "webp", "gif"]
-            .iter()
-            .any(|ext| name.to_lowercase().ends_with(&format!(".{ext}")));
-    if !valid {
+    if !crate::services::uploads::valid_upload_name(name) {
         return Err(topcoat::router::error::not_found().into());
     }
     let lowered = name.to_lowercase();

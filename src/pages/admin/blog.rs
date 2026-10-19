@@ -630,6 +630,7 @@ pub async fn edit_blog_post(cx: &Cx) -> Result<impl View + '_> {
                         <div>
                             <label style="display:block; font-size:13px; font-weight:600; color:var(--muted); margin-bottom:8px;">"썸네일 URL"</label>
                             <input type="text" name="thumbnail_url" class="input" value=(p.thumbnail_url.clone())>
+                            <p style="font-size:12px; color:var(--muted); margin-top:6px;">"프론트 화면에서는 이미지를 자르지 않고 원본 비율로 너비에 자동 맞춤합니다."</p>
                         </div>
                         <div style="grid-column:1 / -1;">
                             <div style="display:flex; gap:8px; margin-bottom:12px;">

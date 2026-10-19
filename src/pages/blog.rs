@@ -46,6 +46,11 @@ pub async fn blog_index(cx: &Cx) -> Result<impl View + '_> {
 
     Ok(view! {
         <div class="container" style="padding-top:60px; padding-bottom:80px;">
+            <style>
+                {r#".blog-featured { display:grid; grid-template-columns:minmax(0,1.2fr) minmax(0,1fr); align-items:center; }
+                .blog-featured-copy { min-width:0; overflow-wrap:anywhere; }
+                @media (max-width:768px) { .blog-featured { grid-template-columns:minmax(0,1fr); } }"#}
+            </style>
             <div style="margin-bottom:40px;">
                 <div style="font-size:11px; font-weight:700; color:#DE5B30; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:8px;">"BLOG"</div>
                 <h1 style="font-size:2rem; font-weight:800; letter-spacing:-0.03em; margin-bottom:8px;">"블로그"</h1>
@@ -58,13 +63,13 @@ pub async fn blog_index(cx: &Cx) -> Result<impl View + '_> {
                 </div>
             } else {
                 if let Some(f) = featured {
-                    <a href=(format!("/blog/{}", f.slug)) class="card" style="display:grid; grid-template-columns:1.2fr 1fr; gap:0; overflow:hidden; margin-bottom:24px;">
+                    <a href=(format!("/blog/{}", f.slug)) class="card blog-featured" style="gap:0; overflow:hidden; margin-bottom:24px;">
                         if !f.thumbnail_url.is_empty() {
-                            <img src=(f.thumbnail_url.clone()) alt=(f.title.clone()) loading="lazy" style="width:100%; height:280px; object-fit:cover; display:block;">
+                            <img class="blog-thumbnail" src=(f.thumbnail_url.clone()) alt=(f.title.clone()) loading="lazy" style="width:100%; max-width:100%; height:auto; object-fit:contain; display:block;">
                         } else {
                             <div style="width:100%; height:280px; background:linear-gradient(135deg, #1f2833 0%, #25283d 100%); display:flex; align-items:center; justify-content:center; font-size:64px;">"🦀"</div>
                         }
-                        <div style="padding:32px;">
+                        <div class="blog-featured-copy" style="padding:32px;">
                             <span class="badge" style="background:#eff6ff; color:#2563EB; margin-bottom:12px;">"최신 글"</span>
                             <h2 style="font-size:1.4rem; font-weight:800; letter-spacing:-0.02em; margin-bottom:10px;">(f.title.clone())</h2>
                             <p style="font-size:14px; color:#6b7280; line-height:1.6; margin-bottom:14px;">(f.summary.clone())</p>
@@ -76,11 +81,11 @@ pub async fn blog_index(cx: &Cx) -> Result<impl View + '_> {
                         </div>
                     </a>
                 }
-                <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:20px;">
+                <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(min(100%,300px), 1fr)); gap:20px;">
                     for item in rest {
                         <a href=(format!("/blog/{}", item.slug)) class="card" style="display:block; overflow:hidden;">
                             if !item.thumbnail_url.is_empty() {
-                                <img src=(item.thumbnail_url.clone()) alt=(item.title.clone()) loading="lazy" style="width:100%; height:170px; object-fit:cover; display:block;">
+                                <img class="blog-thumbnail" src=(item.thumbnail_url.clone()) alt=(item.title.clone()) loading="lazy" style="width:100%; max-width:100%; height:auto; object-fit:contain; display:block;">
                             } else {
                                 <div style="width:100%; height:170px; background:linear-gradient(135deg, #1f2833 0%, #25283d 100%); display:flex; align-items:center; justify-content:center; font-size:44px;">"🦀"</div>
                             }
@@ -143,7 +148,7 @@ pub async fn blog_detail(cx: &Cx) -> Result<impl View + '_> {
                 </a>
 
                 if !p.thumbnail_url.is_empty() {
-                    <img src=(p.thumbnail_url.clone()) alt=(p.title.clone()) style="width:100%; height:320px; object-fit:cover; border-radius:14px; margin-bottom:28px; display:block;">
+                    <img class="blog-thumbnail" src=(p.thumbnail_url.clone()) alt=(p.title.clone()) style="width:100%; max-width:100%; height:auto; object-fit:contain; border-radius:14px; margin-bottom:28px; display:block;">
                 }
 
                 <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px; flex-wrap:wrap;">

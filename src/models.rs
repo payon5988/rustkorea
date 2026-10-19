@@ -172,6 +172,7 @@ pub struct AuditLog {
 #[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct NavItem {
+    pub footer_group: String,
     pub id: String,
     pub label: String,
     pub href: String,

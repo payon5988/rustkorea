@@ -25,11 +25,8 @@ pub const MAX_TAGS: usize = 5;
 /// Default list page size (overridable per surface via settings).
 pub const DEFAULT_PER_PAGE: i64 = 20;
 
-/// External links (footer). Single source; no inline URLs in templates.
+/// External policy links. Navigation links are managed in the database.
 pub mod external_links {
-    pub const RUST_OFFICIAL: &str = "https://www.rust-lang.org";
-    pub const RUST_GITHUB: &str = "https://github.com/rust-lang";
-    pub const TOPCOAT_DOCS: &str = "https://docs.rs/topcoat";
     pub const GOOGLE_ADS_POLICIES: &str = "https://policies.google.com/technologies/ads";
 }
 

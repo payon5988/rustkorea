@@ -7,33 +7,12 @@ use topcoat::{
 };
 
 use crate::db::Db;
-use crate::models::{NavItem, User};
+use crate::models::User;
 use crate::services::i18n::{Locale, detect_locale};
 
 async fn get_user(cx: &Cx) -> Option<User> {
     let db: &Db = topcoat::context::app_context(cx);
     crate::auth::session::current_user(db, cx).await
-}
-
-async fn get_header_nav(cx: &Cx) -> Vec<NavItem> {
-    let db: &Db = topcoat::context::app_context(cx);
-    let items: Vec<NavItem> = sqlx::query_as::<_, NavItem>(
-        "SELECT * FROM nav_items WHERE section = 'header' AND visible = 1 ORDER BY position ASC",
-    )
-    .fetch_all(db)
-    .await
-    .unwrap_or_default();
-    let access = crate::auth::access::load_access(db, cx).await;
-    items
-        .into_iter()
-        .filter(|item| {
-            item.required_permission.is_empty()
-                || access
-                    .as_ref()
-                    .map(|a| a.can(&item.required_permission))
-                    .unwrap_or(false)
-        })
-        .collect()
 }
 
 async fn unread_count(cx: &Cx, user_id: &str) -> i64 {
@@ -53,7 +32,10 @@ pub async fn Header(cx: &Cx) -> Result<impl View + '_> {
     let db: &Db = topcoat::context::app_context(cx);
     let access = crate::auth::access::load_access(db, cx).await;
     let is_admin = access.as_ref().map(|a| a.is_admin()).unwrap_or(false);
-    let nav_items = get_header_nav(cx).await;
+    let nav_items =
+        crate::services::navigation::visible_items(db, "header", access.as_ref()).await?;
+    let mobile_items =
+        crate::services::navigation::visible_items(db, "mobile", access.as_ref()).await?;
     let (site_title_val, logo_url_val) = {
         let db: &crate::db::Db = topcoat::context::app_context(cx);
         let t = crate::services::site_settings::get_setting(db, "site_title").await;
@@ -84,10 +66,6 @@ pub async fn Header(cx: &Cx) -> Result<impl View + '_> {
 
     let is_logged_in = user.is_some();
     let current_path = topcoat::router::request::uri(cx).path().to_string();
-    let tab_home_active = current_path == "/";
-    let tab_manuals_active = current_path.starts_with("/manuals");
-    let tab_community_active = current_path.starts_with("/community");
-    let tab_search_active = current_path.starts_with("/search");
     let tab_profile_active = if is_logged_in {
         if let Some(ref u) = user {
             current_path == format!("/users/{}", u.username)
@@ -114,17 +92,9 @@ pub async fn Header(cx: &Cx) -> Result<impl View + '_> {
                     <span>(site_title_val)</span>
                 </a>
 
-                <nav class="desktop-nav" style="display:flex; align-items:center; gap:4px;">
-                    if nav_items.is_empty() {
-                        <a href="/manuals" style="padding:8px 16px; font-size:15px; color:#374151; font-weight:400; transition:color 0.15s; border-bottom:2px solid transparent;">"매뉴얼"</a>
-                        <a href="/youtube" style="padding:8px 16px; font-size:15px; color:#374151; font-weight:400; transition:color 0.15s; border-bottom:2px solid transparent;">"영상"</a>
-                        <a href="/community" style="padding:8px 16px; font-size:15px; color:#374151; font-weight:400; transition:color 0.15s; border-bottom:2px solid transparent;">"커뮤니티"</a>
-                        <a href="/events" style="padding:8px 16px; font-size:15px; color:#374151; font-weight:400; transition:color 0.15s; border-bottom:2px solid transparent;">"이벤트"</a>
-                        <a href="/search" style="padding:8px 16px; font-size:15px; color:#374151; font-weight:400; transition:color 0.15s; border-bottom:2px solid transparent;">"검색"</a>
-                    } else {
-                        for item in &nav_items {
-                            <a href=(item.href.clone()) style="padding:8px 16px; font-size:15px; color:#374151; font-weight:400; transition:color 0.15s; border-bottom:2px solid transparent;">(item.label.clone())</a>
-                        }
+                <nav aria-label="상단 메뉴" class="desktop-nav" style="display:flex; align-items:center; gap:4px;">
+                    for item in &nav_items {
+                        <a href=(item.href.clone()) aria-current=(if crate::services::navigation::is_active(&item.href, &current_path) { "page" } else { "false" }) style="padding:8px 16px; font-size:15px; color:#374151; font-weight:400; border-bottom:2px solid transparent;">(item.label.clone())</a>
                     }
                 </nav>
 
@@ -155,6 +125,9 @@ pub async fn Header(cx: &Cx) -> Result<impl View + '_> {
                 </div>
 
                 <div class="mobile-actions">
+                    <button type="button" aria-label="전체 메뉴 열기" aria-haspopup="dialog" aria-controls="mobile-menu" onclick="document.getElementById('mobile-menu').showModal()" style="background:none; border:1px solid #E4E4E7; border-radius:8px; padding:6px; color:#6b7280; cursor:pointer;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+                    </button>
                     <a href="/search" style="display:flex; align-items:center; padding:6px; color:#6b7280;">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
                     </a>
@@ -171,25 +144,37 @@ pub async fn Header(cx: &Cx) -> Result<impl View + '_> {
             </div>
         </header>
 
-        <div class="bottom-tab-bar">
-            <a href="/" class="bottom-tab" style=(if tab_home_active { tab_active_style } else { tab_inactive_style })>
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-                <span>"홈"</span>
-            </a>
-            <a href="/manuals" class="bottom-tab" style=(if tab_manuals_active { tab_active_style } else { tab_inactive_style })>
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
-                <span>"매뉴얼"</span>
-            </a>
-            <a href="/community" class="bottom-tab" style=(if tab_community_active { tab_active_style } else { tab_inactive_style })>
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                <span>"커뮤니티"</span>
-            </a>
-            <a href="/search" class="bottom-tab" style=(if tab_search_active { tab_active_style } else { tab_inactive_style })>
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-                <span>"검색"</span>
-            </a>
+        <dialog id="mobile-menu" class="mobile-menu-dialog" aria-label="전체 메뉴" onclick="if(event.target===this){const r=this.getBoundingClientRect();if(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom)this.close()}">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+                <strong>"전체 메뉴"</strong>
+                <button type="button" autofocus="true" aria-label="전체 메뉴 닫기" onclick="document.getElementById('mobile-menu').close()">"닫기"</button>
+            </div>
+            <nav aria-label="모바일 전체 메뉴" style="display:flex; flex-direction:column;">
+                for item in &nav_items {
+                    <a href=(item.href.clone()) aria-current=(if crate::services::navigation::is_active(&item.href, &current_path) { "page" } else { "false" }) onclick="document.getElementById('mobile-menu').close()">(item.label.clone())</a>
+                }
+            </nav>
+        </dialog>
+
+        <nav class="bottom-tab-bar" aria-label="모바일 하단 탭">
+            <div class="bottom-tab-scroll">
+                for item in &mobile_items {
+                    let active = crate::services::navigation::is_active(&item.href, &current_path);
+                    let icon = match item.href.as_str() {
+                        "/" => "M3 10L12 3L21 10V21H15V14H9V21H3Z",
+                        "/manuals" => "M4 19V4Q4 2 7 2H20V22H7Q4 22 4 19ZM4 17H20",
+                        "/community" => "M21 15Q21 17 19 17H7L3 21V5Q3 3 5 3H19Q21 3 21 5Z",
+                        "/search" => "M21 21L16 16M18 10A8 8 0 1 1 2 10A8 8 0 1 1 18 10",
+                        _ => "M5 3H15L19 7V21H5ZM9 11H15M9 15H15",
+                    };
+                    <a href=(item.href.clone()) class="bottom-tab" aria-current=(if active { "page" } else { "false" }) style=(if active { tab_active_style } else { tab_inactive_style })>
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d=(icon)/></svg>
+                        <span>(item.label.clone())</span>
+                    </a>
+                }
+            </div>
             if let Some(u) = &user {
-                <a href=(format!("/users/{}", u.username)) class="bottom-tab" style=(format!("position:relative; {}", if tab_profile_active { tab_active_style } else { tab_inactive_style }))>
+                <a href=(format!("/users/{}", u.username)) class="bottom-tab account-tab" style=(format!("position:relative; {}", if tab_profile_active { tab_active_style } else { tab_inactive_style }))>
                     if let Some(avatar) = &u.avatar_url {
                         <img src=(avatar.clone()) alt="" style="width:22px; height:22px; border-radius:50%;">
                     } else {
@@ -201,11 +186,11 @@ pub async fn Header(cx: &Cx) -> Result<impl View + '_> {
                     }
                 </a>
             } else {
-                <a href="/auth/login" class="bottom-tab" style=(if tab_profile_active { tab_active_style } else { tab_inactive_style })>
+                <a href="/auth/login" class="bottom-tab account-tab" style=(if tab_profile_active { tab_active_style } else { tab_inactive_style })>
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
                     <span>"로그인"</span>
                 </a>
             }
-        </div>
+        </nav>
     })
 }

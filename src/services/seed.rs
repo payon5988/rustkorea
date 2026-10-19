@@ -58,28 +58,6 @@ pub async fn seed_database(db: &Db) {
         .ok();
     }
 
-    // Default header nav items
-    let nav_count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM nav_items")
-        .fetch_one(db)
-        .await
-        .unwrap_or((0,));
-    if nav_count.0 == 0 {
-        let default_navs = vec![
-            ("매뉴얼", "/manuals", 0),
-            ("영상", "/youtube", 1),
-            ("커뮤니티", "/community", 2),
-            ("블로그", "/blog", 3),
-            ("검색", "/search", 4),
-        ];
-        for (label, href, position) in default_navs {
-            sqlx::query("INSERT INTO nav_items (label, href, position, visible, section) VALUES ($1, $2, $3, 1, 'header')")
-                .bind(label)
-                .bind(href)
-                .bind(position)
-                .execute(db).await.ok();
-        }
-    }
-
     // Default categories
     let cat_count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM categories")
         .fetch_one(db)

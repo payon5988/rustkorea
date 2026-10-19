@@ -6,17 +6,10 @@ use topcoat::{
 };
 
 use crate::db::Db;
-use crate::models::NavItem;
 
 #[component]
 pub async fn AdminSidebar(cx: &Cx, active: String) -> Result<impl View + '_> {
     let db: &Db = topcoat::context::app_context(cx);
-    let site_nav_items = sqlx::query_as::<_, NavItem>(
-        "SELECT * FROM nav_items WHERE visible = 1 ORDER BY position ASC",
-    )
-    .fetch_all(db)
-    .await
-    .unwrap_or_default();
     let logo_url = crate::services::site_settings::get_setting(db, "logo_url").await;
 
     let nav_item = |href: &str, active: &str| -> String {
@@ -50,6 +43,8 @@ pub async fn AdminSidebar(cx: &Cx, active: String) -> Result<impl View + '_> {
     let d_reports = nav_item("/admin/reports", &active);
     let d_events = nav_item("/admin/events", &active);
     let access = crate::auth::access::load_access(db, cx).await;
+    let site_nav_items =
+        crate::services::navigation::visible_items(db, "header", access.as_ref()).await?;
     let can_manuals = access
         .as_ref()
         .map(|a| a.can(crate::auth::access::perms::MANUALS_MANAGE))

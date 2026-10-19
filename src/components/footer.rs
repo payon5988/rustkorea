@@ -29,6 +29,9 @@ pub async fn Footer(cx: &Cx) -> Result<impl View + '_> {
     };
     let logo_url = crate::services::site_settings::get_setting(db, "logo_url").await;
 
+    let access = crate::auth::access::load_access(db, cx).await;
+    let items = crate::services::navigation::visible_items(db, "footer", access.as_ref()).await?;
+
     Ok(view! {
         <footer class="desktop-footer" style="border-top:1px solid #e5e7eb; margin-top:80px; background:#f8f9fa;">
             <div class="container" style="padding:48px 24px;">
@@ -44,32 +47,18 @@ pub async fn Footer(cx: &Cx) -> Result<impl View + '_> {
                         </div>
                         <p style="font-size:13px; color:#6b7280; line-height:1.6;">(site_description.clone())</p>
                     </div>
-                    <div>
-                        <h4 style="font-size:12px; font-weight:600; color:#9ca3af; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:14px;">"서비스"</h4>
-                        <ul style="list-style:none; display:flex; flex-direction:column; gap:10px;">
-                            <li><a href="/manuals" style="font-size:14px; color:#6b7280; transition:color 0.15s;">"매뉴얼"</a></li>
-                            <li><a href="/youtube" style="font-size:14px; color:#6b7280; transition:color 0.15s;">"영상"</a></li>
-                            <li><a href="/community" style="font-size:14px; color:#6b7280; transition:color 0.15s;">"커뮤니티"</a></li>
-                            <li><a href="/search" style="font-size:14px; color:#6b7280; transition:color 0.15s;">"검색"</a></li>
-                        </ul>
-                    </div>
-                    <div>
-                        <h4 style="font-size:12px; font-weight:600; color:#9ca3af; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:14px;">"링크"</h4>
-                        <ul style="list-style:none; display:flex; flex-direction:column; gap:10px;">
-                            <li><a href=(crate::util::external_links::RUST_OFFICIAL) style="font-size:14px; color:#6b7280; transition:color 0.15s;" target="_blank" rel="noopener">"Rust 공식"</a></li>
-                            <li><a href=(crate::util::external_links::RUST_GITHUB) style="font-size:14px; color:#6b7280; transition:color 0.15s;" target="_blank" rel="noopener">"GitHub"</a></li>
-                            <li><a href=(crate::util::external_links::TOPCOAT_DOCS) style="font-size:14px; color:#6b7280; transition:color 0.15s;" target="_blank" rel="noopener">"Topcoat Docs"</a></li>
-                        </ul>
-                    </div>
-                    <div>
-                        <h4 style="font-size:12px; font-weight:600; color:#9ca3af; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:14px;">"참여"</h4>
-                        <ul style="list-style:none; display:flex; flex-direction:column; gap:10px;">
-                            <li><a href="/community/new" style="font-size:14px; color:#6b7280; transition:color 0.15s;">"글쓰기"</a></li>
-                            <li><a href="/admin" style="font-size:14px; color:#6b7280; transition:color 0.15s;">"관리자"</a></li>
-                            <li><a href="/privacy" style="font-size:14px; color:#6b7280; transition:color 0.15s;">"개인정보처리방침"</a></li>
-                            <li><a href="/terms" style="font-size:14px; color:#6b7280; transition:color 0.15s;">"이용약관"</a></li>
-                        </ul>
-                    </div>
+                    for (group, label) in crate::services::navigation::FOOTER_GROUPS {
+                        if items.iter().any(|item| item.footer_group == group) {
+                            <nav aria-label=(format!("푸터 {label}"))>
+                                <h4 style="font-size:12px; font-weight:600; color:#9ca3af; margin-bottom:14px;">(label)</h4>
+                                <ul style="list-style:none; display:flex; flex-direction:column; gap:10px;">
+                                    for item in items.iter().filter(|item| item.footer_group == group) {
+                                        <li><a href=(item.href.clone()) style="font-size:14px; color:#6b7280;" target=(if item.href.starts_with('/') { "_self" } else { "_blank" }) rel="noopener noreferrer">(item.label.clone())</a></li>
+                                    }
+                                </ul>
+                            </nav>
+                        }
+                    }
                 </div>
                 <div class="divider" style="margin-bottom:24px;"></div>
                 <p style="font-size:13px; color:#9ca3af; text-align:center;">(footer_text.clone())</p>
@@ -77,15 +66,13 @@ pub async fn Footer(cx: &Cx) -> Result<impl View + '_> {
         </footer>
 
         <footer class="mobile-footer" style="display:none; border-top:1px solid #e5e7eb; margin-top:24px; padding:24px 16px 16px; background:#f8f9fa;">
-            <div style="display:flex; flex-wrap:wrap; gap:16px 24px; margin-bottom:16px;">
-                <a href="/manuals" style="font-size:13px; color:#6b7280; text-decoration:none;">"매뉴얼"</a>
-                <a href="/youtube" style="font-size:13px; color:#6b7280; text-decoration:none;">"영상"</a>
-                <a href="/community" style="font-size:13px; color:#6b7280; text-decoration:none;">"커뮤니티"</a>
-                <a href="/search" style="font-size:13px; color:#6b7280; text-decoration:none;">"검색"</a>
-                <a href="/admin" style="font-size:13px; color:#6b7280; text-decoration:none;">"관리자"</a>
-                <a href="/privacy" style="font-size:13px; color:#6b7280; text-decoration:none;">"개인정보처리방침"</a>
-                <a href="/terms" style="font-size:13px; color:#6b7280; text-decoration:none;">"이용약관"</a>
-            </div>
+            <nav aria-label="모바일 푸터" style="display:flex; flex-wrap:wrap; gap:16px 24px; margin-bottom:16px;">
+                for (group, _label) in crate::services::navigation::FOOTER_GROUPS {
+                    for item in items.iter().filter(|item| item.footer_group == group) {
+                        <a href=(item.href.clone()) style="font-size:13px; color:#6b7280; text-decoration:none;" target=(if item.href.starts_with('/') { "_self" } else { "_blank" }) rel="noopener noreferrer">(item.label.clone())</a>
+                    }
+                }
+            </nav>
             <p style="font-size:12px; color:#9ca3af; text-align:center;">(footer_text)</p>
         </footer>
     })

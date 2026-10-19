@@ -1,5 +1,6 @@
 pub mod i18n;
 pub mod markdown;
+pub mod navigation;
 pub mod notifications;
 pub mod seed;
 pub mod site_settings;

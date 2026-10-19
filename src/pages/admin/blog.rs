@@ -314,24 +314,20 @@ pub async fn fetch_blog_draft(
     if url.is_empty() {
         return Ok(topcoat::router::error::see_other("/admin/blog?error=url"));
     }
-    let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(
-            crate::config::http_timeout_secs(),
-        ))
-        .user_agent(crate::config::http_user_agent())
-        .build();
-    let Ok(client) = client else {
-        return Ok(topcoat::router::error::see_other("/admin/blog?error=fetch"));
-    };
-    let html = match client.get(&url).send().await {
-        Ok(resp) => resp.text().await.unwrap_or_default(),
-        Err(_) => {
-            return Ok(topcoat::router::error::see_other("/admin/blog?error=fetch"));
+    // Internal targets (loopback, compose network, cloud metadata) are refused.
+    let html = match crate::services::outbound::fetch_public_text(&url, 500_000).await {
+        Ok(html) => html,
+        Err(e) => {
+            if e == crate::services::outbound::FetchError::Blocked {
+                crate::auth::access::audit(db, cx, "", "admin.blog.fetch_blocked", "url", "", &url)
+                    .await;
+            }
+            return Ok(topcoat::router::error::see_other(format!(
+                "/admin/blog?error={}",
+                e.code()
+            )));
         }
     };
-    if html.len() > 500_000 {
-        return Ok(topcoat::router::error::see_other("/admin/blog?error=size"));
-    }
     let content_md = crate::services::markdown::html_to_markdown(&html);
     let content_md: String = content_md.chars().take(50_000).collect();
     if content_md.trim().is_empty() {

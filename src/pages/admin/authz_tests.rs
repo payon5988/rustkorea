@@ -249,3 +249,171 @@ async fn public_login_enforces_totp(pool: Db) {
         0
     );
 }
+
+/// Status and body of a request (for JSON endpoints and method checks).
+async fn send(
+    router: &Router,
+    method: &str,
+    cookie: &str,
+    path: &str,
+    content_type: &str,
+    body: Vec<u8>,
+) -> (u16, String) {
+    let response = router
+        .handle(
+            Request::builder()
+                .method(method)
+                .uri(path)
+                .header("cookie", cookie)
+                .header("content-type", content_type)
+                .body(Body::from(body))
+                .unwrap(),
+        )
+        .await;
+    let status = response.status().as_u16();
+    let bytes = topcoat::router::to_bytes(response.into_body(), usize::MAX)
+        .await
+        .unwrap();
+    (status, String::from_utf8_lossy(&bytes).into_owned())
+}
+
+fn editor_upload_body() -> Vec<u8> {
+    let mut body = format!(
+        "--b\r\nContent-Disposition: form-data; name=\"csrf_token\"\r\n\r\n{CSRF}\r\n\
+         --b\r\nContent-Disposition: form-data; name=\"file\"; filename=\"shot.png\"\r\n\
+         Content-Type: image/png\r\n\r\n"
+    )
+    .into_bytes();
+    body.extend_from_slice(b"\x89PNG\r\n\x1a\n");
+    body.extend_from_slice(&[0u8; 32]);
+    body.extend_from_slice(b"\r\n--b--\r\n");
+    body
+}
+
+#[sqlx::test]
+#[ignore = "requires PostgreSQL DATABASE_URL and bundled assets; creates an isolated test database"]
+async fn logout_requires_post_with_csrf(pool: Db) {
+    let member = user_with_session(&pool, "authz-logout", "member").await;
+    let router = router(&pool);
+    let live = "SELECT COUNT(*) FROM sessions WHERE user_id = 'authz-logout'";
+
+    // A cross-site link or <img> (GET) no longer ends the session.
+    let (status, _) = send(
+        &router,
+        "GET",
+        &member,
+        "/auth/logout",
+        "text/plain",
+        vec![],
+    )
+    .await;
+    assert_ne!(status, 303);
+    // A forged POST without this session's token is ignored.
+    let forged = form(&[("csrf_token", "wrong")]);
+    assert_eq!(post(&router, &member, "/auth/logout", forged).await, "/");
+    assert_eq!(count(&pool, live).await, 1);
+    // The real form logs out.
+    let real = form(&[("csrf_token", CSRF)]);
+    assert_eq!(post(&router, &member, "/auth/logout", real).await, "/");
+    assert_eq!(count(&pool, live).await, 0);
+}
+
+#[sqlx::test]
+#[ignore = "requires PostgreSQL DATABASE_URL and bundled assets; creates an isolated test database"]
+async fn editor_uploads_are_recorded_and_capped_for_members(pool: Db) {
+    let member = user_with_session(&pool, "authz-uploader", "member").await;
+    let router = router(&pool);
+    let multipart = "multipart/form-data; boundary=b";
+
+    // Secure mode only honors `__Host-session`; a plain-named cookie with the
+    // same token is anonymous.
+    let plain = member.replacen("__Host-session=", "session=", 1);
+    let (_, body) = send(
+        &router,
+        "POST",
+        &plain,
+        "/admin/uploads",
+        multipart,
+        editor_upload_body(),
+    )
+    .await;
+    assert_eq!(body, "{\"error\":\"forbidden\"}");
+
+    let (_, body) = send(
+        &router,
+        "POST",
+        &member,
+        "/admin/uploads",
+        multipart,
+        editor_upload_body(),
+    )
+    .await;
+    assert!(body.starts_with("{\"url\":\"/uploads/"), "{body}");
+    let url: String = serde_json::from_str::<serde_json::Value>(&body).unwrap()["url"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    assert_eq!(
+        count(
+            &pool,
+            "SELECT COUNT(*) FROM uploads WHERE user_id = 'authz-uploader'"
+        )
+        .await,
+        1
+    );
+    std::fs::remove_file(
+        std::path::Path::new(&crate::config::upload_dir())
+            .join(url.trim_start_matches("/uploads/")),
+    )
+    .ok();
+
+    // Fill the window, then the next upload is refused before touching disk.
+    sqlx::query(
+        "INSERT INTO uploads (user_id, filename, original_name)
+         SELECT 'authz-uploader', 'f' || g, 'f' FROM generate_series(1, $1) g",
+    )
+    .bind(crate::pages::uploads::EDITOR_UPLOADS_PER_WINDOW as i32)
+    .execute(&pool)
+    .await
+    .unwrap();
+    let (_, body) = send(
+        &router,
+        "POST",
+        &member,
+        "/admin/uploads",
+        multipart,
+        editor_upload_body(),
+    )
+    .await;
+    assert_eq!(body, "{\"error\":\"rate\"}");
+
+    // Admin-console users are exempt from the member cap.
+    let admin = user_with_session(&pool, "authz-upload-admin", "admin").await;
+    sqlx::query(
+        "INSERT INTO uploads (user_id, filename, original_name)
+         SELECT 'authz-upload-admin', 'a' || g, 'a' FROM generate_series(1, $1) g",
+    )
+    .bind(crate::pages::uploads::EDITOR_UPLOADS_PER_WINDOW as i32)
+    .execute(&pool)
+    .await
+    .unwrap();
+    let (_, body) = send(
+        &router,
+        "POST",
+        &admin,
+        "/admin/uploads",
+        multipart,
+        editor_upload_body(),
+    )
+    .await;
+    assert!(body.starts_with("{\"url\":"), "{body}");
+    let url: String = serde_json::from_str::<serde_json::Value>(&body).unwrap()["url"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    std::fs::remove_file(
+        std::path::Path::new(&crate::config::upload_dir())
+            .join(url.trim_start_matches("/uploads/")),
+    )
+    .ok();
+}

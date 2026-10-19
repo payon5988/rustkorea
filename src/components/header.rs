@@ -65,6 +65,11 @@ pub async fn Header(cx: &Cx) -> Result<impl View + '_> {
     };
 
     let is_logged_in = user.is_some();
+    let logout_csrf = if is_logged_in {
+        crate::auth::session::csrf_token(db, cx).await
+    } else {
+        String::new()
+    };
     let current_path = topcoat::router::request::uri(cx).path().to_string();
     let tab_profile_active = if is_logged_in {
         if let Some(ref u) = user {
@@ -117,7 +122,10 @@ pub async fn Header(cx: &Cx) -> Result<impl View + '_> {
                             }
                             <span style="font-size:13px; color:#374151; font-weight:500;">(u.username.clone())</span>
                         </a>
-                        <a href="/auth/logout" style="font-size:13px; color:#6b7280; transition:color 0.15s;">"로그아웃"</a>
+                        <form action="/auth/logout" method="POST" style="margin:0; display:flex;">
+                            <input type="hidden" name="csrf_token" value=(logout_csrf.clone())>
+                            <button type="submit" style="background:none; border:none; padding:0; font:inherit; font-size:13px; color:#6b7280; cursor:pointer; transition:color 0.15s;">"로그아웃"</button>
+                        </form>
                     } else {
                         <a href="/auth/login" style="font-size:14px; color:#6b7280; font-weight:500; transition:color 0.15s;">"로그인"</a>
                         <a href="/auth/register" style="background:#2563EB; color:#fff; padding:8px 16px; border-radius:8px; font-size:14px; font-weight:600; transition:background 0.15s;">"회원가입"</a>

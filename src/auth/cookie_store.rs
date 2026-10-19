@@ -22,14 +22,6 @@ fn cookie_name() -> &'static str {
     }
 }
 
-fn fallback_name() -> &'static str {
-    if secure_cookies() {
-        SESSION_COOKIE_PLAIN
-    } else {
-        SESSION_COOKIE_SECURE
-    }
-}
-
 /// Session [`TokenStore`] mirroring the framework default
 /// (`HttpOnly`, `SameSite=Lax`, `Path=/`) but with the `Secure` flag and
 /// `__Host-` prefix controlled by `SECURE_COOKIES`.
@@ -39,9 +31,10 @@ pub struct EnvCookieStore;
 impl TokenStore for EnvCookieStore {
     fn read<'a>(&'a self, cx: &'a Cx) -> TokenStoreFuture<'a, Option<Token>> {
         Box::pin(async move {
-            let jar = topcoat::cookie::cookies(cx);
-            let raw = jar.get(cookie_name()).or_else(|| jar.get(fallback_name()));
-            match raw {
+            // Only the active mode's name: in secure mode a plain `session`
+            // cookie (settable from a subdomain or over http) is ignored, which
+            // is what the `__Host-` prefix guarantees.
+            match topcoat::cookie::cookies(cx).get(cookie_name()) {
                 Some(cookie) => Ok(Token::decode(cookie.value_trimmed()).ok()),
                 None => Ok(None),
             }

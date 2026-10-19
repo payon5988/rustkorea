@@ -61,7 +61,10 @@ pub async fn twofa_page(cx: &Cx) -> Result<impl View + '_> {
                     </form>
                 </div>
                 <div class="site-link">
-                    <a href="/admin/logout">"취소하고 로그아웃"</a>
+                    <form action="/admin/logout" method="POST" style="display:inline;">
+                        <input type="hidden" name="csrf_token" value=(csrf_token.clone())>
+                        <button type="submit" style="background:none; border:none; padding:0; font:inherit; color:inherit; text-decoration:underline; cursor:pointer;">"취소하고 로그아웃"</button>
+                    </form>
                 </div>
             </div>
         </body>

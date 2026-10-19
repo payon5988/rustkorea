@@ -11,6 +11,7 @@ use crate::db::Db;
 pub async fn AdminSidebar(cx: &Cx, active: String) -> Result<impl View + '_> {
     let db: &Db = topcoat::context::app_context(cx);
     let logo_url = crate::services::site_settings::get_setting(db, "logo_url").await;
+    let logout_csrf = crate::auth::session::csrf_token(db, cx).await;
 
     let nav_item = |href: &str, active: &str| -> String {
         let is_active = active == href || (href != "/admin" && active.starts_with(href));
@@ -291,10 +292,13 @@ pub async fn AdminSidebar(cx: &Cx, active: String) -> Result<impl View + '_> {
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
                         "사이트 돌아가기"
                     </a>
-                    <a href="/admin/logout" style="display:flex; align-items:center; gap:10px; padding:9px 12px; font-size:13px; color:var(--muted2); border-radius:8px; transition:all 0.15s;">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-                        "로그아웃"
-                    </a>
+                    <form action="/admin/logout" method="POST" style="margin:0;">
+                        <input type="hidden" name="csrf_token" value=(logout_csrf.clone())>
+                        <button type="submit" style="display:flex; align-items:center; gap:10px; width:100%; padding:9px 12px; font:inherit; font-size:13px; color:var(--muted2); background:none; border:none; border-radius:8px; cursor:pointer; text-align:left; transition:all 0.15s;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                            "로그아웃"
+                        </button>
+                    </form>
                 </div>
 
             </aside>

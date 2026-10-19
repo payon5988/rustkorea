@@ -237,10 +237,16 @@ pub async fn register_submit(
     Ok(topcoat::router::error::see_other("/"))
 }
 
-#[route(GET "/auth/logout")]
-pub async fn logout(cx: &Cx) -> Result<topcoat::router::error::SeeOther> {
+/// POST + CSRF so another site cannot log the user out with a link or image.
+#[route(POST "/auth/logout")]
+pub async fn logout(
+    cx: &Cx,
+    Form(input): Form<sessions::CsrfForm>,
+) -> Result<topcoat::router::error::SeeOther> {
     let db: &Db = topcoat::context::app_context(cx);
-    sessions::destroy_session(db, cx).await;
+    if sessions::verify_csrf_logged(db, cx, &input.csrf_token, "auth.logout").await {
+        sessions::destroy_session(db, cx).await;
+    }
     Ok(topcoat::router::error::see_other("/"))
 }
 

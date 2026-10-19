@@ -100,6 +100,18 @@ DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5435/rustkorea \
   있는지 확인한다. 값을 바꾸려면 compose `environment:`에 `TRUSTED_PROXIES`를 추가한다.
 - 2FA가 켜진 계정은 `/auth/login`, `/admin/login`, GitHub·Google 로그인 모두
   `/admin/2fa`를 거쳐야 정식 세션이 발급된다.
+- 로그아웃은 POST + CSRF만 받는다(`/auth/logout`, `/admin/logout`). GET 링크로는 로그아웃되지 않는다.
+- `SECURE_COOKIES=1`이면 `__Host-session` 쿠키만 세션으로 인정한다. 모드를 바꾸면 기존 세션은 재로그인이 필요하다.
+- 블로그 "가져오기"는 루프백·사설·링크로컬·메타데이터 주소(169.254.169.254 등)로의 요청을 거부하고
+  감사 로그(`admin.blog.fetch_blocked`)에 남긴다. 리다이렉트는 최대 3회, 단계마다 다시 검사한다.
+- 에디터 이미지 업로드(`/admin/uploads`)는 `uploads` 테이블에 기록되며, 관리자 콘솔 권한이 없는
+  회원은 시간당 30회로 제한된다.
+
+## 백업 자동화 (운영 서버)
+
+- `~/backups/rustkorea/backup.sh`가 crontab으로 매일 04:00 실행된다. 덤프 완료 표시를 확인한 파일만
+  남기고 14일 지난 `*-daily.sql.gz`는 지운다. 결과는 `~/backups/rustkorea/backup.log`에 남는다.
+- 배포 전에는 같은 스크립트를 수동 실행하고, 현재 이미지를 `rustkorea-app:before-<작업>-<날짜>`로 태그한다.
 
 권한·2FA 회귀 테스트(개발 PostgreSQL, 자산 빌드 후):
 

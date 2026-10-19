@@ -6,8 +6,27 @@ use crate::config;
 /// YouTube channel RSS endpoint; channel id is appended per request.
 pub const RSS_FEED_BASE: &str = "https://www.youtube.com/feeds/videos.xml";
 
-/// Trusted thumbnail CDN prefixes (RSS-supplied URLs are untrusted input).
-pub const ALLOWED_THUMB_HOSTS: [&str; 2] = ["https://i.ytimg.com/", "https://img.youtube.com/"];
+/// Trusted thumbnail CDN hosts (RSS-supplied URLs are untrusted input).
+/// Feeds also use numbered shards (`i1`..`i9.ytimg.com`), see [`allowed_thumbnail`].
+pub const ALLOWED_THUMB_HOSTS: [&str; 2] = ["i.ytimg.com", "img.youtube.com"];
+
+/// https URL on a YouTube thumbnail CDN host (exact host match, no userinfo).
+pub fn allowed_thumbnail(url: &str) -> bool {
+    let Ok(u) = reqwest::Url::parse(url) else {
+        return false;
+    };
+    let Some(host) = u.host_str() else {
+        return false;
+    };
+    let numbered_shard = host
+        .strip_suffix(".ytimg.com")
+        .and_then(|h| h.strip_prefix('i'))
+        .is_some_and(|n| n.len() == 1 && n.as_bytes()[0].is_ascii_digit());
+    u.scheme() == "https"
+        && u.username().is_empty()
+        && u.port().is_none()
+        && (ALLOWED_THUMB_HOSTS.contains(&host) || numbered_shard)
+}
 
 const RSS_FEED_URL: &str = RSS_FEED_BASE;
 
@@ -76,7 +95,7 @@ fn parse_rss_feed(xml: &str, channel_id: &str) -> Vec<VideoMetadata> {
             .map(|dt| dt.with_timezone(&Utc).to_rfc3339())
             .unwrap_or_else(|_| Utc::now().to_rfc3339());
         // Thumbnails from RSS are untrusted input: only allow YouTube CDN hosts.
-        let thumbnail_url = if ALLOWED_THUMB_HOSTS.iter().any(|h| thumbnail.starts_with(h)) {
+        let thumbnail_url = if allowed_thumbnail(thumbnail) {
             thumbnail.clone()
         } else {
             String::new()
@@ -198,6 +217,30 @@ mod tests {
         assert_eq!(videos[0].title, "Hello & World");
         assert!(videos[0].thumbnail_url.starts_with("https://i.ytimg.com/"));
         assert!(videos[1].thumbnail_url.is_empty());
+    }
+
+    #[test]
+    fn thumbnail_hosts_are_exact() {
+        for ok in [
+            "https://i.ytimg.com/vi/x/hqdefault.jpg",
+            "https://i3.ytimg.com/vi/x/hqdefault.jpg",
+            "https://img.youtube.com/vi/x/0.jpg",
+        ] {
+            assert!(allowed_thumbnail(ok), "{ok}");
+        }
+        for bad in [
+            "http://i.ytimg.com/vi/x.jpg",
+            "https://i.ytimg.com.evil.example/x.jpg",
+            "https://evil.example/i.ytimg.com/x.jpg",
+            "https://i12.ytimg.com/x.jpg",
+            "https://ia.ytimg.com/x.jpg",
+            "https://user@i.ytimg.com/x.jpg",
+            "https://i.ytimg.com:8443/x.jpg",
+            "javascript:alert(1)",
+            "",
+        ] {
+            assert!(!allowed_thumbnail(bad), "{bad}");
+        }
     }
 
     /// Real feeds are indented and nest media fields in `media:group`;

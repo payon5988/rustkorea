@@ -113,6 +113,15 @@ pub async fn delete_post(
     cx: &Cx,
     Form(input): Form<crate::auth::session::CsrfForm>,
 ) -> Result<topcoat::router::error::SeeOther> {
+    let __denied = {
+        let __adb: &crate::db::Db = topcoat::context::app_context(cx);
+        crate::auth::access::require_perm(__adb, cx, crate::auth::access::perms::POSTS_MODERATE)
+            .await
+            .is_none()
+    };
+    if __denied {
+        return Ok(topcoat::router::error::see_other("/admin/login"));
+    }
     let post_id = path_param::<PostId>(cx);
     let db: &Db = topcoat::context::app_context(cx);
 
@@ -310,6 +319,15 @@ pub async fn admin_create_post(
     cx: &Cx,
     Form(input): Form<AdminNewPost>,
 ) -> Result<topcoat::router::error::SeeOther> {
+    let __denied = {
+        let __adb: &crate::db::Db = topcoat::context::app_context(cx);
+        crate::auth::access::require_perm(__adb, cx, crate::auth::access::perms::POSTS_MODERATE)
+            .await
+            .is_none()
+    };
+    if __denied {
+        return Ok(topcoat::router::error::see_other("/admin/login"));
+    }
     let db: &Db = topcoat::context::app_context(cx);
 
     if !crate::auth::session::verify_csrf_logged(db, cx, &input.csrf_token, "admin.posts.create")

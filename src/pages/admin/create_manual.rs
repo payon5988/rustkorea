@@ -29,6 +29,15 @@ pub async fn create_manual(
     cx: &Cx,
     Form(input): Form<NewManual>,
 ) -> Result<topcoat::router::error::SeeOther> {
+    let __denied = {
+        let __adb: &crate::db::Db = topcoat::context::app_context(cx);
+        crate::auth::access::require_perm(__adb, cx, crate::auth::access::perms::MANUALS_MANAGE)
+            .await
+            .is_none()
+    };
+    if __denied {
+        return Ok(topcoat::router::error::see_other("/admin/login"));
+    }
     let db: &Db = topcoat::context::app_context(cx);
 
     if !crate::auth::session::verify_csrf_logged(db, cx, &input.csrf_token, "admin.manuals.create")

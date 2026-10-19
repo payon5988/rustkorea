@@ -1,5 +1,7 @@
 pub mod admin_events;
 pub mod admin_manual_detail;
+#[cfg(test)]
+mod authz_tests;
 pub mod audit;
 pub mod badges;
 pub mod blog;

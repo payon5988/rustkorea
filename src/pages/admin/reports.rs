@@ -102,6 +102,15 @@ pub async fn resolve_report(
     cx: &Cx,
     Form(input): Form<crate::auth::session::CsrfForm>,
 ) -> Result<topcoat::router::error::SeeOther> {
+    let __denied = {
+        let __adb: &crate::db::Db = topcoat::context::app_context(cx);
+        crate::auth::access::require_perm(__adb, cx, crate::auth::access::perms::COMMUNITY_MANAGE)
+            .await
+            .is_none()
+    };
+    if __denied {
+        return Ok(topcoat::router::error::see_other("/admin/login"));
+    }
     let id = path_param::<Id>(cx);
     let db: &Db = topcoat::context::app_context(cx);
 
@@ -128,6 +137,15 @@ pub async fn dismiss_report(
     cx: &Cx,
     Form(input): Form<crate::auth::session::CsrfForm>,
 ) -> Result<topcoat::router::error::SeeOther> {
+    let __denied = {
+        let __adb: &crate::db::Db = topcoat::context::app_context(cx);
+        crate::auth::access::require_perm(__adb, cx, crate::auth::access::perms::COMMUNITY_MANAGE)
+            .await
+            .is_none()
+    };
+    if __denied {
+        return Ok(topcoat::router::error::see_other("/admin/login"));
+    }
     let id = path_param::<Id>(cx);
     let db: &Db = topcoat::context::app_context(cx);
 

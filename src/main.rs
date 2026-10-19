@@ -16,7 +16,7 @@ mod util;
 use topcoat::{
     asset::RouterBuilderAssetExt,
     cookie::RouterBuilderCookieExt,
-    router::{Router, RouterBuilderDiscoverExt},
+    router::{Router, RouterBuilderDiscoverExt, TrustedProxies},
     runtime::RouterBuilderRuntimeExt,
     session::RouterBuilderSessionExt,
 };
@@ -44,6 +44,7 @@ async fn main() {
 
     let router = Router::builder()
         .app_context(pool.clone())
+        .trusted_proxies(TrustedProxies::new().networks(config::trusted_proxies()))
         .cookies()
         .sessions(
             topcoat::session::SessionConfig::builder()

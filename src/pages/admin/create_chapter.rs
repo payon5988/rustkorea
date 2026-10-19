@@ -33,6 +33,15 @@ pub async fn create_chapter(
     cx: &Cx,
     Form(input): Form<NewChapter>,
 ) -> Result<topcoat::router::error::SeeOther> {
+    let __denied = {
+        let __adb: &crate::db::Db = topcoat::context::app_context(cx);
+        crate::auth::access::require_perm(__adb, cx, crate::auth::access::perms::MANUALS_MANAGE)
+            .await
+            .is_none()
+    };
+    if __denied {
+        return Ok(topcoat::router::error::see_other("/admin/login"));
+    }
     let series_slug = path_param::<SeriesSlug>(cx);
     let db: &Db = topcoat::context::app_context(cx);
 

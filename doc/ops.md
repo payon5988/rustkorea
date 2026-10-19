@@ -50,6 +50,23 @@ curl -sf https://<도메인>/healthz     # 200 {"status":"ok"}
 - [ ] `ADMIN_PASSWORD`/`TOTP_RESET_EMAIL` 제거됨 (시드 경고 로그 확인)
 - [ ] 백업이 24시간 이내에 성공함
 
+## 보안 설정
+
+- 클라이언트 IP(로그인 제한·감사 로그)는 `TRUSTED_PROXIES`에 속한 프록시가 보낸
+  `X-Forwarded-For`만 신뢰하며 오른쪽부터 읽는다. 기본값은 루프백과 사설 대역이다.
+  앱 포트를 인터넷에 직접 공개하지 않는다(compose는 127.0.0.1 또는 내부망만 사용).
+  CloudPanel nginx vhost에 `proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;`가
+  있는지 확인한다. 값을 바꾸려면 compose `environment:`에 `TRUSTED_PROXIES`를 추가한다.
+- 2FA가 켜진 계정은 `/auth/login`, `/admin/login`, GitHub·Google 로그인 모두
+  `/admin/2fa`를 거쳐야 정식 세션이 발급된다.
+
+권한·2FA 회귀 테스트(개발 PostgreSQL, 자산 빌드 후):
+
+```bash
+DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5435/rustkorea \
+  cargo test authz_tests -- --include-ignored
+```
+
 ## 비밀키 교체
 
 - DB: `ALTER USER postgres PASSWORD '...'` + `.env` + `docker compose up -d`

@@ -12,7 +12,7 @@ categories = ["web-programming"]
 rust-version = "1.85"
 
 [dependencies]
-tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "sync"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "sync", "fs"] }
 topcoat = { version = "0.10", features = ["tailwind", "runtime", "session", "cookie", "asset", "sse", "multipart"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1" }

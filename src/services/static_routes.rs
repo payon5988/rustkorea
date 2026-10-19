@@ -36,6 +36,22 @@ impl IntoResponse for BinBody {
     }
 }
 
+/// Binary body read at request time (uploads). Owns its bytes so they are
+/// freed after the response is sent.
+pub struct FileBody {
+    pub content_type: &'static str,
+    pub body: Vec<u8>,
+}
+
+impl IntoResponse for FileBody {
+    fn into_response(self, _cx: &Cx) -> Result<Response> {
+        let ct = HeaderValue::from_static(self.content_type);
+        let mut resp = Response::new(Body::from(self.body));
+        resp.headers_mut().insert(CONTENT_TYPE, ct);
+        Ok(resp)
+    }
+}
+
 /// PWA manifest identity (single source; the JSON template below inlines these).
 pub const MANIFEST_SHORT_NAME: &str = "RustKorea";
 pub const MANIFEST_BACKGROUND: &str = "#0f1117";
@@ -178,7 +194,7 @@ topcoat::router::path_param!(upload_name);
 /// whose names match the generated pattern (`[A-Za-z0-9_-]+.(png|jpg|jpeg|webp|gif)`);
 /// everything else is 404 (no traversal possible).
 #[route(GET "/uploads/{upload_name}")]
-pub async fn uploaded_file(cx: &Cx) -> Result<BinBody> {
+pub async fn uploaded_file(cx: &Cx) -> Result<FileBody> {
     let name = path_param::<UploadName>(cx);
     let valid = !name.is_empty()
         && name.len() <= 64
@@ -203,13 +219,15 @@ pub async fn uploaded_file(cx: &Cx) -> Result<BinBody> {
         "image/jpeg"
     };
     let path = std::path::Path::new(&crate::config::upload_dir()).join(name);
-    let bytes = std::fs::read(&path).map_err(|_| topcoat::router::error::not_found())?;
+    let bytes = tokio::fs::read(&path)
+        .await
+        .map_err(|_| topcoat::router::error::not_found())?;
     if bytes.len() > crate::services::uploads::MAX_UPLOAD_BYTES {
         return Err(topcoat::router::error::not_found().into());
     }
-    Ok(BinBody {
+    Ok(FileBody {
         content_type,
-        body: Box::leak(bytes.into_boxed_slice()),
+        body: bytes,
     })
 }
 

@@ -104,13 +104,19 @@ pub async fn login_submit(
                 .is_ok()
             {
                 match crate::auth::access::login_decision(&u) {
-                    LoginDecision::Allow => {
-                        sessions::prune_expired_sessions(db).await;
-                        if sessions::create_session(db, cx, &u.id).await.is_ok() {
+                    LoginDecision::Allow => match sessions::begin_login(db, cx, &u).await {
+                        Ok(sessions::LoginStep::Done) => {
                             sessions::clear_login_attempts(db, cx, &input.email).await;
                             return Ok(topcoat::router::error::see_other(&target));
                         }
-                    }
+                        Ok(sessions::LoginStep::NeedsTotp) => {
+                            sessions::clear_login_attempts(db, cx, &input.email).await;
+                            return Ok(topcoat::router::error::see_other(
+                                sessions::TWOFA_ROUTE,
+                            ));
+                        }
+                        Err(_) => {}
+                    },
                     decision => {
                         let code = if decision == LoginDecision::Pending {
                             crate::auth::session::login_error::PENDING_APPROVAL

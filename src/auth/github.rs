@@ -236,16 +236,19 @@ pub async fn github_callback(cx: &Cx) -> Result<topcoat::router::error::SeeOther
     if let Some(u) = user {
         use crate::auth::access::LoginDecision;
         match crate::auth::access::login_decision(&u) {
-            LoginDecision::Allow => {
-                sessions::prune_expired_sessions(db).await;
-                if sessions::create_session(db, cx, &u.id).await.is_err() {
+            LoginDecision::Allow => match sessions::begin_login(db, cx, &u).await {
+                Ok(sessions::LoginStep::Done) => {}
+                Ok(sessions::LoginStep::NeedsTotp) => {
+                    return Ok(topcoat::router::error::see_other(sessions::TWOFA_ROUTE));
+                }
+                Err(_) => {
                     return Ok(topcoat::router::error::see_other(
                         crate::auth::session::login_error_url(
                             crate::auth::session::login_error::SESSION,
                         ),
                     ));
                 }
-            }
+            },
             LoginDecision::Pending => {
                 return Ok(topcoat::router::error::see_other(
                     crate::auth::session::login_error_url(

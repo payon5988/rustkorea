@@ -171,6 +171,32 @@ pub async fn create_pending_session(db: &Db, cx: &Cx, user_id: &str) -> Result<(
     Ok(())
 }
 
+/// Second-factor page for pending sessions.
+pub const TWOFA_ROUTE: &str = "/admin/2fa";
+
+/// Outcome of [`begin_login`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LoginStep {
+    /// Full session issued.
+    Done,
+    /// Pending session issued; redirect to [`TWOFA_ROUTE`].
+    NeedsTotp,
+}
+
+/// Issue a session for an already-authenticated user (password or OAuth).
+/// Accounts with TOTP enabled only get a pending session, so every login
+/// path enforces the second factor, not just `/admin/login`.
+pub async fn begin_login(db: &Db, cx: &Cx, user: &User) -> Result<LoginStep> {
+    prune_expired_sessions(db).await;
+    if user.totp_enabled == 1 && !user.totp_secret.is_empty() {
+        create_pending_session(db, cx, &user.id).await?;
+        Ok(LoginStep::NeedsTotp)
+    } else {
+        create_session(db, cx, &user.id).await?;
+        Ok(LoginStep::Done)
+    }
+}
+
 /// Resolve the user behind a pre-2FA session, if any.
 pub async fn pending_user(db: &Db, cx: &Cx) -> Option<User> {
     let hash = topcoat::session::token_hash(cx).await.ok()??;
@@ -237,21 +263,13 @@ pub async fn prune_expired_sessions(db: &Db) {
         .ok();
 }
 
-/// Best-effort client IP for rate limiting (X-Forwarded-For aware).
+/// Client IP for rate limiting and audit. Forwarding headers are honored
+/// only from `TRUSTED_PROXIES` (router config), read right to left, so a
+/// client-supplied `X-Forwarded-For` cannot fake the address.
 pub fn client_ip(cx: &Cx) -> String {
-    let headers = topcoat::router::request::headers(cx);
-    if let Some(fwd) = headers.get("x-forwarded-for").and_then(|v| v.to_str().ok()) {
-        if let Some(first) = fwd.split(',').next().map(str::trim) {
-            if !first.is_empty() {
-                return first.to_string();
-            }
-        }
-    }
-    headers
-        .get("x-real-ip")
-        .and_then(|v| v.to_str().ok())
-        .unwrap_or("unknown")
-        .to_string()
+    topcoat::router::request::client_ip(cx)
+        .map(|ip| ip.to_string())
+        .unwrap_or_else(|| "unknown".to_string())
 }
 
 /// Sliding-window login rate limit: at most LOGIN_MAX_ATTEMPTS attempts per

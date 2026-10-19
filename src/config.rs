@@ -78,8 +78,58 @@ pub fn http_user_agent() -> String {
     format!("rustkorea-hub/{}", app_version())
 }
 
+/// Reverse proxies allowed to set `X-Forwarded-For` (comma-separated IPs or
+/// CIDRs). Defaults to loopback + private ranges: the app port is only
+/// published to 127.0.0.1 / the compose network, never to the internet.
+/// Invalid entries are skipped with a warning.
+pub fn trusted_proxies() -> Vec<String> {
+    env_or(
+        "TRUSTED_PROXIES",
+        "127.0.0.0/8,::1/128,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16",
+    )
+    .split(',')
+    .map(str::trim)
+    .filter(|s| !s.is_empty())
+    .filter(|s| {
+        let ok = valid_ip_or_cidr(s);
+        if !ok {
+            eprintln!("[config] TRUSTED_PROXIES: invalid entry skipped: {s}");
+        }
+        ok
+    })
+    .map(String::from)
+    .collect()
+}
+
+fn valid_ip_or_cidr(s: &str) -> bool {
+    let (addr, len) = match s.split_once('/') {
+        Some((a, l)) => (a, Some(l)),
+        None => (s, None),
+    };
+    let Ok(ip) = addr.parse::<std::net::IpAddr>() else {
+        return false;
+    };
+    let max = if ip.is_ipv4() { 32 } else { 128 };
+    len.is_none_or(|l| l.parse::<u8>().is_ok_and(|n| n <= max))
+}
+
 /// Public contact address shown in legal pages and used as a fallback
 /// identifier where an email is required.
 pub fn contact_email() -> String {
     env_or("ADMIN_EMAIL", "admin@rustkorea.kr")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::valid_ip_or_cidr;
+
+    #[test]
+    fn proxy_entries_validated() {
+        for ok in ["127.0.0.1", "10.0.0.0/8", "::1/128", "172.16.0.0/12"] {
+            assert!(valid_ip_or_cidr(ok), "{ok}");
+        }
+        for bad in ["", "localhost", "10.0.0.0/33", "::1/129", "1.2.3.4/x"] {
+            assert!(!valid_ip_or_cidr(bad), "{bad}");
+        }
+    }
 }
